@@ -30,7 +30,7 @@ import {
 
 const API = process.env.NEXT_PUBLIC_API_URL || "${API}";
 
-type SectionType = "sorgenti" | "identita" | "analisi" | "personas" | "reports" | "ads";
+type SectionType = "sorgenti" | "identita" | "analisi" | "personas" | "reports" | "ads" | "intelligence";
 
 
 interface Report {
@@ -322,6 +322,17 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     const [savedIntelligence, setSavedIntelligence] = useState<any>(null);
     const [expandedAd, setExpandedAd] = useState<string | null>(null);
 
+    // Intelligence section state
+    const [battlecards, setBattlecards] = useState<any>(null);
+    const [battlecardsLoading, setBattlecardsLoading] = useState(false);
+    const [psychographic, setPsychographic] = useState<any>(null);
+    const [psychographicLoading, setPsychographicLoading] = useState(false);
+    const [visualBrief, setVisualBrief] = useState<any>(null);
+    const [visualBriefLoading, setVisualBriefLoading] = useState(false);
+    const [seasonality, setSeasonality] = useState<any>(null);
+    const [seasonalityLoading, setSeasonalityLoading] = useState(false);
+    const [exportLoading, setExportLoading] = useState(false);
+
     // VoC / Review Mining
     const [vocReviews, setVocReviews] = useState("");
     const [vocGoogleUrl, setVocGoogleUrl] = useState("");
@@ -439,6 +450,11 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         fetch(`${API}/clients/${id}/voc`).then(r => r.ok ? r.json() : null).then(d => {
             if (d?.data) setVocData(d);
         }).catch(() => {});
+        // Load intelligence data
+        fetch(`${API}/clients/${id}/battlecards`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setBattlecards(d); }).catch(() => {});
+        fetch(`${API}/clients/${id}/psychographic`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setPsychographic(d); }).catch(() => {});
+        fetch(`${API}/clients/${id}/visual-brief`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setVisualBrief(d); }).catch(() => {});
+        fetch(`${API}/clients/${id}/seasonality`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setSeasonality(d); }).catch(() => {});
     }
 
 
@@ -737,7 +753,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     const navItems: { key: SectionType; icon: any; label: string }[] = [
         { key: "sorgenti", icon: LinkIcon, label: "Sorgenti" },
         { key: "identita", icon: PaintBrushIcon, label: "Identità" },
-        { key: "analisi", icon: ChartBarIcon, label: "Analisi" },
+        { key: "analisi", icon: ChartBarIcon, label: "Analisi & VoC" },
+        { key: "intelligence", icon: BoltIcon, label: "Strategic Intelligence" },
         { key: "personas", icon: UserGroupIcon, label: "Buyer Personas" },
         { key: "reports", icon: ChartBarIcon, label: "Reports" },
         { key: "ads", icon: RocketLaunchIcon, label: "Creatività Ads" },
@@ -789,6 +806,30 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
 
 
                 <div className="sidebar-footer">
+                    <button
+                        onClick={async () => {
+                            setExportLoading(true);
+                            try {
+                                const r = await fetch(`${API}/clients/${id}/export`);
+                                if (r.ok) {
+                                    const html = await r.text();
+                                    const blob = new Blob([html], { type: "text/html" });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = `${client.name || id}-analisi-strategica.html`;
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                }
+                            } catch { /* noop */ }
+                            setExportLoading(false);
+                        }}
+                        disabled={exportLoading}
+                        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--lime)", background: "rgba(199,239,0,0.08)", border: "1px solid rgba(199,239,0,0.25)", borderRadius: 7, cursor: "pointer", fontFamily: "inherit", padding: "8px 12px", width: "100%", marginBottom: 10, fontWeight: 600 }}
+                    >
+                        {exportLoading ? <div className="spinner" style={{ width: 12, height: 12 }} /> : <DocumentIcon style={{ width: 13, height: 13 }} />}
+                        Esporta Report PDF
+                    </button>
                     <button onClick={deleteClient} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,0.35)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: "4px 0" }}>
                         <TrashIcon style={{ width: 13, height: 13 }} /> Elimina cliente
                     </button>
@@ -1416,6 +1457,278 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         </div>
                     </div>
                 )}
+                {/* ══ STRATEGIC INTELLIGENCE ══ */}
+                {section === "intelligence" && (
+                    <div style={{ maxWidth: "100%" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
+                            <div>
+                                <h1 className="page-title" style={{ marginBottom: 6 }}>Strategic Intelligence</h1>
+                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Battlecard competitive, analisi psicografica 3 livelli, visual brief e roadmap stagionale</p>
+                            </div>
+                        </div>
+
+                        {/* Generate all button */}
+                        <div className="card" style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                                <p style={{ fontWeight: 700, fontSize: 13, color: "var(--navy)" }}>Genera tutta l&apos;intelligence in una volta</p>
+                                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Battlecards + Psicografica + Visual Brief + Stagionalità — tutto in parallelo</p>
+                            </div>
+                            <button
+                                className="btn btn-orange"
+                                disabled={battlecardsLoading || psychographicLoading || visualBriefLoading || seasonalityLoading}
+                                onClick={async () => {
+                                    setBattlecardsLoading(true); setPsychographicLoading(true); setVisualBriefLoading(true); setSeasonalityLoading(true);
+                                    await Promise.allSettled([
+                                        fetch(`${API}/clients/${id}/battlecards`, { method: "POST" }).then(r => r.ok ? r.json() : null).then(d => { if (d) setBattlecards(d); }),
+                                        fetch(`${API}/clients/${id}/psychographic`, { method: "POST" }).then(r => r.ok ? r.json() : null).then(d => { if (d) setPsychographic(d); }),
+                                        fetch(`${API}/clients/${id}/visual-brief`, { method: "POST" }).then(r => r.ok ? r.json() : null).then(d => { if (d) setVisualBrief(d); }),
+                                        fetch(`${API}/clients/${id}/seasonality`, { method: "POST" }).then(r => r.ok ? r.json() : null).then(d => { if (d) setSeasonality(d); }),
+                                    ]);
+                                    setBattlecardsLoading(false); setPsychographicLoading(false); setVisualBriefLoading(false); setSeasonalityLoading(false);
+                                }}
+                            >
+                                {(battlecardsLoading || psychographicLoading || visualBriefLoading || seasonalityLoading)
+                                    ? <><div className="spinner" style={{ width: 14, height: 14 }} />Generazione in corso...</>
+                                    : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera tutto</>}
+                            </button>
+                        </div>
+
+                        {/* ── COMPETITOR BATTLECARDS ── */}
+                        <div className="card" style={{ marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 16 }}>⚔️</span> Competitor Battlecards
+                                </span>
+                                <button className="btn btn-ghost btn-sm" disabled={battlecardsLoading} onClick={async () => {
+                                    setBattlecardsLoading(true);
+                                    const r = await fetch(`${API}/clients/${id}/battlecards`, { method: "POST" });
+                                    if (r.ok) setBattlecards(await r.json());
+                                    setBattlecardsLoading(false);
+                                }}>
+                                    {battlecardsLoading ? <><div className="spinner" style={{ width: 12, height: 12 }} />Generazione...</> : <><ArrowPathIcon style={{ width: 13, height: 13 }} />{battlecards?.data ? "Rigenera" : "Genera"}</>}
+                                </button>
+                            </div>
+                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>Analisi competitiva strutturata: punti di forza/debolezza dei competitor, i loro angoli comunicativi e come batterli.</p>
+
+                            {battlecards?.data ? (
+                                <div>
+                                    {battlecards.overall && (
+                                        <div style={{ background: "rgba(199,239,0,0.07)", border: "1px solid rgba(199,239,0,0.2)", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
+                                            <p style={{ fontSize: 12, color: "var(--text-dark-primary)", lineHeight: 1.7 }}>{battlecards.overall}</p>
+                                        </div>
+                                    )}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                        {(Array.isArray(battlecards.data) ? battlecards.data : []).map((bc: any, i: number) => (
+                                            <div key={i} style={{ background: "rgba(0,0,0,0.03)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px" }}>
+                                                <p style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", marginBottom: 12 }}>vs {bc.competitor_name}</p>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                                                    <div>
+                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#ef4444", letterSpacing: ".07em", marginBottom: 6 }}>Loro punti forti</p>
+                                                        {(bc.strengths || []).map((s: string, j: number) => <div key={j} style={{ fontSize: 12, marginBottom: 4, display: "flex", gap: 6 }}><span style={{ color: "#ef4444" }}>›</span>{s}</div>)}
+                                                    </div>
+                                                    <div>
+                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#10b981", letterSpacing: ".07em", marginBottom: 6 }}>Loro debolezze</p>
+                                                        {(bc.weaknesses || []).map((s: string, j: number) => <div key={j} style={{ fontSize: 12, marginBottom: 4, display: "flex", gap: 6 }}><span style={{ color: "#10b981" }}>›</span>{s}</div>)}
+                                                    </div>
+                                                </div>
+                                                <div style={{ background: "rgba(199,239,0,0.08)", border: "1px solid rgba(199,239,0,0.2)", borderRadius: 8, padding: "10px 14px", marginBottom: 10 }}>
+                                                    <p style={{ fontSize: 11, fontWeight: 700, color: "var(--lime)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 4 }}>⚡ Nostro vantaggio</p>
+                                                    <p style={{ fontSize: 13, color: "var(--text-dark-primary)" }}>{bc.our_advantage}</p>
+                                                </div>
+                                                {bc.steal_customers_hooks?.length > 0 && (
+                                                    <div>
+                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--orange)", letterSpacing: ".07em", marginBottom: 6 }}>Hook per sottrarre i loro clienti</p>
+                                                        {bc.steal_customers_hooks.map((h: string, j: number) => <div key={j} style={{ fontSize: 12, marginBottom: 4, fontStyle: "italic", display: "flex", gap: 6 }}><span style={{ color: "var(--orange)" }}>›</span>&ldquo;{h}&rdquo;</div>)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : !battlecardsLoading && (
+                                <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Nessuna battlecard generata. Assicurati di avere competitor nella sezione Sorgenti.</p>
+                            )}
+                        </div>
+
+                        {/* ── PSYCHOGRAPHIC ANALYSIS ── */}
+                        <div className="card" style={{ marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 16 }}>🧠</span> Analisi Psicografica — 3 Livelli
+                                </span>
+                                <button className="btn btn-ghost btn-sm" disabled={psychographicLoading} onClick={async () => {
+                                    setPsychographicLoading(true);
+                                    const r = await fetch(`${API}/clients/${id}/psychographic`, { method: "POST" });
+                                    if (r.ok) setPsychographic(await r.json());
+                                    setPsychographicLoading(false);
+                                }}>
+                                    {psychographicLoading ? <><div className="spinner" style={{ width: 12, height: 12 }} />Analisi...</> : <><ArrowPathIcon style={{ width: 13, height: 13 }} />{psychographic?.data ? "Rigenera" : "Genera"}</>}
+                                </button>
+                            </div>
+                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>Tre livelli di profondità: consapevole, identitario e inconscio. La base per copy che tocca le corde giuste.</p>
+
+                            {psychographic?.data ? (() => {
+                                const d = psychographic.data;
+                                const l1 = d.level_1_primary || {};
+                                const l2 = d.level_2_secondary || {};
+                                const l3 = d.level_3_unconscious || {};
+                                const ci = d.copywriting_implications || {};
+                                return (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                        {[
+                                            { level: "LIVELLO 1", title: "Psicografia Primaria — Consapevole", color: "#3b82f6", border: "rgba(59,130,246,0.15)", bg: "rgba(59,130,246,0.04)",
+                                              content: <><p style={{ fontSize: 13, marginBottom: 8 }}><strong>Cosa vuole:</strong> {l1.desires}</p>{(l1.explicit_goals||[]).map((g:string,i:number) => <div key={i} style={{ fontSize: 12, display: "flex", gap: 6, marginBottom: 3 }}><span style={{ color: "#3b82f6" }}>›</span>{g}</div>)}</> },
+                                            { level: "LIVELLO 2", title: "Psicografia Secondaria — Identitaria", color: "#8b5cf6", border: "rgba(139,92,246,0.15)", bg: "rgba(139,92,246,0.04)",
+                                              content: <><p style={{ fontSize: 13, marginBottom: 6 }}><strong>Identità aspirazionale:</strong> {l2.aspirational_identity}</p><p style={{ fontSize: 13, marginBottom: 6 }}><strong>Tribù:</strong> {l2.tribe}</p>{l2.identity_statement && <p style={{ fontSize: 13, fontStyle: "italic", color: "#8b5cf6", fontWeight: 600 }}>&ldquo;{l2.identity_statement}&rdquo;</p>}</> },
+                                            { level: "LIVELLO 3", title: "Psicografia Terziaria — Inconscia", color: "#ec4899", border: "rgba(236,72,153,0.15)", bg: "rgba(236,72,153,0.04)",
+                                              content: <><p style={{ fontSize: 13, marginBottom: 6 }}><strong>Archetipi:</strong> {l3.archetypes}</p><p style={{ fontSize: 13, marginBottom: 6 }}><strong>Vera ragione d&apos;acquisto:</strong> {l3.real_purchase_reason}</p><p style={{ fontSize: 13 }}><strong>Conflitto risolto:</strong> {l3.identity_conflict}</p></> },
+                                        ].map(({ level, title, color, border, bg, content }) => (
+                                            <div key={level} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: "16px 18px" }}>
+                                                <p style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", color: "#999", marginBottom: 6 }}>{level}</p>
+                                                <p style={{ fontSize: 13, fontWeight: 700, color, marginBottom: 12 }}>{title}</p>
+                                                {content}
+                                            </div>
+                                        ))}
+                                        {ci.words_that_activate?.length > 0 && (
+                                            <div style={{ background: "rgba(255,158,28,0.05)", border: "1px solid rgba(255,158,28,0.2)", borderRadius: 10, padding: "14px 18px" }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--orange)", letterSpacing: ".07em", marginBottom: 10 }}>Implicazioni Copywriting</p>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                                    <div><p style={{ fontSize: 11, fontWeight: 700, color: "#10b981", marginBottom: 6 }}>Parole che attivano</p>{ci.words_that_activate.map((w:string,i:number) => <span key={i} style={{ display: "inline-block", fontSize: 11, fontWeight: 600, background: "rgba(16,185,129,0.1)", color: "#10b981", padding: "2px 8px", borderRadius: 4, margin: "2px 3px" }}>{w}</span>)}</div>
+                                                    <div><p style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 6 }}>Parole da evitare</p>{(ci.words_to_avoid||[]).map((w:string,i:number) => <span key={i} style={{ display: "inline-block", fontSize: 11, fontWeight: 600, background: "rgba(239,68,68,0.1)", color: "#ef4444", padding: "2px 8px", borderRadius: 4, margin: "2px 3px" }}>{w}</span>)}</div>
+                                                </div>
+                                                {ci.narrative_arc && <p style={{ fontSize: 12, color: "var(--text-dark-primary)", marginTop: 10 }}><strong>Narrative arc:</strong> {ci.narrative_arc}</p>}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })() : !psychographicLoading && (
+                                <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Nessuna analisi psicografica. Genera prima la ricerca di mercato per risultati migliori.</p>
+                            )}
+                        </div>
+
+                        {/* ── VISUAL BRIEF ── */}
+                        <div className="card" style={{ marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 16 }}>🎨</span> Visual Brief
+                                </span>
+                                <button className="btn btn-ghost btn-sm" disabled={visualBriefLoading} onClick={async () => {
+                                    setVisualBriefLoading(true);
+                                    const r = await fetch(`${API}/clients/${id}/visual-brief`, { method: "POST" });
+                                    if (r.ok) setVisualBrief(await r.json());
+                                    setVisualBriefLoading(false);
+                                }}>
+                                    {visualBriefLoading ? <><div className="spinner" style={{ width: 12, height: 12 }} />Generazione...</> : <><ArrowPathIcon style={{ width: 13, height: 13 }} />{visualBrief?.data ? "Rigenera" : "Genera"}</>}
+                                </button>
+                            </div>
+                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>Brief completo per designer e videomaker: mood, palette, Do&apos;s/Don&apos;ts, hook visivi e struttura video.</p>
+
+                            {visualBrief?.data ? (() => {
+                                const d = visualBrief.data;
+                                const vs = d.video_structure || {};
+                                return (
+                                    <div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                                            <div style={{ background: "rgba(0,0,0,0.03)", borderRadius: 8, padding: 14 }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>Mood & Aesthetic</p>
+                                                <p style={{ fontSize: 13 }}>{d.mood_aesthetic}</p>
+                                            </div>
+                                            <div style={{ background: "rgba(0,0,0,0.03)", borderRadius: 8, padding: 14 }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>Reference Aesthetic</p>
+                                                <p style={{ fontSize: 13 }}>{d.reference_aesthetic}</p>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                                            <div style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 8, padding: 14 }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>✅ Do&apos;s</p>
+                                                {(d.dos||[]).map((s:string,i:number) => <div key={i} style={{ fontSize: 12, marginBottom: 4, display: "flex", gap: 6 }}><span style={{ color: "#10b981" }}>✓</span>{s}</div>)}
+                                            </div>
+                                            <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, padding: 14 }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>❌ Don&apos;ts</p>
+                                                {(d.donts||[]).map((s:string,i:number) => <div key={i} style={{ fontSize: 12, marginBottom: 4, display: "flex", gap: 6 }}><span style={{ color: "#ef4444" }}>✗</span>{s}</div>)}
+                                            </div>
+                                        </div>
+                                        {d.visual_hooks_3sec?.length > 0 && (
+                                            <div style={{ background: "rgba(255,158,28,0.05)", border: "1px solid rgba(255,158,28,0.2)", borderRadius: 8, padding: 14, marginBottom: 14 }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--orange)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>🪝 Hook visivi — primi 3 secondi</p>
+                                                {d.visual_hooks_3sec.map((h:string,i:number) => <div key={i} style={{ fontSize: 12, marginBottom: 4, display: "flex", gap: 6 }}><span style={{ color: "var(--orange)" }}>›</span>{h}</div>)}
+                                            </div>
+                                        )}
+                                        {vs["0_3s"] && (
+                                            <div style={{ background: "rgba(0,0,0,0.03)", borderRadius: 8, padding: 14 }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 10 }}>📱 Struttura Video</p>
+                                                {[["0–3s", vs["0_3s"]], ["3–15s", vs["3_15s"]], ["15–30s", vs["15_30s"]]].map(([t,v]) => v && (
+                                                    <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 8 }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 700, background: "#003366", color: "white", padding: "2px 8px", borderRadius: 4, flexShrink: 0, whiteSpace: "nowrap" }}>{t}</span>
+                                                        <p style={{ fontSize: 13, color: "var(--text-dark-primary)", margin: 0 }}>{v}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })() : !visualBriefLoading && (
+                                <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Nessun visual brief. Genera prima brand identity e ricerca per risultati ottimali.</p>
+                            )}
+                        </div>
+
+                        {/* ── SEASONALITY ROADMAP ── */}
+                        <div className="card" style={{ marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 16 }}>📅</span> Seasonality Roadmap
+                                </span>
+                                <button className="btn btn-ghost btn-sm" disabled={seasonalityLoading} onClick={async () => {
+                                    setSeasonalityLoading(true);
+                                    const r = await fetch(`${API}/clients/${id}/seasonality`, { method: "POST" });
+                                    if (r.ok) setSeasonality(await r.json());
+                                    setSeasonalityLoading(false);
+                                }}>
+                                    {seasonalityLoading ? <><div className="spinner" style={{ width: 12, height: 12 }} />Generazione...</> : <><ArrowPathIcon style={{ width: 13, height: 13 }} />{seasonality?.data ? "Rigenera" : "Genera"}</>}
+                                </button>
+                            </div>
+                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>Calendario angoli e offerte per tutto l&apos;anno, con periodi di picco e priorità di budget.</p>
+
+                            {seasonality?.data ? (() => {
+                                const d = seasonality.data;
+                                const months = d.months || [];
+                                const priorityColor: Record<string,string> = { alta: "#ef4444", media: "#f59e0b", bassa: "#6b7280" };
+                                return (
+                                    <div>
+                                        {d.year_overview && (
+                                            <div style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
+                                                <p style={{ fontSize: 13, color: "var(--text-dark-primary)", lineHeight: 1.7 }}>{d.year_overview}</p>
+                                            </div>
+                                        )}
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginBottom: 16 }}>
+                                            {months.map((m: any, i: number) => {
+                                                const prio = (m.budget_priority || "media").toLowerCase();
+                                                return (
+                                                    <div key={i} style={{ background: "rgba(0,0,0,0.03)", borderRadius: 8, padding: "12px 14px", borderTop: `3px solid ${priorityColor[prio] || "#6b7280"}` }}>
+                                                        <p style={{ fontSize: 13, fontWeight: 800, color: "var(--navy)", marginBottom: 6 }}>{m.month}</p>
+                                                        <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: "var(--text-dark-primary)" }}>{m.recommended_angle}</p>
+                                                        <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>💰 {m.offer_type}</p>
+                                                        <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>⚡ {m.urgency_trigger}</p>
+                                                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: priorityColor[prio] || "#6b7280" }}>Budget: {prio}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {d.peak_periods?.length > 0 && (
+                                            <div style={{ background: "rgba(255,158,28,0.06)", border: "1px solid rgba(255,158,28,0.2)", borderRadius: 8, padding: "12px 16px" }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--orange)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>Periodi di picco</p>
+                                                <p style={{ fontSize: 13 }}>{d.peak_periods.join(" · ")}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })() : !seasonalityLoading && (
+                                <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Nessuna roadmap stagionale. Completa prima la ricerca di mercato.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {section === "personas" && (
                     <div style={{ maxWidth: "100%" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>

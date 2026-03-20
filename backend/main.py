@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -1555,6 +1555,708 @@ Genera {min(request.variations, 3)} variazioni. Rispondi SOLO con JSON valido.""
         raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
 
     return copy_data
+
+
+# ══════════════════════════════════════════════════════════
+#  HELPER: assembla tutto il contesto del cliente
+# ══════════════════════════════════════════════════════════
+
+def _load_full_client_context(client_id: str, metadata: dict) -> str:
+    """Assembla tutta l'intelligence disponibile per un cliente in un unico testo di contesto."""
+    parts = []
+
+    # Brand identity
+    bi = metadata.get("brand_identity", {})
+    if bi:
+        parts.append(f"BRAND IDENTITY:\nTono: {bi.get('tone','')}\nVisual: {bi.get('visuals','')}\nColori: {', '.join(bi.get('colors',[]))}")
+
+    # Research
+    research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
+    if research_path.exists():
+        parts.append("RICERCA DI MERCATO:\n" + research_path.read_text()[:2000])
+
+    # VoC
+    voc_path = CLIENTS_DIR / client_id / "voc_analysis.json"
+    if voc_path.exists():
+        voc = json.loads(voc_path.read_text()).get("data", {})
+        if voc:
+            hooks = voc.get("golden_hooks", [])[:4]
+            pains = voc.get("pain_points", [])[:4]
+            desires = voc.get("desires_outcomes", [])[:4]
+            objections = voc.get("objections", [])[:3]
+            parts.append(f"VOICE OF CUSTOMER (VoC):\nGolden Hooks: {'; '.join(hooks)}\nPain Points: {'; '.join(pains)}\nDesideri: {'; '.join(desires)}\nObiezioni: {'; '.join(objections)}")
+
+    # Psychographic
+    psych_path = CLIENTS_DIR / client_id / "psychographic.json"
+    if psych_path.exists():
+        psych = json.loads(psych_path.read_text()).get("data", {})
+        if psych:
+            p1 = psych.get("level_1_primary", {})
+            parts.append(f"ANALISI PSICOGRAFICA:\nDesideri primari: {p1.get('desires','')}\nPaure primarie: {p1.get('fears','')}\nTrigger inconsci: {psych.get('level_3_unconscious',{}).get('archetypes','')}")
+
+    # Battlecards
+    bc_path = CLIENTS_DIR / client_id / "battlecards.json"
+    if bc_path.exists():
+        bc = json.loads(bc_path.read_text()).get("data", [])
+        if bc:
+            summary = "; ".join([f"{b.get('competitor_name','')}: {b.get('our_advantage','')}" for b in bc[:3]])
+            parts.append(f"VANTAGGI VS COMPETITOR: {summary}")
+
+    # Creative intelligence
+    intel_path = CLIENTS_DIR / client_id / "creative_intelligence.json"
+    if intel_path.exists():
+        intel = json.loads(intel_path.read_text()).get("analysis", "")
+        if intel:
+            parts.append(f"INTELLIGENCE ADS REALI:\n{intel[:1000]}")
+
+    return "\n\n".join(parts)
+
+
+# ══════════════════════════════════════════════════════════
+#  COMPETITOR BATTLECARDS
+# ══════════════════════════════════════════════════════════
+
+@app.post("/clients/{client_id}/battlecards")
+async def generate_battlecards(client_id: str):
+    """Genera schede competitive strutturate per ogni competitor del cliente."""
+    metadata = storage_service.get_metadata(client_id)
+    client_name = metadata.get("name", client_id)
+    competitors = metadata.get("competitors", [])
+
+    if not competitors:
+        raise HTTPException(status_code=400, detail="Nessun competitor salvato nel profilo. Aggiungili nella sezione Sorgenti.")
+
+    research_text = ""
+    research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
+    if research_path.exists():
+        research_text = research_path.read_text()[:3000]
+
+    comp_list = []
+    for c in competitors:
+        name = c.get("name", "") if isinstance(c, dict) else str(c)
+        links = c.get("links", []) if isinstance(c, dict) else []
+        urls = [l.get("url","") if isinstance(l,dict) else str(l) for l in links]
+        comp_list.append(f"- {name}: {', '.join(urls)}")
+
+    system_prompt = f"""Sei un analista strategico esperto di marketing competitivo e Meta Ads.
+Analizza i competitor di {client_name} e crea Battlecard strutturate per ogni concorrente.
+
+BRAND CLIENTE: {client_name}
+COMPETITOR DA ANALIZZARE:
+{chr(10).join(comp_list)}
+
+RICERCA DI MERCATO DISPONIBILE:
+{research_text[:2000]}
+
+Per ogni competitor genera una battlecard con:
+1. POSIZIONAMENTO: Come si posiziona nel mercato
+2. PUNTI DI FORZA: Cosa fanno bene
+3. PUNTI DEBOLI: Vulnerabilità da sfruttare
+4. ANGOLI CHE USANO: Tipo di messaggi/angoli che usano nelle loro comunicazioni
+5. NOSTRO VANTAGGIO: Come {client_name} si differenzia e batte questo competitor
+6. COME RISPONDERE: Angoli e messaggi da usare per sottrarre clienti a questo competitor
+
+OUTPUT JSON:
+{{
+  "battlecards": [
+    {{
+      "competitor_name": "nome",
+      "positioning": "come si posiziona",
+      "strengths": ["punto 1", "punto 2"],
+      "weaknesses": ["debolezza 1", "debolezza 2"],
+      "their_angles": ["angolo che usano 1", "angolo 2"],
+      "our_advantage": "vantaggio chiave di {client_name} vs questo competitor",
+      "counter_strategy": "come batterlo con il nostro marketing",
+      "steal_customers_hooks": ["hook per sottrarre i loro clienti 1", "hook 2"]
+    }}
+  ],
+  "overall_competitive_position": "sintesi del posizionamento complessivo di {client_name} nel mercato"
+}}
+
+Rispondi SOLO con JSON valido."""
+
+    try:
+        raw = await ai_service._call_ai(
+            model="anthropic/claude-sonnet-4-5",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Genera le battlecard per {client_name}"}],
+            temperature=0.5,
+            max_tokens=3000
+        )
+        data = json_repair.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
+
+    result = {"data": data.get("battlecards", data), "overall": data.get("overall_competitive_position",""), "generated_at": datetime.now().isoformat()}
+    bc_path = CLIENTS_DIR / client_id / "battlecards.json"
+    bc_path.parent.mkdir(parents=True, exist_ok=True)
+    bc_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
+    metadata["battlecards"] = result
+    storage_service.save_metadata(client_id, metadata)
+    return result
+
+@app.get("/clients/{client_id}/battlecards")
+async def get_battlecards(client_id: str):
+    bc_path = CLIENTS_DIR / client_id / "battlecards.json"
+    if bc_path.exists():
+        return json.loads(bc_path.read_text())
+    metadata = storage_service.get_metadata(client_id)
+    return metadata.get("battlecards", {"data": None, "generated_at": None})
+
+
+# ══════════════════════════════════════════════════════════
+#  PSYCHOGRAPHIC ANALYSIS — 3 livelli di profondità
+# ══════════════════════════════════════════════════════════
+
+@app.post("/clients/{client_id}/psychographic")
+async def generate_psychographic(client_id: str):
+    """Analisi psicografica a 3 livelli di profondità del cliente ideale."""
+    metadata = storage_service.get_metadata(client_id)
+    client_name = metadata.get("name", client_id)
+    ctx = _load_full_client_context(client_id, metadata)
+
+    system_prompt = f"""Sei uno psicologo del consumatore e stratega di marketing con 20 anni di esperienza.
+Il tuo compito è creare un'analisi psicografica profonda a 3 livelli del cliente ideale di {client_name}.
+
+CONTESTO DISPONIBILE:
+{ctx[:4000]}
+
+STRUTTURA ANALISI:
+
+LIVELLO 1 — PSICOGRAFIA PRIMARIA (consapevole, dichiarata):
+- Cosa dice di volere
+- Obiettivi espliciti
+- Desideri consapevoli
+- Pain points dichiarati
+
+LIVELLO 2 — PSICOGRAFIA SECONDARIA (emotiva, identitaria):
+- Come vuole essere visto dagli altri
+- Identità aspirazionale
+- Valori e credenze core
+- Tribù di appartenenza (chi sono "loro")
+- Paure sociali (giudizio, fallimento, esclusione)
+
+LIVELLO 3 — PSICOGRAFIA TERZIARIA (inconscia, archetipica):
+- Archetipi psicologici attivi (Eroe, Ribelle, Amante, Saggio, ecc.)
+- Trigger inconsci che guidano l'acquisto
+- La vera ragione per cui compra (spesso diversa da quella dichiarata)
+- Narrative interiori ("sono il tipo di persona che...")
+- Come il prodotto risolve un conflitto identitario profondo
+
+OUTPUT JSON:
+{{
+  "level_1_primary": {{
+    "desires": "cosa vuole consapevolmente",
+    "explicit_goals": ["goal 1", "goal 2"],
+    "declared_pain_points": ["pain 1", "pain 2"],
+    "what_they_say": "come descrivono il loro problema"
+  }},
+  "level_2_secondary": {{
+    "aspirational_identity": "chi vuole essere/sembrare",
+    "core_values": ["valore 1", "valore 2"],
+    "tribe": "a quale gruppo vuole appartenere",
+    "social_fears": ["paura sociale 1", "paura 2"],
+    "identity_statement": "Sono il tipo di persona che..."
+  }},
+  "level_3_unconscious": {{
+    "archetypes": "archetipi psicologici dominanti",
+    "real_purchase_reason": "la vera ragione inconscia per cui compra",
+    "unconscious_triggers": ["trigger 1", "trigger 2"],
+    "identity_conflict": "quale conflitto interiore risolve il prodotto",
+    "deepest_fear": "la paura più profonda da non nominare mai esplicitamente"
+  }},
+  "copywriting_implications": {{
+    "words_that_activate": ["parola/frase che risuona 1", "parola 2"],
+    "words_to_avoid": ["parola da evitare 1", "parola 2"],
+    "best_hook_types": ["tipo di hook 1", "tipo 2"],
+    "narrative_arc": "la storia che risuona di più con questa psicografia"
+  }}
+}}
+
+Rispondi SOLO con JSON valido."""
+
+    try:
+        raw = await ai_service._call_ai(
+            model="anthropic/claude-sonnet-4-5",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Genera analisi psicografica per il cliente ideale di {client_name}"}],
+            temperature=0.5,
+            max_tokens=2500
+        )
+        data = json_repair.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
+
+    result = {"data": data, "generated_at": datetime.now().isoformat()}
+    psych_path = CLIENTS_DIR / client_id / "psychographic.json"
+    psych_path.parent.mkdir(parents=True, exist_ok=True)
+    psych_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
+    metadata["psychographic"] = result
+    storage_service.save_metadata(client_id, metadata)
+    return result
+
+@app.get("/clients/{client_id}/psychographic")
+async def get_psychographic(client_id: str):
+    psych_path = CLIENTS_DIR / client_id / "psychographic.json"
+    if psych_path.exists():
+        return json.loads(psych_path.read_text())
+    metadata = storage_service.get_metadata(client_id)
+    return metadata.get("psychographic", {"data": None, "generated_at": None})
+
+
+# ══════════════════════════════════════════════════════════
+#  VISUAL BRIEF — Brief per designer/videomaker
+# ══════════════════════════════════════════════════════════
+
+@app.post("/clients/{client_id}/visual-brief")
+async def generate_visual_brief(client_id: str):
+    """Genera un brief visivo completo per designer e videomaker."""
+    metadata = storage_service.get_metadata(client_id)
+    client_name = metadata.get("name", client_id)
+    ctx = _load_full_client_context(client_id, metadata)
+    bi = metadata.get("brand_identity", {})
+
+    system_prompt = f"""Sei un Creative Director con esperienza in brand identity e advertising per Meta/TikTok.
+Genera un Visual Brief professionale per {client_name} che possa essere consegnato direttamente a designer e videomaker.
+
+CONTESTO:
+{ctx[:4000]}
+
+Il brief deve coprire:
+1. MOOD & AESTHETIC: Atmosfera visiva del brand
+2. COLOR PALETTE: Colori principali e come usarli
+3. TYPOGRAPHY DIRECTION: Stile tipografico
+4. CREATIVE FORMATS: Specifiche per ogni formato Meta Ads
+5. DO's: Cosa includere sempre nelle creatività
+6. DON'Ts: Cosa non fare mai
+7. TARGET VISUAL CUES: Elementi visivi che risuonano con il target
+8. HOOK VISIVI: Prime 3 secondi del video — cosa deve succedere a schermo
+9. REFERENCE AESTHETIC: Tipo di stile/mood di riferimento (es: "clean minimalista", "energico urban", ecc.)
+10. VIDEO BRIEF: Struttura video consigliata (timing preciso)
+
+OUTPUT JSON:
+{{
+  "mood_aesthetic": "descrizione dell'atmosfera visiva",
+  "color_palette": {{
+    "primary": ["#colore1"],
+    "secondary": ["#colore2"],
+    "usage_notes": "come usare i colori nelle ads"
+  }},
+  "typography": "direzione tipografica",
+  "dos": ["cosa fare 1", "cosa fare 2"],
+  "donts": ["cosa NON fare 1", "cosa NON fare 2"],
+  "target_visual_cues": ["elemento visivo che risuona 1", "elemento 2"],
+  "visual_hooks_3sec": ["hook visivo per i primi 3 secondi 1", "hook 2"],
+  "reference_aesthetic": "stile di riferimento",
+  "formats": {{
+    "stories_9x16": "brief specifico per Stories",
+    "feed_4x5": "brief specifico per Feed",
+    "reels": "brief specifico per Reels"
+  }},
+  "video_structure": {{
+    "0_3s": "cosa succede nei primi 3 secondi",
+    "3_15s": "sviluppo 3-15 secondi",
+    "15_30s": "chiusura e CTA 15-30 secondi"
+  }}
+}}
+
+Rispondi SOLO con JSON valido."""
+
+    try:
+        raw = await ai_service._call_ai(
+            model="anthropic/claude-sonnet-4-5",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Genera il visual brief per {client_name}"}],
+            temperature=0.6,
+            max_tokens=2000
+        )
+        data = json_repair.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
+
+    result = {"data": data, "generated_at": datetime.now().isoformat()}
+    vb_path = CLIENTS_DIR / client_id / "visual_brief.json"
+    vb_path.parent.mkdir(parents=True, exist_ok=True)
+    vb_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
+    metadata["visual_brief"] = result
+    storage_service.save_metadata(client_id, metadata)
+    return result
+
+@app.get("/clients/{client_id}/visual-brief")
+async def get_visual_brief(client_id: str):
+    vb_path = CLIENTS_DIR / client_id / "visual_brief.json"
+    if vb_path.exists():
+        return json.loads(vb_path.read_text())
+    metadata = storage_service.get_metadata(client_id)
+    return metadata.get("visual_brief", {"data": None, "generated_at": None})
+
+
+# ══════════════════════════════════════════════════════════
+#  SEASONALITY ROADMAP — Calendario angoli e offerte
+# ══════════════════════════════════════════════════════════
+
+@app.post("/clients/{client_id}/seasonality")
+async def generate_seasonality(client_id: str):
+    """Genera una roadmap stagionale con angoli e offerte per ogni periodo dell'anno."""
+    metadata = storage_service.get_metadata(client_id)
+    client_name = metadata.get("name", client_id)
+    industry = metadata.get("industry", "")
+    ctx = _load_full_client_context(client_id, metadata)
+
+    system_prompt = f"""Sei un esperto di marketing stagionale e pianificazione campagne Meta Ads.
+Crea una Seasonality Roadmap completa per {client_name} nel settore {industry or "analizzato"}.
+
+CONTESTO:
+{ctx[:3000]}
+
+Per ogni mese/periodo identifica:
+- Evento/stagione rilevante per il settore
+- Angolo di comunicazione consigliato
+- Tipo di offerta/promozione da fare
+- Urgency trigger da usare nel copy
+- Formato creativo consigliato
+
+OUTPUT JSON:
+{{
+  "year_overview": "sintesi strategica dell'anno",
+  "months": [
+    {{
+      "month": "Gennaio",
+      "season_context": "contesto stagionale",
+      "key_events": ["evento 1", "evento 2"],
+      "recommended_angle": "angolo di comunicazione consigliato",
+      "offer_type": "tipo di offerta/promozione",
+      "urgency_trigger": "leva di urgenza da usare",
+      "creative_format": "formato creativo consigliato",
+      "budget_priority": "alta/media/bassa"
+    }}
+  ],
+  "peak_periods": ["periodo di picco 1", "periodo 2"],
+  "dead_periods": ["periodo morto da evitare o usare per brand awareness"],
+  "annual_strategy": "strategia annuale in 3 punti chiave"
+}}
+
+Rispondi SOLO con JSON valido con tutti i 12 mesi."""
+
+    try:
+        raw = await ai_service._call_ai(
+            model="anthropic/claude-sonnet-4-5",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Genera la seasonality roadmap per {client_name}"}],
+            temperature=0.5,
+            max_tokens=3000
+        )
+        data = json_repair.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
+
+    result = {"data": data, "generated_at": datetime.now().isoformat()}
+    sea_path = CLIENTS_DIR / client_id / "seasonality.json"
+    sea_path.parent.mkdir(parents=True, exist_ok=True)
+    sea_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
+    metadata["seasonality"] = result
+    storage_service.save_metadata(client_id, metadata)
+    return result
+
+@app.get("/clients/{client_id}/seasonality")
+async def get_seasonality(client_id: str):
+    sea_path = CLIENTS_DIR / client_id / "seasonality.json"
+    if sea_path.exists():
+        return json.loads(sea_path.read_text())
+    metadata = storage_service.get_metadata(client_id)
+    return metadata.get("seasonality", {"data": None, "generated_at": None})
+
+
+# ══════════════════════════════════════════════════════════
+#  EXPORT — Report completo formattato per il cliente
+# ══════════════════════════════════════════════════════════
+
+@app.get("/clients/{client_id}/export")
+async def export_client_report(client_id: str):
+    """Genera un report HTML completo formattato, pronto da stampare come PDF e presentare al cliente."""
+    from fastapi.responses import HTMLResponse
+    metadata = storage_service.get_metadata(client_id)
+    client_name = metadata.get("name", client_id)
+    industry = metadata.get("industry", "")
+    bi = metadata.get("brand_identity", {})
+    today = datetime.now().strftime("%d %B %Y")
+
+    def load_json(path: str):
+        p = CLIENTS_DIR / client_id / path
+        if p.exists():
+            try:
+                return json.loads(p.read_text())
+            except Exception:
+                pass
+        return None
+
+    research_text = ""
+    rp = CLIENTS_DIR / client_id / "research" / "market_research.md"
+    if rp.exists():
+        research_text = rp.read_text()
+
+    voc = load_json("voc_analysis.json")
+    psych = load_json("psychographic.json")
+    battlecards = load_json("battlecards.json")
+    seasonality = load_json("seasonality.json")
+    visual_brief = load_json("visual_brief.json")
+    angles_raw = load_json("angles.json")
+    intel = load_json("creative_intelligence.json")
+
+    def j(d, *keys, default="—"):
+        for k in keys:
+            if not isinstance(d, dict):
+                return default
+            d = d.get(k, {})
+        return d if d else default
+
+    def list_items(items, color="#ff9e1c"):
+        if not items or not isinstance(items, list):
+            return "<p style='color:#999'>—</p>"
+        return "".join(f"<div class='list-item'><span class='dot' style='background:{color}'></span><span>{i}</span></div>" for i in items if i)
+
+    def section(title, icon, content, color="#003366"):
+        return f"""<div class="section"><div class="section-header" style="border-left:4px solid {color}"><span class="section-icon">{icon}</span><h2>{title}</h2></div><div class="section-body">{content}</div></div>"""
+
+    # Build HTML sections
+    sections_html = ""
+
+    # 1. Brand Identity
+    bi_html = f"""
+    <div class="grid-2">
+      <div class="card-inner"><h4>Tono di voce</h4><p>{bi.get('tone','—')}</p></div>
+      <div class="card-inner"><h4>Visual Identity</h4><p>{bi.get('visuals','—')}</p></div>
+    </div>
+    {"<div class='tag-list'>" + "".join(f"<span class='tag' style='background:{c}'>{c}</span>" for c in bi.get('colors',[])) + "</div>" if bi.get('colors') else ""}
+    {"<div class='card-inner'><h4>Settore</h4><p>" + industry + "</p></div>" if industry else ""}
+    """
+    sections_html += section("Brand Identity", "🏷️", bi_html, "#003366")
+
+    # 2. Ricerca di Mercato
+    if research_text:
+        sections_html += section("Ricerca di Mercato", "🔍", f"<div class='research-text'>{research_text[:3000].replace(chr(10),'<br>')}</div>", "#6366f1")
+
+    # 3. Voice of Customer
+    if voc and voc.get("data"):
+        d = voc["data"]
+        voc_html = f"""
+        {"<div class='highlight-box lime'><h4>ICP Summary</h4><p>" + d.get('icp_summary','') + "</p></div>" if d.get('icp_summary') else ""}
+        <div class="grid-2">
+          <div class="card-inner"><h4>🪝 Golden Hooks</h4>{list_items(d.get('golden_hooks',[]),'#f59e0b')}</div>
+          <div class="card-inner"><h4>😤 Pain Points</h4>{list_items(d.get('pain_points',[]),'#ef4444')}</div>
+          <div class="card-inner"><h4>✨ Desideri & Outcome</h4>{list_items(d.get('desires_outcomes',[]),'#10b981')}</div>
+          <div class="card-inner"><h4>🤔 Obiezioni</h4>{list_items(d.get('objections',[]),'#6366f1')}</div>
+        </div>
+        {"<div class='highlight-box orange'><h4>Insights Strategici</h4><p>" + d.get('strategic_insights','') + "</p></div>" if d.get('strategic_insights') else ""}
+        <div class="card-inner"><h4>✍️ Frasi pronte per il copy</h4>{list_items(d.get('top_copy_phrases',[]),'#ff9e1c')}</div>
+        """
+        sections_html += section("Voice of Customer — Review Mining", "🎯", voc_html, "#f59e0b")
+
+    # 4. Psychographic Analysis
+    if psych and psych.get("data"):
+        d = psych["data"]
+        l1 = d.get("level_1_primary", {})
+        l2 = d.get("level_2_secondary", {})
+        l3 = d.get("level_3_unconscious", {})
+        ci = d.get("copywriting_implications", {})
+        psych_html = f"""
+        <div class="psych-levels">
+          <div class="psych-level level1"><div class="level-badge">LIVELLO 1</div><h4>Psicografia Primaria — Consapevole</h4>
+            <p><strong>Cosa vuole:</strong> {l1.get('desires','—')}</p>
+            {list_items(l1.get('explicit_goals',[]),'#3b82f6')}
+          </div>
+          <div class="psych-level level2"><div class="level-badge">LIVELLO 2</div><h4>Psicografia Secondaria — Identitaria</h4>
+            <p><strong>Identità aspirazionale:</strong> {l2.get('aspirational_identity','—')}</p>
+            <p><strong>Tribù:</strong> {l2.get('tribe','—')}</p>
+            <p class="identity-stmt">"{l2.get('identity_statement','')}"</p>
+          </div>
+          <div class="psych-level level3"><div class="level-badge">LIVELLO 3</div><h4>Psicografia Terziaria — Inconscia</h4>
+            <p><strong>Archetipi:</strong> {l3.get('archetypes','—')}</p>
+            <p><strong>Vera ragione d'acquisto:</strong> {l3.get('real_purchase_reason','—')}</p>
+            <p><strong>Conflitto identitario risolto:</strong> {l3.get('identity_conflict','—')}</p>
+          </div>
+        </div>
+        <div class="card-inner" style="margin-top:16px"><h4>Implicazioni Copywriting</h4>
+          <p><strong>Parole che attivano:</strong> {', '.join(ci.get('words_that_activate',[]))}</p>
+          <p><strong>Parole da evitare:</strong> {', '.join(ci.get('words_to_avoid',[]))}</p>
+          <p><strong>Narrative arc:</strong> {ci.get('narrative_arc','—')}</p>
+        </div>
+        """
+        sections_html += section("Analisi Psicografica — 3 Livelli", "🧠", psych_html, "#8b5cf6")
+
+    # 5. Competitor Battlecards
+    if battlecards and battlecards.get("data"):
+        cards = battlecards["data"] if isinstance(battlecards["data"], list) else []
+        bc_html = ""
+        if battlecards.get("overall"):
+            bc_html += f"<div class='highlight-box blue'><p>{battlecards['overall']}</p></div>"
+        for bc in cards:
+            bc_html += f"""
+            <div class="battlecard">
+              <div class="battlecard-header"><h4>vs {bc.get('competitor_name','?')}</h4></div>
+              <div class="grid-2">
+                <div><h5>💪 Loro punti forti</h5>{list_items(bc.get('strengths',[]),'#ef4444')}</div>
+                <div><h5>🎯 Loro debolezze</h5>{list_items(bc.get('weaknesses',[]),'#10b981')}</div>
+              </div>
+              <div class="advantage-box"><h5>⚡ Nostro vantaggio</h5><p>{bc.get('our_advantage','—')}</p></div>
+              <div><h5>🪝 Hook per sottrarre i loro clienti</h5>{list_items(bc.get('steal_customers_hooks',[]),'#f59e0b')}</div>
+            </div>
+            """
+        sections_html += section("Competitor Battlecards", "⚔️", bc_html, "#ef4444")
+
+    # 6. Angoli di Comunicazione
+    if angles_raw and isinstance(angles_raw, list) and len(angles_raw) > 0:
+        ang_html = ""
+        for i, ang in enumerate(angles_raw[:6]):
+            title = ang.get("title", ang.get("angolo","")) if isinstance(ang, dict) else str(ang)
+            desc = ang.get("description", ang.get("descrizione","")) if isinstance(ang, dict) else ""
+            funnel = ang.get("funnel_stage","") if isinstance(ang, dict) else ""
+            ang_html += f"""<div class="angle-card"><span class="angle-num">{i+1}</span><div><h4>{title}</h4>{"<p class='funnel-badge'>" + funnel + "</p>" if funnel else ""}<p>{desc}</p></div></div>"""
+        sections_html += section("Angoli di Comunicazione", "📐", ang_html, "#ff9e1c")
+
+    # 7. Visual Brief
+    if visual_brief and visual_brief.get("data"):
+        d = visual_brief["data"]
+        vb_html = f"""
+        <div class="grid-2">
+          <div class="card-inner"><h4>Mood & Aesthetic</h4><p>{d.get('mood_aesthetic','—')}</p></div>
+          <div class="card-inner"><h4>Reference Aesthetic</h4><p>{d.get('reference_aesthetic','—')}</p></div>
+        </div>
+        <div class="grid-2">
+          <div class="card-inner"><h4>✅ Do's</h4>{list_items(d.get('dos',[]),'#10b981')}</div>
+          <div class="card-inner"><h4>❌ Don'ts</h4>{list_items(d.get('donts',[]),'#ef4444')}</div>
+        </div>
+        <div class="card-inner"><h4>🪝 Hook visivi (primi 3 secondi)</h4>{list_items(d.get('visual_hooks_3sec',[]),'#ff9e1c')}</div>
+        """
+        vs = d.get("video_structure", {})
+        if vs:
+            vb_html += f"""<div class="video-timeline"><h4>📱 Struttura Video</h4>
+              <div class="timeline-row"><span class="time-badge">0-3s</span><p>{vs.get('0_3s','—')}</p></div>
+              <div class="timeline-row"><span class="time-badge">3-15s</span><p>{vs.get('3_15s','—')}</p></div>
+              <div class="timeline-row"><span class="time-badge">15-30s</span><p>{vs.get('15_30s','—')}</p></div>
+            </div>"""
+        sections_html += section("Visual Brief", "🎨", vb_html, "#ec4899")
+
+    # 8. Seasonality Roadmap
+    if seasonality and seasonality.get("data"):
+        d = seasonality["data"]
+        months = d.get("months", [])
+        priority_color = {"alta": "#ef4444", "media": "#f59e0b", "bassa": "#6b7280"}
+        sea_html = ""
+        if d.get("year_overview"):
+            sea_html += f"<div class='highlight-box lime'><p>{d['year_overview']}</p></div>"
+        sea_html += "<div class='months-grid'>"
+        for m in months:
+            prio = m.get("budget_priority","media").lower()
+            sea_html += f"""
+            <div class="month-card" style="border-top:3px solid {priority_color.get(prio,'#6b7280')}">
+              <div class="month-name">{m.get('month','')}</div>
+              <div class="month-angle">{m.get('recommended_angle','—')}</div>
+              <div class="month-offer">💰 {m.get('offer_type','—')}</div>
+              <div class="month-urgency">⚡ {m.get('urgency_trigger','—')}</div>
+              <div class="month-priority" style="color:{priority_color.get(prio,'#6b7280')}">Budget: {prio}</div>
+            </div>"""
+        sea_html += "</div>"
+        if d.get("peak_periods"):
+            sea_html += f"<div class='highlight-box orange'><h4>Periodi di picco</h4><p>{', '.join(d['peak_periods'])}</p></div>"
+        sections_html += section("Seasonality Roadmap", "📅", sea_html, "#10b981")
+
+    # 9. Creative Intelligence (se disponibile)
+    if intel and intel.get("analysis"):
+        sections_html += section("Intelligence Ads Reali", "📊", f"<div class='research-text'>{str(intel['analysis'])[:2000].replace(chr(10),'<br>')}</div>", "#6366f1")
+
+    html = f"""<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analisi Strategica — {client_name}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: 'Inter', sans-serif; background: #f8f9fa; color: #1a1a2e; font-size: 14px; line-height: 1.6; }}
+  .cover {{ background: linear-gradient(135deg, #003366 0%, #001a33 100%); color: white; padding: 80px 60px; min-height: 280px; display: flex; flex-direction: column; justify-content: space-between; }}
+  .cover-top {{ display: flex; justify-content: space-between; align-items: flex-start; }}
+  .cover-brand {{ font-size: 11px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 8px; }}
+  .cover h1 {{ font-size: 42px; font-weight: 900; letter-spacing: -.02em; margin-bottom: 8px; }}
+  .cover-subtitle {{ font-size: 16px; color: rgba(255,255,255,.65); }}
+  .cover-meta {{ font-size: 12px; color: rgba(255,255,255,.4); margin-top: 40px; }}
+  .orange-bar {{ background: #ff9e1c; height: 5px; }}
+  .container {{ max-width: 960px; margin: 0 auto; padding: 40px 24px; }}
+  .section {{ background: white; border-radius: 12px; margin-bottom: 28px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }}
+  .section-header {{ display: flex; align-items: center; gap: 12px; padding: 20px 24px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }}
+  .section-icon {{ font-size: 20px; }}
+  .section-header h2 {{ font-size: 16px; font-weight: 700; color: #003366; letter-spacing: -.01em; }}
+  .section-body {{ padding: 24px; }}
+  .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }}
+  .card-inner {{ background: #f8f9fa; border-radius: 8px; padding: 16px; }}
+  .card-inner h4 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 8px; }}
+  .card-inner p {{ font-size: 13px; color: #333; }}
+  .highlight-box {{ border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; }}
+  .highlight-box.lime {{ background: rgba(199,239,0,.08); border: 1px solid rgba(199,239,0,.3); }}
+  .highlight-box.orange {{ background: rgba(255,158,28,.06); border: 1px solid rgba(255,158,28,.25); }}
+  .highlight-box.blue {{ background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2); }}
+  .highlight-box h4 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 6px; }}
+  .list-item {{ display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; font-size: 13px; }}
+  .dot {{ width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }}
+  .tag-list {{ display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }}
+  .tag {{ font-size: 12px; font-weight: 700; color: white; padding: 4px 12px; border-radius: 20px; }}
+  .research-text {{ font-size: 12.5px; line-height: 1.8; color: #444; white-space: pre-wrap; }}
+  .psych-levels {{ display: flex; flex-direction: column; gap: 16px; }}
+  .psych-level {{ border-radius: 10px; padding: 20px; }}
+  .level1 {{ background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.15); }}
+  .level2 {{ background: rgba(139,92,246,.05); border: 1px solid rgba(139,92,246,.15); }}
+  .level3 {{ background: rgba(236,72,153,.05); border: 1px solid rgba(236,72,153,.15); }}
+  .level-badge {{ font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #888; margin-bottom: 8px; }}
+  .psych-level h4 {{ font-size: 13px; font-weight: 700; margin-bottom: 12px; }}
+  .psych-level p {{ font-size: 13px; margin-bottom: 6px; }}
+  .identity-stmt {{ font-style: italic; font-weight: 600; color: #6366f1; }}
+  .battlecard {{ background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 16px; }}
+  .battlecard-header h4 {{ font-size: 15px; font-weight: 700; color: #003366; margin-bottom: 14px; }}
+  .battlecard h5 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 8px; }}
+  .advantage-box {{ background: rgba(199,239,0,.1); border: 1px solid rgba(199,239,0,.3); border-radius: 8px; padding: 14px; margin: 14px 0; }}
+  .advantage-box h5 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 6px; }}
+  .angle-card {{ display: flex; gap: 16px; align-items: flex-start; padding: 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; }}
+  .angle-num {{ background: #003366; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }}
+  .angle-card h4 {{ font-size: 14px; font-weight: 700; margin-bottom: 4px; }}
+  .angle-card p {{ font-size: 13px; color: #555; }}
+  .funnel-badge {{ display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #ff9e1c; background: rgba(255,158,28,.1); padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; }}
+  .video-timeline {{ margin-top: 16px; }}
+  .video-timeline h4 {{ font-size: 13px; font-weight: 700; margin-bottom: 12px; }}
+  .timeline-row {{ display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }}
+  .time-badge {{ background: #003366; color: white; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }}
+  .months-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }}
+  .month-card {{ background: #f8f9fa; border-radius: 8px; padding: 14px; font-size: 12px; }}
+  .month-name {{ font-weight: 800; font-size: 13px; color: #003366; margin-bottom: 6px; }}
+  .month-angle {{ font-weight: 600; margin-bottom: 4px; color: #333; }}
+  .month-offer {{ color: #555; margin-bottom: 3px; }}
+  .month-urgency {{ color: #555; margin-bottom: 4px; }}
+  .month-priority {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }}
+  .footer {{ text-align: center; padding: 40px; color: #bbb; font-size: 12px; }}
+  @media print {{
+    body {{ background: white; }}
+    .section {{ box-shadow: none; border: 1px solid #eee; page-break-inside: avoid; }}
+    .cover {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
+    .months-grid {{ grid-template-columns: repeat(3,1fr); }}
+  }}
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="cover-top">
+    <div>
+      <div class="cover-brand">Antigravity Operative Manager</div>
+      <h1>{client_name}</h1>
+      <div class="cover-subtitle">Analisi Strategica Avanzata — Meta Ads & Brand Intelligence</div>
+    </div>
+  </div>
+  <div class="cover-meta">Generato il {today} · Riservato e confidenziale</div>
+</div>
+<div class="orange-bar"></div>
+<div class="container">
+{sections_html}
+</div>
+<div class="footer">Analisi generata da Antigravity Operative Manager · {today}</div>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html, media_type="text/html")
 
 
 # ══════════════════════════════════════════════════════════
