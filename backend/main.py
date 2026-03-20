@@ -559,6 +559,9 @@ async def perform_research(client_id: str, request: ResearchRequest = ResearchRe
         if "top_content_patterns" in research_data:
             metadata["preferences"]["top_content_patterns"] = research_data["top_content_patterns"]
 
+        if "key_products" in research_data and isinstance(research_data["key_products"], list):
+            metadata["key_products"] = research_data["key_products"]
+
         storage_service.save_metadata(client_id, metadata)
 
         # Save the research text as markdown file — append extra fields for future AI use

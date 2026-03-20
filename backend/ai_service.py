@@ -118,8 +118,8 @@ ISTRUZIONI OBBLIGATORIE SUI DATI SOCIAL:
         else:
             social_block = ""
 
-        prompt = f"""Sei un Senior Market Researcher & Copywriter Strategist specializzato in direct-response marketing.
-Il tuo compito: costruire una radiografia completa del mercato, del pubblico e del posizionamento del cliente, con l'obiettivo finale di creare messaggi pubblicitari che convertono.
+        prompt = f"""Sei un Senior Market Researcher & Copywriter Strategist specializzato in Meta Ads e direct-response marketing.
+Il tuo compito: produrre un'analisi strategica completa strutturata esattamente nelle fasi della metodologia professionale per Meta Ads.
 
 ━━━ CLIENTE ━━━
 {client_name}
@@ -131,43 +131,28 @@ Il tuo compito: costruire una radiografia completa del mercato, del pubblico e d
 {file_context}
 {user_reqs}
 
-━━━ PROTOCOLLO DI RICERCA ━━━
+━━━ METODOLOGIA DI ANALISI ━━━
 
-FASE 1 — ANALISI DEI DATI REALI (se presenti sopra)
-- Parti SEMPRE dai dati social reali forniti. Sono la tua fonte più preziosa.
-- Estrai citazioni dirette dai commenti. Queste frasi diventeranno hook e angoli di copy.
-- Calcola quale formato/tema di post genera più engagement e perché.
+PRIORITÀ 1 — DATI REALI PRIMA DI TUTTO
+- Parti SEMPRE dai dati social e dai documenti forniti (menu, catalogo, ecc.).
+- Estrai citazioni letterali dai commenti. Sono oro per il copy.
+- Per e-commerce: analizza i prodotti reali con prezzi e caratteristiche.
+- Per attività locali: usa menu, listino, catalogo servizi se fornito.
 
-FASE 2 — RICERCA WEB ATTIVA
-- Usa le tue capacità di ricerca per scansionare i link forniti.
-- Cerca citazioni, recensioni e menzioni recenti del brand su Google, TrustPilot, Google Maps.
-- Se trovi altri account social del cliente (TikTok, Facebook), analizza anche quelli.
-
-FASE 3 — AUDIT COMPETITOR
-- Analizza i competitor indicati. Se non ce ne sono, identificane 3-5 nel mercato reale del cliente.
-- Per ogni competitor: posizionamento, punti di forza, punti deboli sfruttabili.
-- Identifica il "gap di mercato" — cosa nessun competitor sta dicendo ma il pubblico vuole sentire.
-
-FASE 4 — PROFILAZIONE TARGET
-- Chi è il cliente ideale? Dati demografici, psicografici, comportamentali.
-- Quali sono i suoi 3 dolori principali? Le sue 3 aspirazioni?
-- Cosa l'ha già spinto a cercare una soluzione e perché ha fallito in passato?
-- Quali obiezioni ha prima di acquistare?
-
-FASE 5 — VOCABOLARIO REALE
-- Lista le parole/frasi esatte che il target usa per descrivere il suo problema.
-- NON usare linguaggio tecnico/di settore se il target non lo usa.
-- Esempio corretto: "mi vergogno a indossare il costume" invece di "lipodistrofia localizzata".
+PRIORITÀ 2 — RICERCA WEB
+- Scansiona i link forniti. Cerca recensioni Google, citazioni, menzioni recenti.
+- Identifica i prodotti/servizi REALI dell'attività, non fare supposizioni generiche.
 
 ━━━ REGOLE CRITICHE ━━━
-- ZERO genericità: ogni affermazione deve essere supportata da dati o esempi concreti.
-- PRIORITÀ ASSOLUTA al linguaggio reale trovato nei commenti/recensioni.
-- Se i dati social mostrano che un certo tema genera molto engagement, segnalalo esplicitamente come angolo di copy prioritario.
+- ZERO genericità: ogni affermazione deve essere concreta e specifica per questo cliente.
+- Usa il linguaggio reale del target (es: "non riesco a dimagrire" non "difficoltà nel perdere peso").
+- Segnala esplicitamente gli angoli ad alto engagement come prioritari.
 
 RISPONDI ESCLUSIVAMENTE CON QUESTO JSON (nessun testo fuori dal JSON):
 {{
   "industry": "Etichetta settore (max 5 parole)",
-  "research_text": "RAPPORTO COMPLETO — minimo 2000 parole. Struttura: 1) Sintesi del brand, 2) Analisi social e contenuti, 3) Profilazione target con citazioni reali, 4) Audit competitor, 5) Gap di mercato, 6) Angoli di copy prioritari emersi dai dati",
+  "research_text": "ANALISI STRATEGICA COMPLETA — minimo 2500 parole. OBBLIGATORIAMENTE strutturata con questi esatti heading markdown:\\n\\n## FASE 1 — ANALISI DEL BUSINESS\\nCosa vende/offre (prodotti/servizi specifici con prezzi se disponibili). USP reale (cosa li distingue davvero). Canali di vendita. Posizionamento attuale.\\n\\n## FASE 2 — ANALISI DEL MERCATO\\nDimensione e caratteristiche del mercato. Trend rilevanti. Posizionamento rispetto ai competitor. Gap di mercato (cosa nessun competitor sta comunicando ma il target vuole sentire).\\n\\n## FASE 3 — TARGET DI RIFERIMENTO\\nProfilo demografico preciso (età, genere, localizzazione, reddito). Situazione attuale del target PRIMA di scoprire il cliente. Dolori principali (con citazioni reali se disponibili). Aspirazioni e trasformazione desiderata. Obiezioni più frequenti all'acquisto.\\n\\n## FASE 4 — DATI SOCIAL E VOCABOLARIO REALE\\nAnalisi dei contenuti ad alto engagement. Citazioni dirette dai commenti più significativi. Pattern di post che funzionano. Vocabolario che usa il target (frasi esatte, non parafrasate).\\n\\n## FASE 5 — ANGOLI CREATIVI PRIORITARI\\nTop 5 angoli comunicativi emersi dai dati reali. Per ognuno: nome angolo, perché funziona, frase hook di esempio. Priorità per fase del funnel (TOFU/MOFU/BOFU).",
+  "key_products": ["prodotto/servizio 1 con dettaglio", "prodotto 2", "..."],
   "target_vocabulary": ["frase1 esatta dal target", "frase2", "frase3", "...almeno 15 voci"],
   "top_content_patterns": ["pattern1 ad alto engagement", "pattern2", "..."],
   "audience_pain_points": ["dolore1 con citazione reale", "dolore2", "dolore3"],
