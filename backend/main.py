@@ -38,18 +38,10 @@ from .notion_service import notion_service
 app = FastAPI(title="Antigravity Script Manager")
 
 # CORS configuration
-_extra_origin = os.getenv("FRONTEND_URL", "")
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3001",
-] + ([_extra_origin] if _extra_origin else [])
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
