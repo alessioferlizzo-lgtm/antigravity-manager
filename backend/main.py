@@ -1232,6 +1232,210 @@ async def fetch_existing_angles(client_id: str):
 
 
 # ══════════════════════════════════════════════════════════
+#  VOICE OF CUSTOMER — Review Mining & Psychographic VoC
+# ══════════════════════════════════════════════════════════
+
+class VoCRequest(BaseModel):
+    reviews_text: Optional[str] = ""          # paste raw reviews
+    google_reviews_url: Optional[str] = ""    # URL Google Maps/Reviews (info only, shown in UI)
+    include_meta_comments: Optional[bool] = False  # fetch FB/IG comments via API (if ad_account connected)
+
+@app.post("/clients/{client_id}/voc/analyze")
+async def analyze_voc(client_id: str, request: VoCRequest):
+    """Analizza recensioni e commenti con AI per estrarre VoC, Golden Hooks, Pain Points, ICP signals."""
+    metadata = storage_service.get_metadata(client_id)
+    client_name = metadata.get("name", client_id)
+
+    reviews_input = (request.reviews_text or "").strip()
+
+    # If no reviews pasted, raise error
+    if not reviews_input:
+        raise HTTPException(status_code=400, detail="Incolla almeno alcune recensioni nel campo testo per avviare l'analisi.")
+
+    system_prompt = f"""Sei un esperto di Voice of Customer (VoC) e copywriting per Meta Ads con 15 anni di esperienza.
+Il tuo compito è analizzare recensioni di clienti reali e trasformarle in intelligence strategica per creare copy e creatività che convertono.
+
+BRAND ANALIZZATO: {client_name}
+
+METODOLOGIA DI ANALISI:
+Studia ogni recensione cercando:
+1. GOLDEN HOOKS: Frasi exact-match usate dai clienti che esprimono la trasformazione/risultato. Queste sono le frasi più potenti da usare letteralmente nel copy.
+2. PAIN POINTS: Il "prima" — frustrazioni, problemi, dolori che i clienti avevano prima del prodotto/servizio.
+3. DESIDERI & OUTCOME: Il "dopo" — cosa i clienti volevano ottenere e cosa hanno ottenuto.
+4. OBIEZIONI RICORRENTI: Dubbi, esitazioni, scuse che i clienti menzionano (spesso nel "inizialmente ero scettico..." o "avevo paura che...").
+5. TRIGGER PSICOGRAFICI: Motivazioni profonde, valori, identità del cliente ideale.
+6. KEYWORD ICP: Termini demografici/situazionali che definiscono il cliente ideale.
+7. SOCIAL PROOF ANGLES: Storie specifiche o risultati quantificabili da amplificare.
+
+OUTPUT RICHIESTO (JSON VALIDO):
+{{
+  "golden_hooks": ["frase esatta 1", "frase esatta 2", ...],
+  "pain_points": ["pain point 1", "pain point 2", ...],
+  "desires_outcomes": ["desiderio/risultato 1", ...],
+  "objections": ["obiezione 1", ...],
+  "psychographic_triggers": ["trigger 1", ...],
+  "icp_keywords": ["keyword 1", ...],
+  "social_proof_angles": ["storia/dato specifico 1", ...],
+  "top_copy_phrases": ["frase pronta per copy 1", "frase 2", ...],
+  "icp_summary": "Descrizione del cliente ideale in 2-3 frasi basata sulle recensioni",
+  "strategic_insights": "Insights strategici su cosa differenzia questo brand e come posizionarlo nel copy"
+}}
+
+Rispondi SOLO con JSON valido, senza markdown, senza prefissi."""
+
+    user_msg = f"RECENSIONI DA ANALIZZARE:\n\n{reviews_input[:8000]}"
+
+    try:
+        raw = await ai_service._call_ai(
+            model="anthropic/claude-sonnet-4-5",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg}
+            ],
+            temperature=0.4,
+            max_tokens=2000
+        )
+        voc_data = json_repair.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
+
+    # Save to file and metadata
+    voc_path = CLIENTS_DIR / client_id / "voc_analysis.json"
+    voc_path.parent.mkdir(parents=True, exist_ok=True)
+    result = {
+        "data": voc_data,
+        "reviews_count": len([l for l in reviews_input.split("\n") if l.strip()]),
+        "generated_at": datetime.now().isoformat(),
+        "google_reviews_url": request.google_reviews_url or ""
+    }
+    with open(voc_path, "w") as f:
+        json.dump(result, f, ensure_ascii=False, indent=2)
+
+    # Also sync to Supabase metadata
+    metadata["voc_analysis"] = result
+    storage_service.save_metadata(client_id, metadata)
+
+    return result
+
+
+@app.get("/clients/{client_id}/voc")
+async def get_voc(client_id: str):
+    voc_path = CLIENTS_DIR / client_id / "voc_analysis.json"
+    if voc_path.exists():
+        with open(voc_path, "r") as f:
+            return json.load(f)
+    # Fallback: check metadata
+    metadata = storage_service.get_metadata(client_id)
+    if "voc_analysis" in metadata:
+        return metadata["voc_analysis"]
+    return {"data": None, "generated_at": None}
+
+
+# ══════════════════════════════════════════════════════════
+#  COPY GENERATOR — Framework-based Meta Ads copy
+# ══════════════════════════════════════════════════════════
+
+class CopyRequest(BaseModel):
+    framework: str = "PAS"          # PAS | AIDA | BAB | HOOK_BODY_CTA | 4C
+    angle_title: str
+    angle_description: Optional[str] = ""
+    product_name: Optional[str] = ""
+    variations: Optional[int] = 1    # number of copy variations to generate
+
+@app.post("/clients/{client_id}/copy/generate")
+async def generate_copy(client_id: str, request: CopyRequest):
+    """Genera copy strutturato per Meta Ads usando framework professionali di copywriting."""
+    metadata = storage_service.get_metadata(client_id)
+    client_name = metadata.get("name", client_id)
+    brand_identity = metadata.get("brand_identity", {})
+    tone = brand_identity.get("tone", "")
+
+    # Pull context: research + VoC
+    research_text = ""
+    research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
+    if research_path.exists():
+        with open(research_path, "r") as f:
+            research_text = f.read()[:3000]
+
+    voc_text = ""
+    voc_path = CLIENTS_DIR / client_id / "voc_analysis.json"
+    if voc_path.exists():
+        with open(voc_path, "r") as f:
+            voc_data = json.load(f)
+        voc_analysis = voc_data.get("data", {})
+        if voc_analysis:
+            hooks = voc_analysis.get("golden_hooks", [])[:5]
+            pains = voc_analysis.get("pain_points", [])[:5]
+            desires = voc_analysis.get("desires_outcomes", [])[:5]
+            voc_text = f"\nGOLDEN HOOKS (usa queste frasi letteralmente): {', '.join(hooks)}\nPAIN POINTS: {', '.join(pains)}\nDESIDERI: {', '.join(desires)}"
+
+    framework_guides = {
+        "PAS": "PAS (Problem-Agitate-Solution): 1) Hook che identifica il problema 2) Agita il dolore/frustrazione 3) Presenta la soluzione come unica via d'uscita",
+        "AIDA": "AIDA (Attention-Interest-Desire-Action): 1) Hook che cattura attenzione 2) Crea interesse con un fatto/storia 3) Alimenta il desiderio con benefici 4) CTA urgente",
+        "BAB": "BAB (Before-After-Bridge): 1) Descrivi la situazione attuale dolorosa (Prima) 2) Dipingi la vita desiderata (Dopo) 3) Presenta il prodotto come il ponte",
+        "HOOK_BODY_CTA": "Hook-Body-CTA: 1) Hook in 1 riga devastante 2) Body con prova/storia/benefici (3-5 righe) 3) CTA forte e specifica",
+        "4C": "4C (Clear-Concise-Compelling-Credible): Copy brevissimo, ogni parola guadagna il suo posto, credibilità integrata, offer irresistibile",
+    }
+    fw_guide = framework_guides.get(request.framework, framework_guides["PAS"])
+
+    system_prompt = f"""Sei un copywriter esperto di Meta Ads con un track record di €10M+ in ad spend ottimizzate.
+Il tuo copy converte perché usa le parole esatte del cliente ideale, non il linguaggio del brand.
+
+BRAND: {client_name}
+TONO: {tone or "professionale ma diretto"}
+ANGOLO DA SVILUPPARE: {request.angle_title}
+{f"DESCRIZIONE ANGOLO: {request.angle_description}" if request.angle_description else ""}
+{f"PRODOTTO/SERVIZIO: {request.product_name}" if request.product_name else ""}
+{voc_text}
+
+FRAMEWORK DA USARE: {fw_guide}
+
+REGOLE FONDAMENTALI:
+- Il PRIMARY TEXT deve essere scroll-stopping dal primo carattere
+- Usa frasi brevi e impatto alto — scrivi come parli, non come un brochure
+- Il HOOK deve arrestare lo scroll in 0.3 secondi
+- La HEADLINE è ciò che appare sotto all'immagine — massimo 5-7 parole
+- Il CTA è specifico, non generico ("Scopri il programma" non "Clicca qui")
+- NON usare emoji a meno che non siano parte del tono del brand
+- Ogni variazione deve avere un angolo di hook diverso
+
+FORMATO OUTPUT (JSON):
+{{
+  "variations": [
+    {{
+      "hook": "Prima riga/frase d'apertura — il gancio",
+      "primary_text": "Testo completo dell'ad (primary text, max 150 parole)",
+      "headline": "Headline sotto all'immagine (max 7 parole)",
+      "description": "Descrizione opzionale sotto headline (max 20 parole)",
+      "cta_button": "Testo bottone CTA"
+    }}
+  ],
+  "framework_used": "{request.framework}",
+  "copy_notes": "Note strategiche sul copy generato"
+}}
+
+Genera {min(request.variations, 3)} variazioni. Rispondi SOLO con JSON valido."""
+
+    user_msg = f"Genera copy Meta Ads per l'angolo: {request.angle_title}\n\nContesto ricerca:\n{research_text[:1500]}"
+
+    try:
+        raw = await ai_service._call_ai(
+            model="anthropic/claude-sonnet-4-5",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg}
+            ],
+            temperature=0.7,
+            max_tokens=2500
+        )
+        copy_data = json_repair.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
+
+    return copy_data
+
+
+# ══════════════════════════════════════════════════════════
 #  CREATIVE INTELLIGENCE — fetch ad creatives + AI analysis
 # ══════════════════════════════════════════════════════════
 

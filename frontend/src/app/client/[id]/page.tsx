@@ -322,6 +322,22 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     const [savedIntelligence, setSavedIntelligence] = useState<any>(null);
     const [expandedAd, setExpandedAd] = useState<string | null>(null);
 
+    // VoC / Review Mining
+    const [vocReviews, setVocReviews] = useState("");
+    const [vocGoogleUrl, setVocGoogleUrl] = useState("");
+    const [vocLoading, setVocLoading] = useState(false);
+    const [vocData, setVocData] = useState<any>(null);
+    const [vocError, setVocError] = useState<string | null>(null);
+
+    // Copy Generator
+    const [copyFramework, setCopyFramework] = useState("PAS");
+    const [copyAngle, setCopyAngle] = useState("");
+    const [copyAngleDesc, setCopyAngleDesc] = useState("");
+    const [copyVariations, setCopyVariations] = useState(2);
+    const [copyLoading, setCopyLoading] = useState(false);
+    const [copyResult, setCopyResult] = useState<any>(null);
+    const [copyError, setCopyError] = useState<string | null>(null);
+
     // Personas Specifiche
     const [newPersonaTheme, setNewPersonaTheme] = useState("");
     const [personaLoading, setPersonaLoading] = useState(false);
@@ -419,6 +435,10 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         // Load reports
         const reps = await fetch(`${API}/clients/${id}/reports`).then(r => r.ok ? r.json() : []);
         setReports(reps);
+        // Load VoC if exists
+        fetch(`${API}/clients/${id}/voc`).then(r => r.ok ? r.json() : null).then(d => {
+            if (d?.data) setVocData(d);
+        }).catch(() => {});
     }
 
 
@@ -1265,6 +1285,127 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                 </div>
                             )}
                         </div>
+
+                        {/* ── VoC & Review Mining ── */}
+                        <div className="card" style={{ marginTop: 24 }}>
+                            <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontSize: 16 }}>🎯</span> Voice of Customer — Review Mining
+                            </span>
+                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
+                                Incolla recensioni Google, commenti Instagram o qualsiasi testo di clienti reali. L&apos;AI estrae Golden Hooks, Pain Points, Obiezioni e ICP signals pronti per il copy.
+                            </p>
+
+                            {/* Google Reviews URL (info only) */}
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Link Google Reviews (opzionale — per riferimento)</label>
+                                <input
+                                    className="input"
+                                    style={{ maxWidth: 480 }}
+                                    placeholder="https://maps.google.com/..."
+                                    value={vocGoogleUrl}
+                                    onChange={e => setVocGoogleUrl(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Reviews text */}
+                            <div style={{ marginBottom: 14 }}>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Testo recensioni / commenti</label>
+                                <textarea
+                                    className="input"
+                                    rows={8}
+                                    style={{ width: "100%", fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 }}
+                                    placeholder={"Incolla qui le recensioni, una per riga:\n\n⭐⭐⭐⭐⭐ Ho provato questo prodotto e ha cambiato completamente...\n⭐⭐⭐⭐ Ero scettico all'inizio perché avevo già provato altri...\n⭐⭐⭐⭐⭐ Risultati incredibili in soli 30 giorni..."}
+                                    value={vocReviews}
+                                    onChange={e => setVocReviews(e.target.value)}
+                                />
+                                <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                                    {vocReviews.split("\n").filter(l => l.trim()).length} righe incollate
+                                </p>
+                            </div>
+
+                            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}>
+                                <button
+                                    className="btn btn-orange"
+                                    disabled={vocLoading || !vocReviews.trim()}
+                                    onClick={async () => {
+                                        setVocLoading(true);
+                                        setVocError(null);
+                                        try {
+                                            const r = await fetch(`${API}/clients/${id}/voc/analyze`, {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ reviews_text: vocReviews, google_reviews_url: vocGoogleUrl })
+                                            });
+                                            if (r.ok) {
+                                                const d = await r.json();
+                                                setVocData(d);
+                                            } else {
+                                                const err = await r.json();
+                                                setVocError(err.detail || "Errore analisi");
+                                            }
+                                        } catch { setVocError("Errore di rete"); }
+                                        setVocLoading(false);
+                                    }}
+                                >
+                                    {vocLoading ? <><div className="spinner" style={{ width: 14, height: 14 }} />Analisi VoC in corso...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Analizza VoC</>}
+                                </button>
+                                {vocData?.generated_at && (
+                                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                                        Ultima analisi: {new Date(vocData.generated_at).toLocaleDateString("it-IT")}
+                                    </span>
+                                )}
+                            </div>
+                            {vocError && <p style={{ fontSize: 12, color: "#ef4444", marginBottom: 12 }}>⚠️ {vocError}</p>}
+
+                            {/* VoC Results */}
+                            {vocData?.data && (() => {
+                                const d = vocData.data;
+                                const vocSections = [
+                                    { key: "golden_hooks", label: "Golden Hooks", icon: "🪝", color: "#f59e0b", desc: "Frasi esatte dei clienti da usare letteralmente nel copy" },
+                                    { key: "pain_points", label: "Pain Points", icon: "😤", color: "#ef4444", desc: "Frustrazioni e problemi prima del prodotto" },
+                                    { key: "desires_outcomes", label: "Desideri & Outcome", icon: "✨", color: "#10b981", desc: "Trasformazioni e risultati desiderati" },
+                                    { key: "objections", label: "Obiezioni Ricorrenti", icon: "🤔", color: "#6366f1", desc: "Dubbi ed esitazioni da smontare nel copy" },
+                                    { key: "psychographic_triggers", label: "Trigger Psicografici", icon: "🧠", color: "#8b5cf6", desc: "Motivazioni profonde e valori del cliente ideale" },
+                                    { key: "top_copy_phrases", label: "Frasi Pronte per Copy", icon: "✍️", color: "var(--orange)", desc: "Usa queste direttamente negli ads" },
+                                ];
+                                return (
+                                    <div>
+                                        {d.icp_summary && (
+                                            <div style={{ background: "rgba(199,239,0,0.08)", border: "1px solid rgba(199,239,0,0.2)", borderRadius: 10, padding: "14px 18px", marginBottom: 20 }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--lime)", letterSpacing: ".07em", marginBottom: 6 }}>ICP Summary</p>
+                                                <p style={{ fontSize: 13, color: "var(--text-dark-primary)", lineHeight: 1.7, margin: 0 }}>{d.icp_summary}</p>
+                                            </div>
+                                        )}
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14, marginBottom: 20 }}>
+                                            {vocSections.map(({ key, label, icon, color, desc }) => {
+                                                const items: string[] = d[key] || [];
+                                                if (!items.length) return null;
+                                                return (
+                                                    <div key={key} style={{ background: "rgba(0,0,0,0.04)", border: `1px solid ${color}33`, borderRadius: 10, padding: "14px 16px" }}>
+                                                        <p style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>{icon} {label}</p>
+                                                        <p style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 10 }}>{desc}</p>
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                            {items.map((item, i) => (
+                                                                <div key={i} style={{ fontSize: 12, color: "var(--text-dark-primary)", lineHeight: 1.6, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                                                                    <span style={{ color, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>›</span>
+                                                                    <span style={{ fontStyle: key === "golden_hooks" || key === "top_copy_phrases" ? "italic" : "normal" }}>&ldquo;{item}&rdquo;</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {d.strategic_insights && (
+                                            <div style={{ background: "rgba(255,158,28,0.06)", border: "1px solid rgba(255,158,28,0.2)", borderRadius: 10, padding: "14px 18px" }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--orange)", letterSpacing: ".07em", marginBottom: 8 }}>Insights Strategici</p>
+                                                <p style={{ fontSize: 13, color: "var(--text-dark-primary)", lineHeight: 1.7, margin: 0 }}>{d.strategic_insights}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </div>
                     </div>
                 )}
                 {section === "personas" && (
@@ -1720,8 +1861,155 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
                             <div>
                                 <h1 className="page-title" style={{ marginBottom: 6 }}>Creatività & Intelligence Ads</h1>
-                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Analisi profonda delle inserzioni reali: copy, angoli, pattern vincenti e cosa testare</p>
+                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Copy generator, analisi inserzioni reali, angoli vincenti</p>
                             </div>
+                        </div>
+
+                        {/* ── Copy Generator ── */}
+                        <div className="card" style={{ marginBottom: 24 }}>
+                            <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontSize: 16 }}>✍️</span> Copy Generator — Meta Ads
+                            </span>
+                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
+                                Genera copy strutturato con framework professionali (PAS, AIDA, BAB…) partendo dall&apos;angolo scelto e dalla VoC analysis.
+                            </p>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                                <div>
+                                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Framework</label>
+                                    <select className="input" value={copyFramework} onChange={e => setCopyFramework(e.target.value)}>
+                                        <option value="PAS">PAS — Problem · Agitate · Solution</option>
+                                        <option value="AIDA">AIDA — Attention · Interest · Desire · Action</option>
+                                        <option value="BAB">BAB — Before · After · Bridge</option>
+                                        <option value="HOOK_BODY_CTA">Hook · Body · CTA</option>
+                                        <option value="4C">4C — Clear · Concise · Compelling · Credible</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Variazioni</label>
+                                    <select className="input" value={copyVariations} onChange={e => setCopyVariations(Number(e.target.value))}>
+                                        <option value={1}>1 variazione</option>
+                                        <option value={2}>2 variazioni</option>
+                                        <option value={3}>3 variazioni</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Angolo / Titolo</label>
+                                <input
+                                    className="input"
+                                    style={{ width: "100%" }}
+                                    placeholder="Es: 'La paura di invecchiare male' oppure 'Smetti di sprecare soldi in palestra'"
+                                    value={copyAngle}
+                                    onChange={e => setCopyAngle(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Descrizione angolo (opzionale)</label>
+                                <textarea
+                                    className="input"
+                                    rows={2}
+                                    style={{ width: "100%", fontSize: 12 }}
+                                    placeholder="Contesto aggiuntivo sull'angolo, target specifico, tone of voice..."
+                                    value={copyAngleDesc}
+                                    onChange={e => setCopyAngleDesc(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                                <button
+                                    className="btn btn-orange"
+                                    disabled={copyLoading || !copyAngle.trim()}
+                                    onClick={async () => {
+                                        setCopyLoading(true);
+                                        setCopyError(null);
+                                        try {
+                                            const r = await fetch(`${API}/clients/${id}/copy/generate`, {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({
+                                                    framework: copyFramework,
+                                                    angle_title: copyAngle,
+                                                    angle_description: copyAngleDesc,
+                                                    product_name: client.name || "",
+                                                    variations: copyVariations
+                                                })
+                                            });
+                                            if (r.ok) {
+                                                setCopyResult(await r.json());
+                                            } else {
+                                                const err = await r.json();
+                                                setCopyError(err.detail || "Errore generazione copy");
+                                            }
+                                        } catch { setCopyError("Errore di rete"); }
+                                        setCopyLoading(false);
+                                    }}
+                                >
+                                    {copyLoading ? <><div className="spinner" style={{ width: 14, height: 14 }} />Generazione copy...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Copy</>}
+                                </button>
+                                {vocData?.data && (
+                                    <span style={{ fontSize: 11, color: "var(--lime)", fontWeight: 600 }}>● VoC caricata — il copy userà Golden Hooks reali</span>
+                                )}
+                            </div>
+                            {copyError && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 10 }}>⚠️ {copyError}</p>}
+
+                            {/* Copy Results */}
+                            {copyResult?.variations && (
+                                <div style={{ marginTop: 20 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                                        <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", margin: 0 }}>
+                                            {copyResult.variations.length} {copyResult.framework_used} variation{copyResult.variations.length > 1 ? "i" : "e"} generate
+                                        </p>
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                                        {copyResult.variations.map((v: any, i: number) => (
+                                            <div key={i} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid var(--border)", borderRadius: 10, padding: "18px 20px" }}>
+                                                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--orange)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>Variazione {i + 1}</p>
+                                                {v.hook && (
+                                                    <div style={{ marginBottom: 12 }}>
+                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 4 }}>Hook</p>
+                                                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-dark-primary)", margin: 0, lineHeight: 1.5 }}>{v.hook}</p>
+                                                    </div>
+                                                )}
+                                                {v.primary_text && (
+                                                    <div style={{ marginBottom: 12 }}>
+                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 4 }}>Primary Text</p>
+                                                        <p style={{ fontSize: 13, color: "var(--text-dark-primary)", margin: 0, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{v.primary_text}</p>
+                                                    </div>
+                                                )}
+                                                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+                                                    {v.headline && (
+                                                        <div>
+                                                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 3 }}>Headline</p>
+                                                            <p style={{ fontSize: 13, fontWeight: 700, color: "var(--navy)", margin: 0 }}>{v.headline}</p>
+                                                        </div>
+                                                    )}
+                                                    {v.description && (
+                                                        <div>
+                                                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 3 }}>Descrizione</p>
+                                                            <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>{v.description}</p>
+                                                        </div>
+                                                    )}
+                                                    {v.cta_button && (
+                                                        <div>
+                                                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 3 }}>CTA Button</p>
+                                                            <span style={{ fontSize: 12, fontWeight: 700, color: "white", background: "var(--orange)", borderRadius: 6, padding: "3px 10px" }}>{v.cta_button}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {copyResult.copy_notes && (
+                                        <div style={{ marginTop: 14, padding: "12px 16px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 8 }}>
+                                            <p style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>Note Strategiche</p>
+                                            <p style={{ fontSize: 12, color: "var(--text-dark-primary)", margin: 0, lineHeight: 1.7 }}>{copyResult.copy_notes}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {!client.ad_account_id && (
