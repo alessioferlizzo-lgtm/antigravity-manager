@@ -1497,7 +1497,8 @@ async def shopify_callback(code: str, shop: str, state: str, hmac: str = ""):
     storage_service.save_metadata(client_id, metadata)
     # Redirect back to client page
     from fastapi.responses import RedirectResponse
-    return RedirectResponse(url=f"http://localhost:3001/client/{client_id}?shopify=connected")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3001")
+    return RedirectResponse(url=f"{frontend_url}/client/{client_id}?shopify=connected")
 
 
 @app.get("/clients/{client_id}/shopify/orders")
