@@ -385,7 +385,7 @@ export default function Dashboard() {
         body: JSON.stringify({ 
           feedback: scrFeedback, 
           angle_title: scrAngle?.title || "",
-          script_id: currentScript?.script_id || "script_1"
+          script_id: `script_${scrIdx + 1}`
         })
       });
       if (!r.ok) throw new Error("Errore durante la ridefinizione.");
