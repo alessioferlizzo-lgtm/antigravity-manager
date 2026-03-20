@@ -88,6 +88,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [section, setSection] = useState<WsSection>("tasks");
   const [loading, setLoading] = useState(true);
+  const [backendError, setBackendError] = useState(false);
 
   // Modals
   const [clientModal, setClientModal] = useState(false);
@@ -206,10 +207,13 @@ export default function Dashboard() {
   const [vaultSaving, setVaultSaving] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
     Promise.all([
-      fetch(`${API}/clients`).then(r => r.json()),
-      fetch(`${API}/tasks`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/clients`, { signal: controller.signal }).then(r => r.json()),
+      fetch(`${API}/tasks`, { signal: controller.signal }).then(r => r.ok ? r.json() : []),
     ]).then(([c, t]) => {
+      clearTimeout(timeout);
       const savedOrder: string[] = JSON.parse(localStorage.getItem("ag_clientOrder") || "[]");
       const sorted = savedOrder.length
         ? [...c].sort((a: Client, b: Client) => {
@@ -218,6 +222,10 @@ export default function Dashboard() {
         })
         : c;
       setClients(sorted); setTasks(t); setLoading(false);
+    }).catch(() => {
+      clearTimeout(timeout);
+      setLoading(false);
+      setBackendError(true);
     });
   }, []);
 
@@ -536,8 +544,25 @@ export default function Dashboard() {
 
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--navy)", gap: 12, color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
-      <div className="spinner" /> Caricamento...
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--navy)", gap: 16, color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
+      <div className="spinner" />
+      <div style={{ textAlign: "center" }}>
+        <div>Caricamento...</div>
+        <div style={{ fontSize: 12, marginTop: 8, color: "rgba(255,255,255,0.35)" }}>Prima apertura: attendi fino a 60 secondi</div>
+      </div>
+    </div>
+  );
+
+  if (backendError) return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--navy)", gap: 16, color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
+      <div style={{ fontSize: 32 }}>⚠️</div>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>Backend non raggiungibile</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>Il server si sta avviando. Riprova tra qualche secondo.</div>
+        <button onClick={() => window.location.reload()} style={{ padding: "10px 24px", background: "linear-gradient(135deg, #2563eb, #7c3aed)", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>
+          Ricarica
+        </button>
+      </div>
     </div>
   );
 
