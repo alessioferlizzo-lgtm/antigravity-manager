@@ -30,7 +30,7 @@ import {
 
 const API = process.env.NEXT_PUBLIC_API_URL || "${API}";
 
-type SectionType = "sorgenti" | "identita" | "analisi" | "personas" | "reports" | "ads" | "intelligence";
+type SectionType = "sorgenti" | "identita" | "analisi" | "personas" | "reports" | "intelligence";
 
 
 interface Report {
@@ -311,17 +311,6 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     const [liveError, setLiveError] = useState<string | null>(null);
     const [livePeriod, setLivePeriod] = useState("last_30d");
 
-    // Ads / Creative Intelligence section
-    const [adsDatePreset, setAdsDatePreset] = useState("last_90d");
-    const [adCreatives, setAdCreatives] = useState<any[]>([]);
-    const [adCreativesLoading, setAdCreativesLoading] = useState(false);
-    const [adCreativesError, setAdCreativesError] = useState<string | null>(null);
-    const [adsTotalCount, setAdsTotalCount] = useState(0);
-    const [creativeAnalysis, setCreativeAnalysis] = useState<string | null>(null);
-    const [creativeAnalysisLoading, setCreativeAnalysisLoading] = useState(false);
-    const [savedIntelligence, setSavedIntelligence] = useState<any>(null);
-    const [expandedAd, setExpandedAd] = useState<string | null>(null);
-
     // Intelligence section state
     const [battlecards, setBattlecards] = useState<any>(null);
     const [battlecardsLoading, setBattlecardsLoading] = useState(false);
@@ -339,15 +328,6 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     const [vocLoading, setVocLoading] = useState(false);
     const [vocData, setVocData] = useState<any>(null);
     const [vocError, setVocError] = useState<string | null>(null);
-
-    // Copy Generator
-    const [copyFramework, setCopyFramework] = useState("PAS");
-    const [copyAngle, setCopyAngle] = useState("");
-    const [copyAngleDesc, setCopyAngleDesc] = useState("");
-    const [copyVariations, setCopyVariations] = useState(2);
-    const [copyLoading, setCopyLoading] = useState(false);
-    const [copyResult, setCopyResult] = useState<any>(null);
-    const [copyError, setCopyError] = useState<string | null>(null);
 
     // Personas Specifiche
     const [newPersonaTheme, setNewPersonaTheme] = useState("");
@@ -370,16 +350,6 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         }
     }, [section, client.ad_account_id, livePeriod]);
 
-    // Load saved creative intelligence when entering Ads section
-    useEffect(() => {
-        if (section === "ads" && client.ad_account_id) {
-            fetch(`${API}/live-ads/creative-intelligence/${id}`)
-                .then(r => r.ok ? r.json() : null)
-                .then(d => { if (d?.analysis) setSavedIntelligence(d); })
-                .catch(() => {});
-        }
-    }, [section, client.ad_account_id]);
-
     async function fetchLiveMetrics(period: string) {
         setLiveLoading(true);
         setLiveError(null);
@@ -395,44 +365,6 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
             setLiveError("Errore di rete. Verifica che il backend sia attivo.");
         }
         setLiveLoading(false);
-    }
-
-    async function fetchAdCreatives() {
-        if (!client.ad_account_id) return;
-        setAdCreativesLoading(true);
-        setAdCreativesError(null);
-        try {
-            const r = await fetch(`${API}/live-ads/creatives/${id}?date_preset=${adsDatePreset}`);
-            if (r.ok) {
-                const d = await r.json();
-                setAdCreatives(d.ads || []);
-                setAdsTotalCount(d.total_ads || 0);
-            } else {
-                const err = await r.json();
-                setAdCreativesError(err.detail || "Errore nel caricamento delle inserzioni.");
-            }
-        } catch {
-            setAdCreativesError("Errore di rete. Verifica che il backend sia attivo.");
-        }
-        setAdCreativesLoading(false);
-    }
-
-    async function analyzeCreatives() {
-        if (!adCreatives.length) return;
-        setCreativeAnalysisLoading(true);
-        try {
-            const r = await fetch(`${API}/live-ads/analyze-creatives/${id}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ads: adCreatives, date_preset: adsDatePreset }),
-            });
-            if (r.ok) {
-                const d = await r.json();
-                setCreativeAnalysis(d.analysis);
-                setSavedIntelligence(d);
-            }
-        } catch { /* noop */ }
-        setCreativeAnalysisLoading(false);
     }
 
     async function load() {
@@ -754,10 +686,9 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         { key: "sorgenti", icon: LinkIcon, label: "Sorgenti" },
         { key: "identita", icon: PaintBrushIcon, label: "Identità" },
         { key: "analisi", icon: ChartBarIcon, label: "Analisi & VoC" },
-        { key: "intelligence", icon: BoltIcon, label: "Strategic Intelligence" },
+        { key: "intelligence", icon: BoltIcon, label: "Strategia Avanzata" },
         { key: "personas", icon: UserGroupIcon, label: "Buyer Personas" },
         { key: "reports", icon: ChartBarIcon, label: "Reports" },
-        { key: "ads", icon: RocketLaunchIcon, label: "Creatività Ads" },
     ];
 
 
@@ -1232,8 +1163,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                 {/* ══ ANALISI ══ */}
                 {section === "analisi" && (
                     <div style={{ maxWidth: "100%" }}>
-                        <h1 className="page-title" style={{ marginBottom: 6 }}>Analisi</h1>
-                        <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 28 }}>SWOT, obiettivi e strategia</p>
+                        <h1 className="page-title" style={{ marginBottom: 6 }}>Analisi di Mercato & VoC</h1>
+                        <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 28 }}>Ricerca di mercato, analisi SWOT, Voice of Customer — il fondamento di ogni strategia</p>
 
                         {/* CTA Genera */}
                         <div className="card" style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1462,8 +1393,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                     <div style={{ maxWidth: "100%" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
                             <div>
-                                <h1 className="page-title" style={{ marginBottom: 6 }}>Strategic Intelligence</h1>
-                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Battlecard competitive, analisi psicografica 3 livelli, visual brief e roadmap stagionale</p>
+                                <h1 className="page-title" style={{ marginBottom: 6 }}>Strategia Avanzata</h1>
+                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Analisi competitor, psicografia profonda, visual brief e pianificazione stagionale — dalla guida metodologica</p>
                             </div>
                         </div>
 
@@ -1471,7 +1402,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         <div className="card" style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <div>
                                 <p style={{ fontWeight: 700, fontSize: 13, color: "var(--navy)" }}>Genera tutta l&apos;intelligence in una volta</p>
-                                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Battlecards + Psicografica + Visual Brief + Stagionalità — tutto in parallelo</p>
+                                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Competitor Battlecard + Analisi Psicografica + Visual Brief + Calendario Stagionale — tutto in parallelo</p>
                             </div>
                             <button
                                 className="btn btn-orange"
@@ -1497,7 +1428,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         <div className="card" style={{ marginBottom: 16 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                                 <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span style={{ fontSize: 16 }}>⚔️</span> Competitor Battlecards
+                                    <span style={{ fontSize: 16 }}>⚔️</span> Competitor Battlecard
                                 </span>
                                 <button className="btn btn-ghost btn-sm" disabled={battlecardsLoading} onClick={async () => {
                                     setBattlecardsLoading(true);
@@ -1676,7 +1607,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         <div className="card" style={{ marginBottom: 16 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                                 <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span style={{ fontSize: 16 }}>📅</span> Seasonality Roadmap
+                                    <span style={{ fontSize: 16 }}>📅</span> Calendario Stagionale e Roadmap
                                 </span>
                                 <button className="btn btn-ghost btn-sm" disabled={seasonalityLoading} onClick={async () => {
                                     setSeasonalityLoading(true);
@@ -2172,368 +2103,6 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                     </div>
                                 ))}
                             </div>
-                        )}
-                    </div>
-                )}
-
-                {/* ══ ADS / CREATIVE INTELLIGENCE ══ */}
-                {section === "ads" && (
-                    <div style={{ maxWidth: "100%" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
-                            <div>
-                                <h1 className="page-title" style={{ marginBottom: 6 }}>Creatività & Intelligence Ads</h1>
-                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Copy generator, analisi inserzioni reali, angoli vincenti</p>
-                            </div>
-                        </div>
-
-                        {/* ── Copy Generator ── */}
-                        <div className="card" style={{ marginBottom: 24 }}>
-                            <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                                <span style={{ fontSize: 16 }}>✍️</span> Copy Generator — Meta Ads
-                            </span>
-                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
-                                Genera copy strutturato con framework professionali (PAS, AIDA, BAB…) partendo dall&apos;angolo scelto e dalla VoC analysis.
-                            </p>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                                <div>
-                                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Framework</label>
-                                    <select className="input" value={copyFramework} onChange={e => setCopyFramework(e.target.value)}>
-                                        <option value="PAS">PAS — Problem · Agitate · Solution</option>
-                                        <option value="AIDA">AIDA — Attention · Interest · Desire · Action</option>
-                                        <option value="BAB">BAB — Before · After · Bridge</option>
-                                        <option value="HOOK_BODY_CTA">Hook · Body · CTA</option>
-                                        <option value="4C">4C — Clear · Concise · Compelling · Credible</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Variazioni</label>
-                                    <select className="input" value={copyVariations} onChange={e => setCopyVariations(Number(e.target.value))}>
-                                        <option value={1}>1 variazione</option>
-                                        <option value={2}>2 variazioni</option>
-                                        <option value={3}>3 variazioni</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div style={{ marginBottom: 12 }}>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Angolo / Titolo</label>
-                                <input
-                                    className="input"
-                                    style={{ width: "100%" }}
-                                    placeholder="Es: 'La paura di invecchiare male' oppure 'Smetti di sprecare soldi in palestra'"
-                                    value={copyAngle}
-                                    onChange={e => setCopyAngle(e.target.value)}
-                                />
-                            </div>
-
-                            <div style={{ marginBottom: 16 }}>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Descrizione angolo (opzionale)</label>
-                                <textarea
-                                    className="input"
-                                    rows={2}
-                                    style={{ width: "100%", fontSize: 12 }}
-                                    placeholder="Contesto aggiuntivo sull'angolo, target specifico, tone of voice..."
-                                    value={copyAngleDesc}
-                                    onChange={e => setCopyAngleDesc(e.target.value)}
-                                />
-                            </div>
-
-                            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                                <button
-                                    className="btn btn-orange"
-                                    disabled={copyLoading || !copyAngle.trim()}
-                                    onClick={async () => {
-                                        setCopyLoading(true);
-                                        setCopyError(null);
-                                        try {
-                                            const r = await fetch(`${API}/clients/${id}/copy/generate`, {
-                                                method: "POST",
-                                                headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({
-                                                    framework: copyFramework,
-                                                    angle_title: copyAngle,
-                                                    angle_description: copyAngleDesc,
-                                                    product_name: client.name || "",
-                                                    variations: copyVariations
-                                                })
-                                            });
-                                            if (r.ok) {
-                                                setCopyResult(await r.json());
-                                            } else {
-                                                const err = await r.json();
-                                                setCopyError(err.detail || "Errore generazione copy");
-                                            }
-                                        } catch { setCopyError("Errore di rete"); }
-                                        setCopyLoading(false);
-                                    }}
-                                >
-                                    {copyLoading ? <><div className="spinner" style={{ width: 14, height: 14 }} />Generazione copy...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Copy</>}
-                                </button>
-                                {vocData?.data && (
-                                    <span style={{ fontSize: 11, color: "var(--lime)", fontWeight: 600 }}>● VoC caricata — il copy userà Golden Hooks reali</span>
-                                )}
-                            </div>
-                            {copyError && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 10 }}>⚠️ {copyError}</p>}
-
-                            {/* Copy Results */}
-                            {copyResult?.variations && (
-                                <div style={{ marginTop: 20 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                                        <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", margin: 0 }}>
-                                            {copyResult.variations.length} {copyResult.framework_used} variation{copyResult.variations.length > 1 ? "i" : "e"} generate
-                                        </p>
-                                    </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                                        {copyResult.variations.map((v: any, i: number) => (
-                                            <div key={i} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid var(--border)", borderRadius: 10, padding: "18px 20px" }}>
-                                                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--orange)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>Variazione {i + 1}</p>
-                                                {v.hook && (
-                                                    <div style={{ marginBottom: 12 }}>
-                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 4 }}>Hook</p>
-                                                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-dark-primary)", margin: 0, lineHeight: 1.5 }}>{v.hook}</p>
-                                                    </div>
-                                                )}
-                                                {v.primary_text && (
-                                                    <div style={{ marginBottom: 12 }}>
-                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 4 }}>Primary Text</p>
-                                                        <p style={{ fontSize: 13, color: "var(--text-dark-primary)", margin: 0, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{v.primary_text}</p>
-                                                    </div>
-                                                )}
-                                                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", paddingTop: 12, borderTop: "1px solid var(--border)" }}>
-                                                    {v.headline && (
-                                                        <div>
-                                                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 3 }}>Headline</p>
-                                                            <p style={{ fontSize: 13, fontWeight: 700, color: "var(--navy)", margin: 0 }}>{v.headline}</p>
-                                                        </div>
-                                                    )}
-                                                    {v.description && (
-                                                        <div>
-                                                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 3 }}>Descrizione</p>
-                                                            <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>{v.description}</p>
-                                                        </div>
-                                                    )}
-                                                    {v.cta_button && (
-                                                        <div>
-                                                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em", marginBottom: 3 }}>CTA Button</p>
-                                                            <span style={{ fontSize: 12, fontWeight: 700, color: "white", background: "var(--orange)", borderRadius: 6, padding: "3px 10px" }}>{v.cta_button}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {copyResult.copy_notes && (
-                                        <div style={{ marginTop: 14, padding: "12px 16px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 8 }}>
-                                            <p style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>Note Strategiche</p>
-                                            <p style={{ fontSize: 12, color: "var(--text-dark-primary)", margin: 0, lineHeight: 1.7 }}>{copyResult.copy_notes}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {!client.ad_account_id && (
-                            <div className="card" style={{ textAlign: "center", padding: 40 }}>
-                                <RocketLaunchIcon style={{ width: 40, height: 40, color: "var(--text-muted)", margin: "0 auto 12px" }} />
-                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Configura un Ad Account Meta nella sezione Sorgenti per abilitare l&apos;analisi creatività.</p>
-                            </div>
-                        )}
-
-                        {client.ad_account_id && (
-                            <>
-                                {/* Saved intelligence banner */}
-                                {savedIntelligence && !creativeAnalysis && (
-                                    <div className="card" style={{ marginBottom: 20, border: "1px solid rgba(199,239,0,0.2)", background: "rgba(199,239,0,0.03)" }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                <span style={{ fontSize: 14 }}>🧠</span>
-                                                <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-dark-primary)" }}>Ultima Analisi Salvata</span>
-                                                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                                                    {savedIntelligence.ads_count} ads · {savedIntelligence.period} · {new Date(savedIntelligence.generated_at).toLocaleDateString("it-IT")}
-                                                </span>
-                                            </div>
-                                            <button
-                                                className="btn btn-ghost btn-sm"
-                                                style={{ fontSize: 11 }}
-                                                onClick={() => setCreativeAnalysis(savedIntelligence.analysis)}
-                                            >
-                                                <EyeIcon style={{ width: 13, height: 13 }} /> Visualizza
-                                            </button>
-                                        </div>
-                                        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
-                                            Questa intelligence è già disponibile all&apos;Esperto Andromeda e alla generazione angoli.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Fetch controls */}
-                                <div className="card" style={{ marginBottom: 20 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                                        <select
-                                            className="input"
-                                            style={{ fontSize: 12, padding: "6px 10px", maxWidth: 200 }}
-                                            value={adsDatePreset}
-                                            onChange={e => setAdsDatePreset(e.target.value)}
-                                        >
-                                            <option value="last_30d">Ultimi 30 giorni</option>
-                                            <option value="last_90d">Ultimi 90 giorni</option>
-                                            <option value="last_quarter">Ultimo trimestre</option>
-                                            <option value="last_year">Ultimo anno</option>
-                                            <option value="maximum">Tutto lo storico</option>
-                                        </select>
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={fetchAdCreatives}
-                                            disabled={adCreativesLoading}
-                                        >
-                                            {adCreativesLoading
-                                                ? <><div className="spinner" style={{ width: 14, height: 14 }} />Caricamento ads...</>
-                                                : <><MagnifyingGlassIcon style={{ width: 15, height: 15 }} />Carica Inserzioni</>
-                                            }
-                                        </button>
-                                        {adCreatives.length > 0 && (
-                                            <button
-                                                className="btn btn-secondary"
-                                                onClick={analyzeCreatives}
-                                                disabled={creativeAnalysisLoading}
-                                            >
-                                                {creativeAnalysisLoading
-                                                    ? <><div className="spinner" style={{ width: 14, height: 14 }} />Analisi AI in corso...</>
-                                                    : <><SparklesIcon style={{ width: 15, height: 15 }} />Analizza con AI</>
-                                                }
-                                            </button>
-                                        )}
-                                        {adCreatives.length > 0 && (
-                                            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                                                {adCreatives.length} ads caricate (su {adsTotalCount} totali)
-                                            </span>
-                                        )}
-                                    </div>
-                                    {adCreativesError && (
-                                        <p style={{ fontSize: 12, color: "#ef4444", marginTop: 10, marginBottom: 0 }}>⚠️ {adCreativesError}</p>
-                                    )}
-                                </div>
-
-                                {/* AI Analysis result */}
-                                {(creativeAnalysis || creativeAnalysisLoading) && (
-                                    <div className="card" style={{ marginBottom: 20, border: "1px solid rgba(199,239,0,0.2)" }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                <SparklesIcon style={{ width: 16, height: 16, color: "var(--lime)" }} />
-                                                <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-dark-primary)" }}>Analisi Strategica Creatività</span>
-                                                {creativeAnalysisLoading && <div className="spinner" />}
-                                            </div>
-                                            {creativeAnalysis && (
-                                                <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => setCreativeAnalysis(null)}>
-                                                    <XMarkIcon style={{ width: 13, height: 13 }} /> Chiudi
-                                                </button>
-                                            )}
-                                        </div>
-                                        {creativeAnalysis && (
-                                            <div style={{ fontSize: 13, lineHeight: 1.8, color: "var(--text-dark-primary)" }}>
-                                                <FormatText text={creativeAnalysis} />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Ads list */}
-                                {adCreatives.length > 0 && (
-                                    <div>
-                                        <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>
-                                            Inserzioni — ordinate per CTR
-                                        </p>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                            {[...adCreatives].sort((a, b) => (b.ctr || 0) - (a.ctr || 0)).map((ad, i) => {
-                                                const key = ad.ad_id || String(i);
-                                                const isExpanded = expandedAd === key;
-                                                const hasCreative = ad.body || ad.title;
-                                                const imgUrl = ad.thumbnail_url || ad.image_url;
-                                                return (
-                                                    <div
-                                                        key={key}
-                                                        className="card"
-                                                        style={{ padding: "12px 16px", cursor: hasCreative ? "pointer" : "default", transition: "border-color .15s", border: isExpanded ? "1px solid rgba(199,239,0,0.35)" : "1px solid var(--border)" }}
-                                                        onClick={() => hasCreative && setExpandedAd(isExpanded ? null : key)}
-                                                    >
-                                                        {/* Row summary */}
-                                                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                                                            {imgUrl && (
-                                                                // eslint-disable-next-line @next/next/no-img-element
-                                                                <img src={imgUrl} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
-                                                            )}
-                                                            {!imgUrl && (
-                                                                <div style={{ width: 48, height: 48, borderRadius: 6, background: "rgba(0,0,0,0.06)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                                    <PhotoIcon style={{ width: 20, height: 20, color: "var(--text-muted)" }} />
-                                                                </div>
-                                                            )}
-                                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dark-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                                    {ad.ad_name || "—"}
-                                                                </div>
-                                                                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                                    {ad.campaign_name}
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ display: "flex", gap: 12, flexShrink: 0, fontSize: 12 }}>
-                                                                {[
-                                                                    { l: "Spend", v: `€${ad.spend}`, c: "#6366f1" },
-                                                                    { l: "CTR", v: `${ad.ctr}%`, c: ad.ctr >= 2 ? "#10b981" : ad.ctr >= 1 ? "#f59e0b" : "#ef4444" },
-                                                                    { l: "CPC", v: `€${ad.cpc}`, c: "#3b82f6" },
-                                                                    { l: "Conv", v: ad.conversioni || "—", c: "#f97316" },
-                                                                    { l: "CPA", v: ad.cpa ? `€${ad.cpa}` : "—", c: "#ec4899" },
-                                                                ].map(m => (
-                                                                    <div key={m.l} style={{ textAlign: "center" }}>
-                                                                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "#9ca3af", letterSpacing: ".06em" }}>{m.l}</div>
-                                                                        <div style={{ fontWeight: 700, color: m.c }}>{m.v}</div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                            {hasCreative && (
-                                                                <ChevronIcon expanded={isExpanded} />
-                                                            )}
-                                                        </div>
-
-                                                        {/* Expanded creative */}
-                                                        {isExpanded && (
-                                                            <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
-                                                                {ad.title && (
-                                                                    <div style={{ marginBottom: 8 }}>
-                                                                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em" }}>Headline</span>
-                                                                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dark-primary)", marginTop: 4, marginBottom: 0 }}>{ad.title}</p>
-                                                                    </div>
-                                                                )}
-                                                                {ad.body && (
-                                                                    <div style={{ marginBottom: 8 }}>
-                                                                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em" }}>Copy</span>
-                                                                        <p style={{ fontSize: 13, color: "var(--text-dark-primary)", marginTop: 4, marginBottom: 0, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{ad.body}</p>
-                                                                    </div>
-                                                                )}
-                                                                {ad.description && (
-                                                                    <div>
-                                                                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: ".07em" }}>Descrizione</span>
-                                                                        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, marginBottom: 0 }}>{ad.description}</p>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {!adCreatives.length && !adCreativesLoading && !adCreativesError && (
-                                    <div className="card" style={{ textAlign: "center", padding: 40 }}>
-                                        <MagnifyingGlassIcon style={{ width: 36, height: 36, color: "var(--text-muted)", margin: "0 auto 12px" }} />
-                                        <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 0 }}>
-                                            Seleziona un periodo e clicca &quot;Carica Inserzioni&quot; per analizzare le creatività.
-                                        </p>
-                                    </div>
-                                )}
-                            </>
                         )}
                     </div>
                 )}
