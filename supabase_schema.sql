@@ -71,6 +71,6 @@ ON CONFLICT (id) DO NOTHING;
 
 -- ── POLICY STORAGE (publishable key può leggere/scrivere) ─────────
 
-CREATE POLICY IF NOT EXISTS "logos_all"    ON storage.objects FOR ALL USING (bucket_id = 'logos')    WITH CHECK (bucket_id = 'logos');
-CREATE POLICY IF NOT EXISTS "rawdata_all"  ON storage.objects FOR ALL USING (bucket_id = 'raw-data') WITH CHECK (bucket_id = 'raw-data');
-CREATE POLICY IF NOT EXISTS "graphics_all" ON storage.objects FOR ALL USING (bucket_id = 'graphics') WITH CHECK (bucket_id = 'graphics');
+CREATE POLICY "logos_all"    ON storage.objects FOR ALL USING (bucket_id = 'logos')    WITH CHECK (bucket_id = 'logos');
+CREATE POLICY "rawdata_all"  ON storage.objects FOR ALL USING (bucket_id = 'raw-data') WITH CHECK (bucket_id = 'raw-data');
+CREATE POLICY "graphics_all" ON storage.objects FOR ALL USING (bucket_id = 'graphics') WITH CHECK (bucket_id = 'graphics');
