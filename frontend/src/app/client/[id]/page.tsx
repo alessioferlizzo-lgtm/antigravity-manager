@@ -939,6 +939,55 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                              </div>
                          </div>
 
+                         {/* Meta Pixel ID */}
+                         <div className="card" style={{ marginBottom: 16 }}>
+                             <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                                 <span style={{ fontSize: 16 }}>📡</span> Meta Pixel & Token
+                             </span>
+                             <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
+                                 Pixel ID per il tracciamento conversioni. Token opzionale solo se diverso da quello globale.
+                             </p>
+                             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                     <input
+                                         className="input"
+                                         style={{ maxWidth: 320 }}
+                                         placeholder="Es: 1234567890123456"
+                                         value={client.pixel_id || ""}
+                                         onChange={e => setClient((p: any) => ({ ...p, pixel_id: e.target.value }))}
+                                         onBlur={async e => {
+                                             await fetch(`${API}/clients/${id}/meta-pixel`, {
+                                                 method: "PATCH",
+                                                 headers: { "Content-Type": "application/json" },
+                                                 body: JSON.stringify({ pixel_id: e.target.value.trim(), meta_access_token: client.meta_access_token || "" })
+                                             });
+                                         }}
+                                     />
+                                     <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Pixel ID</span>
+                                     {client.pixel_id && <span style={{ fontSize: 11, color: "#10b981", fontWeight: 600 }}>✓ Configurato</span>}
+                                 </div>
+                                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                     <input
+                                         className="input"
+                                         style={{ maxWidth: 320 }}
+                                         type="password"
+                                         placeholder="Token specifico cliente (opzionale)"
+                                         value={client.meta_access_token || ""}
+                                         onChange={e => setClient((p: any) => ({ ...p, meta_access_token: e.target.value }))}
+                                         onBlur={async e => {
+                                             await fetch(`${API}/clients/${id}/meta-pixel`, {
+                                                 method: "PATCH",
+                                                 headers: { "Content-Type": "application/json" },
+                                                 body: JSON.stringify({ pixel_id: client.pixel_id || "", meta_access_token: e.target.value.trim() })
+                                             });
+                                         }}
+                                     />
+                                     <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Token (override)</span>
+                                     {client.meta_access_token && <span style={{ fontSize: 11, color: "#10b981", fontWeight: 600 }}>✓ Impostato</span>}
+                                 </div>
+                             </div>
+                         </div>
+
                          {/* Shopify Connection */}
                          <ShopifyCard clientId={id} client={client} setClient={setClient} />
 

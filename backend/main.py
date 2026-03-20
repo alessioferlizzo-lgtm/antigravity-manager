@@ -794,6 +794,21 @@ async def update_ad_account(client_id: str, update: AdAccountUpdate):
     storage_service.save_metadata(client_id, metadata)
     return {"ad_account_id": metadata["ad_account_id"]}
 
+class MetaPixelUpdate(BaseModel):
+    pixel_id: Optional[str] = ""
+    meta_access_token: Optional[str] = ""
+
+@app.patch("/clients/{client_id}/meta-pixel")
+async def update_meta_pixel(client_id: str, update: MetaPixelUpdate):
+    metadata = storage_service.get_metadata(client_id)
+    metadata["pixel_id"] = update.pixel_id.strip() if update.pixel_id else ""
+    if update.meta_access_token:
+        metadata["meta_access_token"] = update.meta_access_token.strip()
+    elif update.meta_access_token == "":
+        metadata.pop("meta_access_token", None)
+    storage_service.save_metadata(client_id, metadata)
+    return {"pixel_id": metadata.get("pixel_id", ""), "has_token": bool(metadata.get("meta_access_token"))}
+
 @app.get("/clients/{client_id}/meta-ads-insights")
 async def fetch_meta_ads_insights(client_id: str, date_preset: str = "last_30d", since: str = "", until: str = ""):
     metadata = storage_service.get_metadata(client_id)
@@ -801,7 +816,7 @@ async def fetch_meta_ads_insights(client_id: str, date_preset: str = "last_30d",
     if not ad_account_id:
         raise HTTPException(status_code=400, detail="Ad Account ID non configurato per questo cliente. Aggiungilo nella sezione Sorgenti.")
 
-    token = os.getenv("META_ACCESS_TOKEN")
+    token = metadata.get("meta_access_token") or os.getenv("META_ACCESS_TOKEN")
     if not token:
         raise HTTPException(status_code=500, detail="META_ACCESS_TOKEN non trovato nel file .env")
 
@@ -1011,7 +1026,7 @@ async def get_client_campaigns(client_id: str, date_preset: str = "last_30d", si
     ad_id = metadata.get("ad_account_id", "").strip()
     if not ad_id:
         raise HTTPException(status_code=400, detail="Ad Account ID non configurato per questo cliente")
-    token = os.getenv("META_ACCESS_TOKEN")
+    token = metadata.get("meta_access_token") or os.getenv("META_ACCESS_TOKEN")
     if not token:
         raise HTTPException(status_code=500, detail="META_ACCESS_TOKEN non trovato nel file .env")
     if not ad_id.startswith("act_"):
@@ -1235,7 +1250,7 @@ async def get_ad_creatives(client_id: str, date_preset: str = "last_90d", since:
     ad_id = metadata.get("ad_account_id", "").strip()
     if not ad_id:
         raise HTTPException(status_code=400, detail="Ad Account ID non configurato per questo cliente")
-    token = os.getenv("META_ACCESS_TOKEN")
+    token = metadata.get("meta_access_token") or os.getenv("META_ACCESS_TOKEN")
     if not token:
         raise HTTPException(status_code=500, detail="META_ACCESS_TOKEN non trovato nel file .env")
     if not ad_id.startswith("act_"):
@@ -1724,9 +1739,10 @@ async def generate_script_endpoint(client_id: str, request: ScriptRequest):
         script_path = scripts_dir / f"{script_id}.md"
         with open(script_path, "w") as f:
             f.write(script)
-        
+
         scripts.append({"script_id": script_id, "content": script})
-    
+
+    storage_service.sync_scripts(client_id)
     return scripts
 
 @app.post("/clients/{client_id}/feedback")
@@ -1789,7 +1805,8 @@ async def submit_feedback(client_id: str, request: FeedbackRequest):
     script_path = scripts_dir / f"{script_id}.md"
     with open(script_path, "w") as f:
         f.write(new_script)
-        
+
+    storage_service.sync_scripts(client_id)
     return {"script_id": script_id, "content": new_script}
 
 

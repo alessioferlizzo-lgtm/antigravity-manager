@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS public.client_graphics_meta (
     updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.client_scripts (
+    client_id   TEXT PRIMARY KEY REFERENCES public.clients(id) ON DELETE CASCADE,
+    data        JSONB NOT NULL DEFAULT '{}',
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── DISABILITA RLS (tool interno, nessuna auth multi-utente) ──────
 
 ALTER TABLE public.clients               DISABLE ROW LEVEL SECURITY;
@@ -59,6 +65,7 @@ ALTER TABLE public.client_reports        DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.creative_intelligence DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.client_angles         DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.client_graphics_meta  DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_scripts        DISABLE ROW LEVEL SECURITY;
 
 -- ── BUCKET STORAGE ───────────────────────────────────────────────
 

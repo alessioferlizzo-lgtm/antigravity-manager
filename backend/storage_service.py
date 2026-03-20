@@ -330,6 +330,19 @@ class StorageService:
             "updated_at": datetime.now().isoformat()
         }).execute())
 
+    def sync_scripts(self, client_id: str):
+        scripts_dir = CLIENTS_DIR / client_id / "scripts"
+        if not scripts_dir.exists():
+            return
+        scripts = {}
+        for f in sorted(scripts_dir.glob("*.md")):
+            scripts[f.stem] = f.read_text()
+        if scripts:
+            _sb_run(lambda sb: sb.table("client_scripts").upsert({
+                "client_id": client_id, "data": scripts,
+                "updated_at": datetime.now().isoformat()
+            }).execute())
+
     # ─── LOGO SUPABASE HELPERS ────────────────────────────────────
     def save_logo_to_supabase(self, client_id: str, logo_filename: str, content: bytes, ext: str):
         mime_map = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -484,5 +497,18 @@ class StorageService:
             print(f"[Supabase] Synced {len(result.data)} graphics meta")
         except Exception as e:
             print(f"[Supabase] Graphics meta sync failed: {e}")
+
+        # 8. Scripts
+        try:
+            result = sb.table("client_scripts").select("client_id, data").execute()
+            for row in result.data:
+                scripts_dir = CLIENTS_DIR / row["client_id"] / "scripts"
+                scripts_dir.mkdir(parents=True, exist_ok=True)
+                for script_id, content in row["data"].items():
+                    with open(scripts_dir / f"{script_id}.md", "w") as f:
+                        f.write(content)
+            print(f"[Supabase] Synced {len(result.data)} script sets")
+        except Exception as e:
+            print(f"[Supabase] Scripts sync failed: {e}")
 
         print("[Supabase] Startup sync complete ✓")
