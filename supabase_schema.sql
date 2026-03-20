@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════
--- ANTIGRAVITY MANAGER — Supabase Schema
--- Esegui questo script UNA SOLA VOLTA nel SQL Editor di Supabase
+-- ANTIGRAVITY MANAGER — Supabase Schema (idempotente)
+-- Può essere rieseguito più volte senza errori
 -- ═══════════════════════════════════════════════════════════════
 
 -- ── TABELLE ──────────────────────────────────────────────────────
