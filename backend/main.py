@@ -1232,65 +1232,187 @@ async def fetch_existing_angles(client_id: str):
 
 
 # ══════════════════════════════════════════════════════════
-#  VOICE OF CUSTOMER — Review Mining & Psychographic VoC
+#  VOICE OF CUSTOMER — Review Mining automatico da URL
 # ══════════════════════════════════════════════════════════
 
 class VoCRequest(BaseModel):
-    reviews_text: Optional[str] = ""          # paste raw reviews
-    google_reviews_url: Optional[str] = ""    # URL Google Maps/Reviews (info only, shown in UI)
-    include_meta_comments: Optional[bool] = False  # fetch FB/IG comments via API (if ad_account connected)
+    instagram_url: Optional[str] = ""      # https://www.instagram.com/handle/
+    google_reviews_url: Optional[str] = "" # https://maps.google.com/... oppure https://g.page/...
+    include_competitors: Optional[bool] = True  # se True cerca anche sui competitor del cliente
+
+
+async def _fetch_instagram_comments(ig_handle: str, token: str, ig_user_id: str = "") -> list[str]:
+    """Recupera commenti recenti dal profilo Instagram tramite Meta Graph API."""
+    comments = []
+    try:
+        # Se abbiamo già l'IG Business Account ID del cliente, usiamo Business Discovery
+        # per leggere i post del profilo target (che può essere il brand stesso o un competitor)
+        async with httpx.AsyncClient(timeout=30.0) as hc:
+            # Step 1: trova l'IG Business Account ID del cliente (per usare Business Discovery)
+            if not ig_user_id:
+                me_resp = await hc.get(
+                    "https://graph.facebook.com/v19.0/me/accounts",
+                    params={"access_token": token, "fields": "id,name,instagram_business_account"}
+                )
+                pages = me_resp.json().get("data", [])
+                for page in pages:
+                    iba = page.get("instagram_business_account", {})
+                    if iba.get("id"):
+                        ig_user_id = iba["id"]
+                        break
+
+            if not ig_user_id:
+                return comments
+
+            # Step 2: Business Discovery sul profilo target
+            disc_resp = await hc.get(
+                f"https://graph.facebook.com/v19.0/{ig_user_id}",
+                params={
+                    "fields": f"business_discovery.fields(username,media_count,media{{caption,comments_count,comments{{text,timestamp}}}})",
+                    "username": ig_handle,
+                    "access_token": token,
+                }
+            )
+            disc_data = disc_resp.json()
+            media_list = disc_data.get("business_discovery", {}).get("media", {}).get("data", [])
+            for post in media_list[:15]:  # ultimi 15 post
+                caption = post.get("caption", "")
+                if caption:
+                    comments.append(f"[POST] {caption[:300]}")
+                for c in post.get("comments", {}).get("data", []):
+                    txt = c.get("text", "").strip()
+                    if txt and len(txt) > 10:
+                        comments.append(txt)
+    except Exception as e:
+        print(f"IG fetch error for {ig_handle}: {e}")
+    return comments
+
+
+async def _fetch_google_reviews_text(url: str) -> str:
+    """Tenta di scaricare il testo della pagina Google Maps/Reviews."""
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "it-IT,it;q=0.9",
+        }
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as hc:
+            resp = await hc.get(url, headers=headers)
+            text = resp.text
+            # Estrai solo il testo visibile (rimuovi HTML)
+            text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
+            text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+            text = re.sub(r'<[^>]+>', ' ', text)
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text[:6000]
+    except Exception as e:
+        print(f"Google reviews fetch error: {e}")
+        return ""
+
 
 @app.post("/clients/{client_id}/voc/analyze")
 async def analyze_voc(client_id: str, request: VoCRequest):
-    """Analizza recensioni e commenti con AI per estrarre VoC, Golden Hooks, Pain Points, ICP signals."""
+    """
+    Raccoglie automaticamente recensioni e commenti da Instagram e Google Reviews,
+    poi usa l'AI per estrarre VoC intelligence: Golden Hooks, Pain Points, ICP signals, ecc.
+    Se i dati del brand sono scarsi, include anche i competitor.
+    """
     metadata = storage_service.get_metadata(client_id)
     client_name = metadata.get("name", client_id)
+    token = metadata.get("meta_access_token") or os.getenv("META_ACCESS_TOKEN", "")
 
-    reviews_input = (request.reviews_text or "").strip()
+    collected_texts: list[str] = []
+    sources_used: list[str] = []
 
-    # If no reviews pasted, raise error
-    if not reviews_input:
-        raise HTTPException(status_code=400, detail="Incolla almeno alcune recensioni nel campo testo per avviare l'analisi.")
+    # ── 1. Instagram del brand ────────────────────────────────────────────────
+    ig_handle = ""
+    if request.instagram_url:
+        ig_handle = extract_ig_handle(request.instagram_url)
 
+    # Prova anche dai link salvati nel profilo se non fornito esplicitamente
+    if not ig_handle:
+        for link in metadata.get("links", []):
+            url_val = link.get("url", "") if isinstance(link, dict) else str(link)
+            if "instagram.com" in url_val:
+                ig_handle = extract_ig_handle(url_val)
+                break
+
+    if ig_handle and token:
+        ig_comments = await _fetch_instagram_comments(ig_handle, token)
+        if ig_comments:
+            collected_texts.extend(ig_comments)
+            sources_used.append(f"Instagram @{ig_handle} ({len(ig_comments)} commenti/caption)")
+
+    # ── 2. Google Reviews ──────────────────────────────────────────────────────
+    if request.google_reviews_url:
+        google_text = await _fetch_google_reviews_text(request.google_reviews_url)
+        if google_text and len(google_text) > 200:
+            collected_texts.append(f"[GOOGLE REVIEWS]\n{google_text}")
+            sources_used.append("Google Reviews")
+
+    # ── 3. Fallback competitor se dati scarsi ─────────────────────────────────
+    if request.include_competitors and len(collected_texts) < 5:
+        competitors = metadata.get("competitors", [])
+        for comp in competitors[:3]:
+            comp_links = comp.get("links", []) if isinstance(comp, dict) else []
+            for cl in comp_links:
+                cl_url = cl.get("url", "") if isinstance(cl, dict) else str(cl)
+                if "instagram.com" in cl_url and token:
+                    comp_handle = extract_ig_handle(cl_url)
+                    if comp_handle:
+                        comp_comments = await _fetch_instagram_comments(comp_handle, token)
+                        if comp_comments:
+                            collected_texts.extend([f"[COMPETITOR @{comp_handle}] {c}" for c in comp_comments[:20]])
+                            sources_used.append(f"Instagram competitor @{comp_handle}")
+
+    if not collected_texts:
+        raise HTTPException(
+            status_code=400,
+            detail="Nessun dato raccolto. Assicurati di avere: 1) Un link Instagram valido, 2) Un Meta Access Token configurato in Sorgenti, 3) Oppure un link Google Reviews raggiungibile."
+        )
+
+    raw_corpus = "\n".join(collected_texts)[:9000]
+
+    # ── 4. AI Analysis ────────────────────────────────────────────────────────
     system_prompt = f"""Sei un esperto di Voice of Customer (VoC) e copywriting per Meta Ads con 15 anni di esperienza.
-Il tuo compito è analizzare recensioni di clienti reali e trasformarle in intelligence strategica per creare copy e creatività che convertono.
+Il tuo compito è analizzare commenti e recensioni reali raccolti automaticamente e trasformarli in intelligence strategica.
 
-BRAND ANALIZZATO: {client_name}
+BRAND: {client_name}
+FONTI ANALIZZATE: {', '.join(sources_used)}
 
-METODOLOGIA DI ANALISI:
-Studia ogni recensione cercando:
-1. GOLDEN HOOKS: Frasi exact-match usate dai clienti che esprimono la trasformazione/risultato. Queste sono le frasi più potenti da usare letteralmente nel copy.
-2. PAIN POINTS: Il "prima" — frustrazioni, problemi, dolori che i clienti avevano prima del prodotto/servizio.
-3. DESIDERI & OUTCOME: Il "dopo" — cosa i clienti volevano ottenere e cosa hanno ottenuto.
-4. OBIEZIONI RICORRENTI: Dubbi, esitazioni, scuse che i clienti menzionano (spesso nel "inizialmente ero scettico..." o "avevo paura che...").
+NOTA IMPORTANTE: Alcuni testi potrebbero venire da competitor (marcati [COMPETITOR]).
+Usali per capire cosa vogliono i clienti nel settore, ma distinguili dal brand principale.
+I testi [POST] sono caption Instagram del brand — contengono il linguaggio del brand stesso.
+I commenti non marcati sono del brand principale.
+
+METODOLOGIA:
+1. GOLDEN HOOKS: Frasi exact-match usate dai clienti reali che esprimono trasformazione/risultato. Da usare letteralmente nel copy.
+2. PAIN POINTS: Il "prima" — frustrazioni, problemi, dolori prima del prodotto.
+3. DESIDERI & OUTCOME: Il "dopo" — trasformazioni e risultati ottenuti/cercati.
+4. OBIEZIONI: Dubbi, esitazioni ("inizialmente ero scettico", "avevo paura che", "non credevo").
 5. TRIGGER PSICOGRAFICI: Motivazioni profonde, valori, identità del cliente ideale.
-6. KEYWORD ICP: Termini demografici/situazionali che definiscono il cliente ideale.
-7. SOCIAL PROOF ANGLES: Storie specifiche o risultati quantificabili da amplificare.
+6. SOCIAL PROOF ANGLES: Storie specifiche o risultati quantificabili reali.
 
-OUTPUT RICHIESTO (JSON VALIDO):
+OUTPUT (JSON VALIDO):
 {{
-  "golden_hooks": ["frase esatta 1", "frase esatta 2", ...],
-  "pain_points": ["pain point 1", "pain point 2", ...],
+  "golden_hooks": ["frase esatta 1", ...],
+  "pain_points": ["pain point 1", ...],
   "desires_outcomes": ["desiderio/risultato 1", ...],
   "objections": ["obiezione 1", ...],
   "psychographic_triggers": ["trigger 1", ...],
-  "icp_keywords": ["keyword 1", ...],
   "social_proof_angles": ["storia/dato specifico 1", ...],
-  "top_copy_phrases": ["frase pronta per copy 1", "frase 2", ...],
-  "icp_summary": "Descrizione del cliente ideale in 2-3 frasi basata sulle recensioni",
-  "strategic_insights": "Insights strategici su cosa differenzia questo brand e come posizionarlo nel copy"
+  "top_copy_phrases": ["frase pronta per copy 1", ...],
+  "icp_summary": "Chi è il cliente ideale in 2-3 frasi basate sui dati reali",
+  "strategic_insights": "Insights su come posizionare il brand nel copy basati sui dati"
 }}
 
-Rispondi SOLO con JSON valido, senza markdown, senza prefissi."""
-
-    user_msg = f"RECENSIONI DA ANALIZZARE:\n\n{reviews_input[:8000]}"
+Rispondi SOLO con JSON valido."""
 
     try:
         raw = await ai_service._call_ai(
             model="anthropic/claude-sonnet-4-5",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_msg}
+                {"role": "user", "content": f"DATI RACCOLTI:\n\n{raw_corpus}"}
             ],
             temperature=0.4,
             max_tokens=2000
@@ -1299,19 +1421,20 @@ Rispondi SOLO con JSON valido, senza markdown, senza prefissi."""
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
 
-    # Save to file and metadata
-    voc_path = CLIENTS_DIR / client_id / "voc_analysis.json"
-    voc_path.parent.mkdir(parents=True, exist_ok=True)
     result = {
         "data": voc_data,
-        "reviews_count": len([l for l in reviews_input.split("\n") if l.strip()]),
+        "sources": sources_used,
+        "texts_count": len(collected_texts),
         "generated_at": datetime.now().isoformat(),
-        "google_reviews_url": request.google_reviews_url or ""
+        "instagram_url": request.instagram_url or "",
+        "google_reviews_url": request.google_reviews_url or "",
     }
+
+    voc_path = CLIENTS_DIR / client_id / "voc_analysis.json"
+    voc_path.parent.mkdir(parents=True, exist_ok=True)
     with open(voc_path, "w") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
-    # Also sync to Supabase metadata
     metadata["voc_analysis"] = result
     storage_service.save_metadata(client_id, metadata)
 
@@ -1324,7 +1447,6 @@ async def get_voc(client_id: str):
     if voc_path.exists():
         with open(voc_path, "r") as f:
             return json.load(f)
-    # Fallback: check metadata
     metadata = storage_service.get_metadata(client_id)
     if "voc_analysis" in metadata:
         return metadata["voc_analysis"]

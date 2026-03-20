@@ -1292,41 +1292,44 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                 <span style={{ fontSize: 16 }}>🎯</span> Voice of Customer — Review Mining
                             </span>
                             <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
-                                Incolla recensioni Google, commenti Instagram o qualsiasi testo di clienti reali. L&apos;AI estrae Golden Hooks, Pain Points, Obiezioni e ICP signals pronti per il copy.
+                                Inserisci i link e il sistema raccoglie automaticamente commenti Instagram e recensioni Google.
+                                Se i dati sono scarsi, analizza anche i competitor già salvati nel profilo.
                             </p>
 
-                            {/* Google Reviews URL (info only) */}
-                            <div style={{ marginBottom: 12 }}>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Link Google Reviews (opzionale — per riferimento)</label>
-                                <input
-                                    className="input"
-                                    style={{ maxWidth: 480 }}
-                                    placeholder="https://maps.google.com/..."
-                                    value={vocGoogleUrl}
-                                    onChange={e => setVocGoogleUrl(e.target.value)}
-                                />
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+                                <div>
+                                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>
+                                        Instagram del brand
+                                    </label>
+                                    <input
+                                        className="input"
+                                        style={{ maxWidth: 420 }}
+                                        placeholder="https://www.instagram.com/nomebrand/"
+                                        value={vocReviews}
+                                        onChange={e => setVocReviews(e.target.value)}
+                                    />
+                                    <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                                        Recupera commenti recenti dai post tramite Meta API (richiede token configurato in Sorgenti)
+                                    </p>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>
+                                        Google Reviews
+                                    </label>
+                                    <input
+                                        className="input"
+                                        style={{ maxWidth: 420 }}
+                                        placeholder="https://maps.google.com/... oppure https://g.page/..."
+                                        value={vocGoogleUrl}
+                                        onChange={e => setVocGoogleUrl(e.target.value)}
+                                    />
+                                </div>
                             </div>
 
-                            {/* Reviews text */}
-                            <div style={{ marginBottom: 14 }}>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".07em", display: "block", marginBottom: 6 }}>Testo recensioni / commenti</label>
-                                <textarea
-                                    className="input"
-                                    rows={8}
-                                    style={{ width: "100%", fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 }}
-                                    placeholder={"Incolla qui le recensioni, una per riga:\n\n⭐⭐⭐⭐⭐ Ho provato questo prodotto e ha cambiato completamente...\n⭐⭐⭐⭐ Ero scettico all'inizio perché avevo già provato altri...\n⭐⭐⭐⭐⭐ Risultati incredibili in soli 30 giorni..."}
-                                    value={vocReviews}
-                                    onChange={e => setVocReviews(e.target.value)}
-                                />
-                                <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                                    {vocReviews.split("\n").filter(l => l.trim()).length} righe incollate
-                                </p>
-                            </div>
-
-                            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}>
+                            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
                                 <button
                                     className="btn btn-orange"
-                                    disabled={vocLoading || !vocReviews.trim()}
+                                    disabled={vocLoading || (!vocReviews.trim() && !vocGoogleUrl.trim())}
                                     onClick={async () => {
                                         setVocLoading(true);
                                         setVocError(null);
@@ -1334,7 +1337,11 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                             const r = await fetch(`${API}/clients/${id}/voc/analyze`, {
                                                 method: "POST",
                                                 headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({ reviews_text: vocReviews, google_reviews_url: vocGoogleUrl })
+                                                body: JSON.stringify({
+                                                    instagram_url: vocReviews.trim(),
+                                                    google_reviews_url: vocGoogleUrl.trim(),
+                                                    include_competitors: true
+                                                })
                                             });
                                             if (r.ok) {
                                                 const d = await r.json();
@@ -1347,11 +1354,12 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                         setVocLoading(false);
                                     }}
                                 >
-                                    {vocLoading ? <><div className="spinner" style={{ width: 14, height: 14 }} />Analisi VoC in corso...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Analizza VoC</>}
+                                    {vocLoading ? <><div className="spinner" style={{ width: 14, height: 14 }} />Raccolta dati in corso...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Avvia VoC Analysis</>}
                                 </button>
                                 {vocData?.generated_at && (
                                     <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                                         Ultima analisi: {new Date(vocData.generated_at).toLocaleDateString("it-IT")}
+                                        {vocData.sources?.length > 0 && ` — ${vocData.sources.join(", ")}`}
                                     </span>
                                 )}
                             </div>
