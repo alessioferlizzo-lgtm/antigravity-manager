@@ -1,0 +1,76 @@
+-- ═══════════════════════════════════════════════════════════════
+-- ANTIGRAVITY MANAGER — Supabase Schema
+-- Esegui questo script UNA SOLA VOLTA nel SQL Editor di Supabase
+-- ═══════════════════════════════════════════════════════════════
+
+-- ── TABELLE ──────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.clients (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL DEFAULT '',
+    metadata    JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.client_research (
+    client_id   TEXT PRIMARY KEY REFERENCES public.clients(id) ON DELETE CASCADE,
+    content     TEXT NOT NULL DEFAULT '',
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id          TEXT PRIMARY KEY,
+    data        JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.client_reports (
+    id          TEXT PRIMARY KEY,
+    client_id   TEXT NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+    data        JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.creative_intelligence (
+    client_id   TEXT PRIMARY KEY REFERENCES public.clients(id) ON DELETE CASCADE,
+    data        JSONB NOT NULL DEFAULT '{}',
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.client_angles (
+    client_id   TEXT PRIMARY KEY REFERENCES public.clients(id) ON DELETE CASCADE,
+    data        JSONB NOT NULL DEFAULT '[]',
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.client_graphics_meta (
+    client_id   TEXT PRIMARY KEY REFERENCES public.clients(id) ON DELETE CASCADE,
+    data        JSONB NOT NULL DEFAULT '[]',
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── DISABILITA RLS (tool interno, nessuna auth multi-utente) ──────
+
+ALTER TABLE public.clients               DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_research       DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks                 DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_reports        DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.creative_intelligence DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_angles         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_graphics_meta  DISABLE ROW LEVEL SECURITY;
+
+-- ── BUCKET STORAGE ───────────────────────────────────────────────
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES
+    ('logos',    'logos',    true,  10485760),
+    ('raw-data', 'raw-data', false, 52428800),
+    ('graphics', 'graphics', true,  20971520)
+ON CONFLICT (id) DO NOTHING;
+
+-- ── POLICY STORAGE (publishable key può leggere/scrivere) ─────────
+
+CREATE POLICY IF NOT EXISTS "logos_all"    ON storage.objects FOR ALL USING (bucket_id = 'logos')    WITH CHECK (bucket_id = 'logos');
+CREATE POLICY IF NOT EXISTS "rawdata_all"  ON storage.objects FOR ALL USING (bucket_id = 'raw-data') WITH CHECK (bucket_id = 'raw-data');
+CREATE POLICY IF NOT EXISTS "graphics_all" ON storage.objects FOR ALL USING (bucket_id = 'graphics') WITH CHECK (bucket_id = 'graphics');

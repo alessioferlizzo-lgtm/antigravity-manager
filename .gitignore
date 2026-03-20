@@ -1,0 +1,17 @@
+.tmp/
+.env
+.env.local
+.env.*.local
+__pycache__/
+node_modules/
+.next/
+*.python-version
+*.log
+clients/
+tasks.json
+.venv/
+.claude/
+backend/server.log
+backend/uvicorn.log
+backend/storage/
+directives/

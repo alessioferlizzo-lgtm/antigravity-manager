@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+python-multipart
+httpx
+pypdf
+json_repair
+fal_client
+Pillow
+supabase>=2.0.0

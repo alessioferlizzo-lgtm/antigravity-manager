@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: antigravity-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: FAL_KEY
+        sync: false
+      - key: GOOGLE_AI_API_KEY
+        sync: false
+      - key: NOTION_API_KEY
+        sync: false
+      - key: NOTION_CREATIVES_DB_ID
+        sync: false
+      - key: NOTION_COPY_ENGINEERING_DB_ID
+        sync: false
+      - key: NOTION_COPY_VAULT_DB_ID
+        sync: false
+      - key: NOTION_ANGLES_VAULT_DB_ID
+        sync: false
+      - key: NOTION_GRAPHICS_VAULT_DB_ID
+        sync: false
+      - key: NOTION_CLIENTS_PERSONAS_DB_ID
+        sync: false
+      - key: SHOPIFY_CLIENT_ID
+        sync: false
+      - key: SHOPIFY_CLIENT_SECRET
+        sync: false
+      - key: SHOPIFY_REDIRECT_URI
+        sync: false
