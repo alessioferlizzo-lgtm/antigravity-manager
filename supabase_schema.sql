@@ -76,7 +76,11 @@ VALUES
     ('graphics', 'graphics', true,  20971520)
 ON CONFLICT (id) DO NOTHING;
 
--- ── POLICY STORAGE (publishable key può leggere/scrivere) ─────────
+-- ── POLICY STORAGE (DROP IF EXISTS per idempotenza) ──────────────
+
+DROP POLICY IF EXISTS "logos_all"    ON storage.objects;
+DROP POLICY IF EXISTS "rawdata_all"  ON storage.objects;
+DROP POLICY IF EXISTS "graphics_all" ON storage.objects;
 
 CREATE POLICY "logos_all"    ON storage.objects FOR ALL USING (bucket_id = 'logos')    WITH CHECK (bucket_id = 'logos');
 CREATE POLICY "rawdata_all"  ON storage.objects FOR ALL USING (bucket_id = 'raw-data') WITH CHECK (bucket_id = 'raw-data');
