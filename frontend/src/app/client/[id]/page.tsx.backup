@@ -2111,8 +2111,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                 )}
 
                 {/* ══ ANALISI COMPLETA ══ */}
-                {section === "analisi-strategica" && (
-                    <AnalisiStrategicaSection clientId={id} apiUrl={API} />
+                {section === "analisi-completa" && (
+                    <CompleteAnalysisSection clientId={id} apiUrl={API} />
                 )}
             </main>
         </div>

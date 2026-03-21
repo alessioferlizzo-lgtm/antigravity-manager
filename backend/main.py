@@ -3537,7 +3537,7 @@ async def generate_complete_client_analysis(client_id: str):
         instagram_comments=social_data  # Già inclusi sopra
     )
     
-    # Salva in Supabase
+    # Salva in Supabase (14 sezioni)
     try:
         await supabase.table("client_complete_analysis").upsert({
             "client_id": client_id,
@@ -3553,11 +3553,13 @@ async def generate_complete_client_analysis(client_id: str):
             "reviews_voc": complete_analysis.get("reviews_voc", {}),
             "battlecards": complete_analysis.get("battlecards", {}),
             "seasonal_roadmap": complete_analysis.get("seasonal_roadmap", {}),
+            "psychographic_analysis": complete_analysis.get("psychographic_analysis", {}),
+            "visual_brief": complete_analysis.get("visual_brief", {}),
             "updated_at": "NOW()"
         }).execute()
     except Exception as e:
         print(f"Errore salvataggio Supabase: {e}")
-    
+
     return {"success": True, "analysis": complete_analysis}
 
 

@@ -240,76 +240,87 @@ async def generate_complete_analysis_orchestrator(
     instagram_comments: str = ""
 ) -> Dict[str, Any]:
     """
-    ORCHESTRATOR: Genera tutte le 12 sezioni dell'analisi completa
+    ORCHESTRATOR: Genera tutte le 14 sezioni dell'analisi completa
     Chiama tutte le funzioni in sequenza e raccoglie i risultati
     """
     from .ai_service_complete_analysis import CompleteAnalysisService
     from . import ai_service_complete_analysis_part2 as part2
     from . import ai_service_complete_analysis_part3 as part3
+    from . import ai_service_complete_analysis_part4 as part4
 
     service = CompleteAnalysisService(ai_service)
 
-    print("🔄 Generazione analisi completa: Step 1/12 - Brand Identity...")
+    print("🔄 Generazione analisi completa: Step 1/14 - Brand Identity...")
     brand_identity = await service.generate_brand_identity(
         client_info, site_url, social_data, raw_docs, ads_data
     )
 
-    print("🔄 Step 2/12 - Brand Values...")
+    print("🔄 Step 2/14 - Brand Values...")
     brand_values = await service.generate_brand_values(
         client_info, site_url, social_data, raw_docs
     )
 
-    print("🔄 Step 3/12 - Product Portfolio...")
+    print("🔄 Step 3/14 - Product Portfolio...")
     product_portfolio = await service.generate_product_portfolio(
         client_info, site_url, raw_docs
     )
 
-    print("🔄 Step 4/12 - Reasons to Buy...")
+    print("🔄 Step 4/14 - Reasons to Buy...")
     reasons_to_buy = await service.generate_reasons_to_buy(
         client_info, brand_identity, product_portfolio, brand_values
     )
 
-    print("🔄 Step 5/12 - Customer Personas...")
+    print("🔄 Step 5/14 - Customer Personas...")
     customer_personas = await service.generate_customer_personas(
         client_info, brand_identity, product_portfolio, social_data, ads_data
     )
 
-    print("🔄 Step 6/12 - Content Matrix...")
+    print("🔄 Step 6/14 - Content Matrix...")
     content_matrix = await part2.generate_content_matrix(
         ai_service, customer_personas, product_portfolio
     )
 
-    print("🔄 Step 7/12 - Product Vertical Analysis...")
+    print("🔄 Step 7/14 - Product Vertical Analysis...")
     product_vertical = await part2.generate_product_vertical_analysis(
         ai_service, product_portfolio, customer_personas, site_url
     )
 
-    print("🔄 Step 8/12 - Brand Voice...")
+    print("🔄 Step 8/14 - Brand Voice...")
     brand_voice = await part2.generate_brand_voice(
         ai_service, site_url, social_data, ads_data
     )
 
-    print("🔄 Step 9/12 - Objections Management...")
+    print("🔄 Step 9/14 - Objections Management...")
     objections = await part2.generate_objections_management(
         ai_service, site_url, brand_voice, product_portfolio
     )
 
-    print("🔄 Step 10/12 - Reviews Analysis (Voice of Customer)...")
+    print("🔄 Step 10/14 - Reviews Analysis (Voice of Customer)...")
     reviews_voc = await part2.generate_reviews_analysis(
         ai_service, social_data, google_reviews, instagram_comments
     )
 
-    print("🔄 Step 11/12 - Competitor Battlecards...")
+    print("🔄 Step 11/14 - Competitor Battlecards...")
     battlecards = await part3.generate_competitor_battlecards(
         ai_service, client_info, site_url, brand_identity, brand_values, product_portfolio
     )
 
-    print("🔄 Step 12/12 - Seasonal Roadmap...")
+    print("🔄 Step 12/14 - Seasonal Roadmap...")
     seasonal_roadmap = await part3.generate_seasonal_roadmap(
         ai_service, client_info, product_portfolio, customer_personas
     )
 
-    print("✅ Analisi completa generata con successo!")
+    print("🔄 Step 13/14 - Psychographic Analysis...")
+    psychographic_analysis = await part4.generate_psychographic_analysis(
+        ai_service, client_info, site_url, social_data, ads_data, customer_personas
+    )
+
+    print("🔄 Step 14/14 - Visual Brief...")
+    visual_brief = await part4.generate_visual_brief(
+        ai_service, client_info, brand_identity, brand_voice, site_url, social_data
+    )
+
+    print("✅ Analisi completa generata con successo - 14 sezioni!")
 
     return {
         "brand_identity": brand_identity,
@@ -323,5 +334,7 @@ async def generate_complete_analysis_orchestrator(
         "objections": objections,
         "reviews_voc": reviews_voc,
         "battlecards": battlecards,
-        "seasonal_roadmap": seasonal_roadmap
+        "seasonal_roadmap": seasonal_roadmap,
+        "psychographic_analysis": psychographic_analysis,
+        "visual_brief": visual_brief
     }
