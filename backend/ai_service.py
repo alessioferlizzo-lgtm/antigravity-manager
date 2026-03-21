@@ -503,3 +503,30 @@ Rispondi SOLO con JSON:
         if fb != -1 and lb > fb:
             raw = raw[fb:lb+1]
         return json_repair.loads(raw)
+
+
+    # ══════════════════════════════════════════════════════════
+    #  COMPLETE ANALYSIS — Metodologia dalla guida
+    # ══════════════════════════════════════════════════════════
+
+    async def generate_complete_analysis(
+        self,
+        client_info: Dict[str, Any],
+        site_url: str,
+        social_data: str = "",
+        ads_data: str = "",
+        raw_docs: str = "",
+        google_reviews: str = "",
+        instagram_comments: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Genera l'analisi completa in 12 sezioni seguendo la metodologia della guida.
+        Orchestrator che chiama tutte le funzioni di analisi.
+        """
+        from .ai_service_complete_analysis_part3 import generate_complete_analysis_orchestrator
+        return await generate_complete_analysis_orchestrator(
+            self, client_info, site_url, social_data, ads_data,
+            raw_docs, google_reviews, instagram_comments
+        )
+
+ai_service = AIService()

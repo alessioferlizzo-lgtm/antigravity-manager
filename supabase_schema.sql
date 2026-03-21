@@ -56,16 +56,35 @@ CREATE TABLE IF NOT EXISTS public.client_scripts (
     updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.client_complete_analysis (
+    client_id             TEXT PRIMARY KEY REFERENCES public.clients(id) ON DELETE CASCADE,
+    brand_identity        JSONB NOT NULL DEFAULT '{}',
+    brand_values          JSONB NOT NULL DEFAULT '{}',
+    product_portfolio     JSONB NOT NULL DEFAULT '{}',
+    reasons_to_buy        JSONB NOT NULL DEFAULT '{}',
+    customer_personas     JSONB NOT NULL DEFAULT '[]',
+    content_matrix        JSONB NOT NULL DEFAULT '[]',
+    product_vertical      JSONB NOT NULL DEFAULT '[]',
+    brand_voice           JSONB NOT NULL DEFAULT '{}',
+    objections            JSONB NOT NULL DEFAULT '{}',
+    reviews_voc           JSONB NOT NULL DEFAULT '{}',
+    battlecards           JSONB NOT NULL DEFAULT '{}',
+    seasonal_roadmap      JSONB NOT NULL DEFAULT '{}',
+    created_at            TIMESTAMPTZ DEFAULT NOW(),
+    updated_at            TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── DISABILITA RLS (tool interno, nessuna auth multi-utente) ──────
 
-ALTER TABLE public.clients               DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.client_research       DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tasks                 DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.client_reports        DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.creative_intelligence DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.client_angles         DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.client_graphics_meta  DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.client_scripts        DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients                 DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_research         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks                   DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_reports          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.creative_intelligence   DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_angles           DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_graphics_meta    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_scripts          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_complete_analysis DISABLE ROW LEVEL SECURITY;
 
 -- ── BUCKET STORAGE ───────────────────────────────────────────────
 
