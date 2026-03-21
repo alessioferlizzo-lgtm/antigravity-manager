@@ -3370,203 +3370,88 @@ def serve_creative_image(filename: str):
 @app.post("/clients/{client_id}/analysis/complete")
 async def generate_complete_client_analysis(client_id: str):
     """
-    Genera l'analisi completa del cliente in 12 sezioni.
-    Segue ESATTAMENTE la metodologia della guida.
+    🔥 NUOVO SISTEMA - Raccolta Dati Massiva + Analisi Completa
+
+    Genera l'analisi completa del cliente in 14 sezioni.
+    Segue ESATTAMENTE la metodologia della guida Francesco Agostinis.
+
+    RACCOGLIE DATI DA:
+    - Sito web completo (prodotti, servizi, prezzi)
+    - Google Reviews (150+)
+    - Instagram completo (tutti post + commenti)
+    - Meta Ads (top 100 ads + copy)
+    - Competitor (zona + Italia top) + loro recensioni/Instagram
     """
     metadata = storage_service.get_metadata(client_id)
-    client_info = {"id": client_id, "name": metadata.get("name", ""), "metadata": metadata}
-    
-    # Ottieni il sito URL
-    site_url = ""
-    links = metadata.get("links", [])
-    for link in links:
-        url = link.get("url", "") if isinstance(link, dict) else str(link)
-        if url and ("http" in url.lower()):
-            site_url = url
-            break
-    
+    client_info = {
+        "id": client_id,
+        "name": metadata.get("name", ""),
+        "industry": metadata.get("industry", ""),
+        "location": metadata.get("location", ""),
+        "metadata": metadata
+    }
+
+    # 🔥 RACCOLTA DATI MASSIVA
+    from .data_collection_service import DataCollectionService
+
+    data_collector = DataCollectionService(ai_service)
+
+    print(f"\n{'='*80}")
+    print(f"🚀 ANALISI STRATEGICA COMPLETA: {client_info['name']}")
+    print(f"{'='*80}\n")
+
+    # Raccogli TUTTI i dati
+    all_data = await data_collector.collect_all_data(client_id, metadata)
+
+    site_url = all_data.get("site_url", "")
     if not site_url:
         raise HTTPException(status_code=400, detail="Nessun sito web fornito per il cliente. Aggiungi un link nella sezione Sorgenti.")
     
-    # Raccogli dati social (Instagram)
-    social_data = ""
-    ig_token = metadata.get("meta_access_token") or os.getenv("META_ACCESS_TOKEN")
-    if ig_token:
-        # Usa la stessa logica di fetch Instagram del market research
-        # (Riutilizza il codice esistente dall'endpoint /research)
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as hc:
-                me_resp = await hc.get(
-                    "https://graph.facebook.com/v19.0/me",
-                    params={"fields": "id,instagram_business_account", "access_token": ig_token}
-                )
-            me_data = me_resp.json()
-            ig_user_id = me_data.get("instagram_business_account", {}).get("id")
-            
-            if ig_user_id:
-                # Prendi l'handle Instagram del cliente
-                client_ig_handle = None
-                for link in links:
-                    url = link.get("url", "") if isinstance(link, dict) else str(link)
-                    if "instagram.com" in url:
-                        client_ig_handle = url.strip("/").split("/")[-1].replace("@", "")
-                        break
-                
-                if client_ig_handle:
-                    async with httpx.AsyncClient(timeout=30.0) as hc:
-                        disc = (await hc.get(
-                            f"https://graph.facebook.com/v19.0/{ig_user_id}",
-                            params={
-                                "fields": f"business_discovery.username({client_ig_handle}){{followers_count,media_count,biography,media{{id,caption,like_count,comments_count,timestamp,media_type}}}}",
-                                "access_token": ig_token,
-                            }
-                        )).json()
-                    
-                    if "business_discovery" in disc:
-                        ig_data = disc["business_discovery"]
-                        posts = ig_data.get("media", {}).get("data", [])
-                        sorted_posts = sorted(posts, key=lambda p: p.get("like_count", 0) + p.get("comments_count", 0), reverse=True)
-                        
-                        social_data += f"ACCOUNT INSTAGRAM: @{client_ig_handle}\n"
-                        social_data += f"Follower: {ig_data.get('followers_count', 0):,}\n"
-                        social_data += f"Bio: {ig_data.get('biography', '')}\n\n"
-                        social_data += "TOP POST (engagement più alto):\n"
-                        
-                        for p in sorted_posts[:6]:
-                            caption = (p.get("caption", "") or "")[:200]
-                            social_data += f"[{p.get('timestamp','')[:10]}] {p.get('media_type','')} | ❤️ {p.get('like_count',0):,} likes | 💬 {p.get('comments_count',0)} commenti\n"
-                            social_data += f"Caption: {caption}\n\n"
-                        
-                        # Fetch commenti dai top 3 post
-                        async def fetch_comments(post_id):
-                            try:
-                                async with httpx.AsyncClient(timeout=15.0) as hc:
-                                    data = (await hc.get(
-                                        f"https://graph.facebook.com/v19.0/{post_id}/comments",
-                                        params={"fields": "text,like_count", "access_token": ig_token, "limit": 20}
-                                    )).json().get("data", [])
-                                return data
-                            except:
-                                return []
-                        
-                        comments_results = await asyncio.gather(*[fetch_comments(p.get("id")) for p in sorted_posts[:3]])
-                        for post, comm_data in zip(sorted_posts[:3], comments_results):
-                            if comm_data:
-                                social_data += f"\nCOMMENTI POST (❤️{post.get('like_count',0)} likes):\n"
-                                for c in comm_data[:15]:
-                                    text = c.get("text", "").strip()
-                                    if text:
-                                        social_data += f"- \"{text}\"\n"
-        except Exception as e:
-            print(f"Errore raccolta dati social: {e}")
-    
-    # Raccogli dati ads (Meta Ads Manager)
-    ads_data = ""
-    ad_account_id = metadata.get("ad_account_id", "").strip()
-    if ad_account_id and ig_token:
-        try:
-            if not ad_account_id.startswith("act_"):
-                ad_account_id = f"act_{ad_account_id}"
-            
-            async with httpx.AsyncClient(timeout=30.0) as hc:
-                insights_resp = await hc.get(
-                    f"https://graph.facebook.com/v19.0/{ad_account_id}/insights",
-                    params={
-                        "fields": "ad_id,ad_name,adset_name,campaign_name,spend,ctr,cpc,actions,cost_per_action_type",
-                        "level": "ad",
-                        "date_preset": "last_90d",
-                        "limit": 30,
-                        "access_token": ig_token
-                    }
-                )
-            
-            insights_data = insights_resp.json()
-            if "data" in insights_data:
-                ads = insights_data["data"]
-                ads.sort(key=lambda x: float(x.get("ctr", 0) or 0), reverse=True)
-                
-                ads_data += f"ADS ATTIVE (ultimi 90 giorni) — Top {len(ads[:15])} per CTR:\n\n"
-                
-                for i, ad in enumerate(ads[:15], 1):
-                    ads_data += f"AD #{i}: {ad.get('ad_name', 'N/D')}\n"
-                    ads_data += f"Campaign: {ad.get('campaign_name', '')}\n"
-                    ads_data += f"CTR: {ad.get('ctr', 0)}% | CPC: €{ad.get('cpc', 0)} | Spend: €{ad.get('spend', 0)}\n"
-                    
-                    # Prova a recuperare il copy
-                    try:
-                        async with httpx.AsyncClient(timeout=15.0) as hc:
-                            creative_resp = await hc.get(
-                                f"https://graph.facebook.com/v19.0/{ad.get('ad_id')}",
-                                params={
-                                    "fields": "creative{body,title}",
-                                    "access_token": ig_token
-                                }
-                            )
-                        creative_data = creative_resp.json()
-                        creative = creative_data.get("creative", {})
-                        if creative.get("body"):
-                            ads_data += f"Copy: {creative['body'][:200]}\n"
-                        if creative.get("title"):
-                            ads_data += f"Title: {creative['title']}\n"
-                    except:
-                        pass
-                    
-                    ads_data += "\n"
-        except Exception as e:
-            print(f"Errore raccolta dati ads: {e}")
-    
-    # Raccogli documenti caricati
+    # Estrai i dati raccolti
+    site_content = all_data.get("site_content", {})
+    google_reviews = all_data.get("google_reviews", {})
+    instagram_data = all_data.get("instagram_data", {})
+    meta_ads = all_data.get("meta_ads", {})
+    competitor_data = all_data.get("competitor_data", {})
+
+    # Raccogli documenti caricati (raw-data folder)
     raw_docs = ""
     raw_files = list((CLIENTS_DIR / client_id / "raw-data").glob("*")) if (CLIENTS_DIR / client_id / "raw-data").exists() else []
-    for file_path in raw_files[:5]:  # Max 5 documenti
+    for file_path in raw_files[:5]:
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()[:3000]  # Max 3000 char per file
+                content = f.read()[:3000]
                 raw_docs += f"\n\n--- {file_path.name} ---\n{content}"
         except:
             pass
-    
-    # 🔥 NUOVO: Scraping profondo del sito con Perplexity
-    print(f"🌐 Scraping sito web {site_url} con Perplexity...")
-    site_content = ""
-    try:
-        scraping_prompt = f"""Analizza il sito web {site_url} e fornisci un'estrazione completa e dettagliata del contenuto.
 
-Naviga e raccogli:
-1. **Homepage**: Testo completo, headline, value proposition
-2. **Chi Siamo / About**: Storia, mission, valori
-3. **Pagine Prodotto**: Nome prodotti, descrizioni, ingredienti, prezzi
-4. **FAQ**: Domande frequenti e risposte
-5. **Blog** (se presente): Temi principali
-6. **Footer**: Informazioni aziendali, certificazioni
+    # Formatta dati per l'analisi
+    import json
 
-Fornisci un report strutturato con TUTTO il testo trovato, senza riassumere."""
+    site_content_text = json.dumps(site_content, ensure_ascii=False) if isinstance(site_content, dict) else str(site_content)
+    google_reviews_text = json.dumps(google_reviews, ensure_ascii=False) if isinstance(google_reviews, dict) else str(google_reviews)
+    instagram_text = json.dumps(instagram_data, ensure_ascii=False) if isinstance(instagram_data, dict) else str(instagram_data)
+    ads_text = json.dumps(meta_ads, ensure_ascii=False) if isinstance(meta_ads, dict) else str(meta_ads)
 
-        site_content = await ai_service._call_ai(
-            model="perplexity/sonar-pro",
-            messages=[{"role": "user", "content": scraping_prompt}],
-            temperature=0.1,
-            max_tokens=8000
-        )
-        print(f"✅ Scraping completato: {len(site_content)} caratteri")
-    except Exception as e:
-        print(f"⚠️  Errore scraping sito: {e}")
-        site_content = f"Sito: {site_url} (scraping fallito)"
-
-    # Chiama l'orchestrator
-    print(f"🚀 Inizio generazione analisi completa per {client_info['name']}...")
+    # 🔥 CHIAMA L'ORCHESTRATOR CON TUTTI I DATI RACCOLTI
+    print(f"\n{'='*80}")
+    print(f"🧠 GENERAZIONE ANALISI STRATEGICA")
+    print(f"{'='*80}\n")
 
     complete_analysis = await ai_service.generate_complete_analysis(
         client_info=client_info,
         site_url=site_url,
-        site_content=site_content,  # 🔥 NUOVO
-        social_data=social_data,
-        ads_data=ads_data,
+        site_content=site_content_text,
+        social_data=instagram_text,
+        ads_data=ads_text,
         raw_docs=raw_docs,
-        google_reviews="",  # TODO: implementare scraping Google Reviews se necessario
-        instagram_comments=social_data  # Già inclusi sopra
+        google_reviews=google_reviews_text,
+        instagram_comments=instagram_text
     )
-    
+
+    # Aggiungi dati competitor all'analisi
+    complete_analysis["competitor_data"] = competitor_data
+
     # Salva in Supabase (14 sezioni)
     try:
         await supabase.table("client_complete_analysis").upsert({
