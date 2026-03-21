@@ -6,6 +6,9 @@ Sezioni 4-14 seguendo metodologia Francesco Agostinis
 import json
 from typing import Dict, Any, List
 
+# Import Instagram formatter dal modulo principale
+from .ai_service_strategic_analysis import format_instagram_data
+
 
 async def generate_reasons_to_buy(
     ai_service,
@@ -89,7 +92,7 @@ REGOLE:
 
     try:
         response = await ai_service._call_ai(
-            model="perplexity/sonar-pro",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.3,
             max_tokens=3000
@@ -125,6 +128,9 @@ async def generate_customer_personas(
 
     client_name = client_info.get("name", "")
 
+    # 🔥 FORMATTA DATI INSTAGRAM
+    instagram_formatted = format_instagram_data(social_data) if social_data else "Dati Instagram non disponibili"
+
     system_prompt = f"""Agisci come un Customer Intelligence Analyst esperto in segmentazione psicografica.
 
 Crea 10 IDEAL CUSTOMER PERSONAS (ICP) MOLTO SPECIFICHE per {client_name}.
@@ -135,8 +141,7 @@ BRAND IDENTITY:
 PRODOTTI:
 {json.dumps(product_portfolio, ensure_ascii=False)[:2000]}
 
-DATI SOCIAL:
-{social_data[:1500] if social_data else "Non disponibili"}
+{instagram_formatted}
 
 DATI ADS:
 {ads_data[:1500] if ads_data else "Non disponibili"}
@@ -187,7 +192,7 @@ REGOLE:
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",  # Claude migliore per creatività personas
+            model="anthropic/claude-3.5-sonnet",  # Claude migliore per creatività personas
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.4,
             max_tokens=5000
@@ -260,7 +265,7 @@ REGOLE:
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.4,
             max_tokens=4000
@@ -294,6 +299,9 @@ async def generate_brand_voice(
 
     client_name = client_info.get("name", "")
 
+    # 🔥 FORMATTA DATI INSTAGRAM
+    instagram_formatted = format_instagram_data(social_data) if social_data else "Dati Instagram non disponibili"
+
     system_prompt = f"""Agisci come un Brand Linguist & Psicologo della Comunicazione.
 
 Analizza il linguaggio di {client_name} e crea le BRAND VOICE & COMMUNICATION GUIDELINES.
@@ -301,8 +309,7 @@ Analizza il linguaggio di {client_name} e crea le BRAND VOICE & COMMUNICATION GU
 CONTENUTO SITO:
 {site_content[:5000]}
 
-SOCIAL:
-{social_data[:2000] if social_data else "Non disponibili"}
+{instagram_formatted}
 
 OUTPUT RICHIESTO:
 
@@ -366,7 +373,7 @@ Rispondi SOLO con JSON:
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.3,
             max_tokens=4000

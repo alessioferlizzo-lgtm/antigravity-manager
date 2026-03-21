@@ -3452,28 +3452,49 @@ async def generate_complete_client_analysis(client_id: str):
     # Aggiungi dati competitor all'analisi
     complete_analysis["competitor_data"] = competitor_data
 
-    # Salva in Supabase (14 sezioni)
+    # 🔥 AGGIORNA METADATA CON I NUOVI DATI (SWOT, OBIETTIVI, STRATEGIA)
+    if complete_analysis.get("swot"):
+        metadata["swot"] = complete_analysis["swot"]
+    if complete_analysis.get("objectives"):
+        metadata["objectives"] = complete_analysis["objectives"]
+    if complete_analysis.get("strategy"):
+        metadata["strategy"] = complete_analysis["strategy"]
+
+    # Salva metadata aggiornato
+    storage_service.save_metadata(client_id, metadata)
+    print("✅ Metadata aggiornato con SWOT, Obiettivi e Strategia")
+
+    # Salva in Supabase (14 sezioni + bonus)
     try:
-        await supabase.table("client_complete_analysis").upsert({
-            "client_id": client_id,
-            "brand_identity": complete_analysis.get("brand_identity", {}),
-            "brand_values": complete_analysis.get("brand_values", {}),
-            "product_portfolio": complete_analysis.get("product_portfolio", {}),
-            "reasons_to_buy": complete_analysis.get("reasons_to_buy", {}),
-            "customer_personas": complete_analysis.get("customer_personas", []),
-            "content_matrix": complete_analysis.get("content_matrix", []),
-            "product_vertical": complete_analysis.get("product_vertical", []),
-            "brand_voice": complete_analysis.get("brand_voice", {}),
-            "objections": complete_analysis.get("objections", {}),
-            "reviews_voc": complete_analysis.get("reviews_voc", {}),
-            "battlecards": complete_analysis.get("battlecards", {}),
-            "seasonal_roadmap": complete_analysis.get("seasonal_roadmap", {}),
-            "psychographic_analysis": complete_analysis.get("psychographic_analysis", {}),
-            "visual_brief": complete_analysis.get("visual_brief", {}),
-            "updated_at": "NOW()"
-        }).execute()
+        supabase = _get_sb()
+        if not supabase:
+            print("⚠️  Supabase non configurato - analisi NON salvata nel database")
+        else:
+            supabase.table("client_complete_analysis").upsert({
+                "client_id": client_id,
+                "brand_identity": complete_analysis.get("brand_identity", {}),
+                "brand_values": complete_analysis.get("brand_values", {}),
+                "product_portfolio": complete_analysis.get("product_portfolio", {}),
+                "reasons_to_buy": complete_analysis.get("reasons_to_buy", {}),
+                "customer_personas": complete_analysis.get("customer_personas", []),
+                "content_matrix": complete_analysis.get("content_matrix", []),
+                "product_vertical": complete_analysis.get("product_vertical", []),
+                "brand_voice": complete_analysis.get("brand_voice", {}),
+                "objections": complete_analysis.get("objections", {}),
+                "reviews_voc": complete_analysis.get("reviews_voc", {}),
+                "battlecards": complete_analysis.get("battlecards", {}),
+                "seasonal_roadmap": complete_analysis.get("seasonal_roadmap", {}),
+                "psychographic_analysis": complete_analysis.get("psychographic_analysis", {}),
+                "visual_brief": complete_analysis.get("visual_brief", {}),
+                # NUOVE SEZIONI
+                "swot": complete_analysis.get("swot", {}),
+                "objectives": complete_analysis.get("objectives", {}),
+                "strategy": complete_analysis.get("strategy", ""),
+                "updated_at": "NOW()"
+            }).execute()
+            print("✅ Analisi salvata in Supabase")
     except Exception as e:
-        print(f"Errore salvataggio Supabase: {e}")
+        print(f"❌ Errore salvataggio Supabase: {e}")
 
     return {"success": True, "analysis": complete_analysis}
 
@@ -3484,7 +3505,10 @@ async def get_complete_client_analysis(client_id: str):
     Recupera l'analisi completa salvata per il cliente.
     """
     try:
-        result = await supabase.table("client_complete_analysis").select("*").eq("client_id", client_id).execute()
+        supabase = _get_sb()
+        if not supabase:
+            return None
+        result = supabase.table("client_complete_analysis").select("*").eq("client_id", client_id).execute()
         if result.data and len(result.data) > 0:
             return result.data[0]
         else:
@@ -3500,7 +3524,9 @@ async def delete_complete_analysis(client_id: str):
     Elimina l'analisi completa per il cliente.
     """
     try:
-        await supabase.table("client_complete_analysis").delete().eq("client_id", client_id).execute()
+        supabase = _get_sb()
+        if supabase:
+            supabase.table("client_complete_analysis").delete().eq("client_id", client_id).execute()
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

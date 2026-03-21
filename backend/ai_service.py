@@ -16,12 +16,18 @@ if not os.getenv("OPENROUTER_API_KEY"):
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY")
 
 # DEBUG LOG al caricamento
 if OPENROUTER_API_KEY:
-    print(f"🤖 AIService: API Key caricata con successo ({OPENROUTER_API_KEY[:6]}...)")
+    print(f"🤖 AIService: OpenRouter API Key caricata ({OPENROUTER_API_KEY[:6]}...)")
 else:
-    print("❌ AIService: ERRORE! API Key non trovata nel file .env")
+    print("⚠️  AIService: OpenRouter API Key non trovata")
+
+if GOOGLE_AI_API_KEY:
+    print(f"🤖 AIService: Google AI API Key caricata ({GOOGLE_AI_API_KEY[:6]}...)")
+else:
+    print("⚠️  AIService: Google AI API Key non trovata")
 
 class AIService:
     def __init__(self):
@@ -33,34 +39,95 @@ class AIService:
         }
 
     async def _call_ai(self, model: str, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000) -> str:
+        """Call AI with automatic fallback to Google Gemini if OpenRouter fails (402 Payment Required)"""
+
+        # Try OpenRouter first
+        if OPENROUTER_API_KEY:
+            try:
+                payload = {
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens
+                }
+                async with httpx.AsyncClient(timeout=600.0) as client:
+                    response = await client.post(OPENROUTER_URL, headers=self.headers, json=payload)
+                    response.raise_for_status()
+                    result = response.json()
+
+                    # LOGGING ESPLICITO PER L'UTENTE
+                    model_used = result.get("model", model)
+                    usage = result.get("usage", {})
+                    prompt_tokens = usage.get("prompt_tokens", 0)
+                    completion_tokens = usage.get("completion_tokens", 0)
+
+                    print(f"\n--- 🧠 CHIAMATA AI OPENROUTER ---")
+                    print(f"Modello Richiesto: {model}")
+                    print(f"Modello Risposto: {model_used}")
+                    print(f"Token: {prompt_tokens} (prompt) + {completion_tokens} (completion) = {prompt_tokens + completion_tokens}")
+                    print(f"-----------------------------\n")
+
+                    choice = result["choices"][0]
+                    finish_reason = choice.get("finish_reason", "")
+                    content = choice["message"]["content"]
+                    if finish_reason == "length":
+                        print(f"WARNING: Response truncated (finish_reason=length). Length: {len(content)}")
+                    return content
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in [401, 402, 403]:
+                    print(f"⚠️  OpenRouter: {e.response.status_code} {e.response.reason_phrase} - Switching to Google Gemini fallback")
+                else:
+                    raise
+            except Exception as e:
+                print(f"⚠️  OpenRouter error: {e} - Switching to Google Gemini fallback")
+
+        # Fallback to Google Gemini
+        if GOOGLE_AI_API_KEY:
+            print(f"\n--- 🧠 CHIAMATA AI GOOGLE GEMINI (FALLBACK) ---")
+            return await self._call_google_gemini(messages, temperature, max_tokens)
+
+        raise Exception("No AI provider available. Please configure OPENROUTER_API_KEY or GOOGLE_AI_API_KEY")
+
+    async def _call_google_gemini(self, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000) -> str:
+        """Call Google Gemini API directly"""
+        # Convert OpenAI-style messages to Gemini format
+        gemini_contents = []
+        system_instruction = None
+
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+
+            if role == "system":
+                system_instruction = content
+            elif role == "user":
+                gemini_contents.append({"role": "user", "parts": [{"text": content}]})
+            elif role == "assistant":
+                gemini_contents.append({"role": "model", "parts": [{"text": content}]})
+
         payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
+            "contents": gemini_contents,
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            }
         }
+
+        if system_instruction:
+            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+
+        # Use Gemini 1.5 Flash for speed and cost efficiency
+        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_AI_API_KEY}"
+
         async with httpx.AsyncClient(timeout=600.0) as client:
-            response = await client.post(OPENROUTER_URL, headers=self.headers, json=payload)
+            response = await client.post(gemini_url, json=payload)
             response.raise_for_status()
             result = response.json()
-            
-            # LOGGING ESPLICITO PER L'UTENTE
-            model_used = result.get("model", model)
-            usage = result.get("usage", {})
-            prompt_tokens = usage.get("prompt_tokens", 0)
-            completion_tokens = usage.get("completion_tokens", 0)
-            
-            print(f"\n--- 🧠 CHIAMATA AI ESTERNA ---")
-            print(f"Modello Richiesto: {model}")
-            print(f"Modello Risposto: {model_used}")
-            print(f"Token: {prompt_tokens} (prompt) + {completion_tokens} (completion) = {prompt_tokens + completion_tokens}")
+
+            print(f"Modello: Gemini 1.5 Flash")
             print(f"-----------------------------\n")
 
-            choice = result["choices"][0]
-            finish_reason = choice.get("finish_reason", "")
-            content = choice["message"]["content"]
-            if finish_reason == "length":
-                print(f"WARNING: Response truncated (finish_reason=length). Length: {len(content)}")
+            content = result["candidates"][0]["content"]["parts"][0]["text"]
             return content
 
     async def perform_market_research(self, client_info: Dict[str, Any], raw_data: str, user_prompt: str = "", social_data: str = "") -> Dict[str, Any]:

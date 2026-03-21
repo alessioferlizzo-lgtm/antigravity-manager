@@ -12,6 +12,73 @@ import asyncio
 import httpx
 
 
+def format_instagram_data(social_data_json: str) -> str:
+    """
+    Formatta i dati Instagram da JSON grezzo a testo leggibile per l'AI.
+
+    Trasforma:
+    {"account": {...}, "posts": [...]}
+
+    In testo strutturato con:
+    - Info account (followers, bio)
+    - Top post con engagement
+    - Commenti più significativi
+    """
+    try:
+        if not social_data_json or social_data_json == "Non disponibili":
+            return "Dati Instagram non disponibili"
+
+        data = json.loads(social_data_json) if isinstance(social_data_json, str) else social_data_json
+
+        # Se c'è un errore nei dati
+        if isinstance(data, dict) and "error" in data:
+            return f"Errore raccolta Instagram: {data['error']}"
+
+        # Estrai info account
+        account = data.get("account", {})
+        posts = data.get("posts", [])
+
+        formatted = f"""
+📸 INSTAGRAM - @{account.get('username', 'N/A')}
+
+👥 METRICHE ACCOUNT:
+   • Follower: {account.get('followers', 0):,}
+   • Post totali: {account.get('posts_count', 0)}
+   • Bio: {account.get('bio', 'N/A')}
+
+🔥 TOP POST (ordinati per engagement):
+"""
+
+        # Mostra top 30 post con engagement
+        for i, post in enumerate(posts[:30], 1):
+            caption = post.get('caption', '')[:200] if post.get('caption') else '[Nessun caption]'
+            likes = post.get('like_count', 0)
+            comments_count = post.get('comments_count', 0)
+            engagement = likes + (comments_count * 2)
+
+            formatted += f"\n{i}. POST (Engagement: {engagement:,} | ❤️ {likes} | 💬 {comments_count})"
+            formatted += f"\n   Caption: {caption}{'...' if len(post.get('caption', '')) > 200 else ''}\n"
+
+            # Mostra top commenti se presenti
+            all_comments = post.get('all_comments', [])
+            if all_comments:
+                # Ordina per like
+                top_comments = sorted(all_comments, key=lambda c: c.get('like_count', 0), reverse=True)[:5]
+                if top_comments:
+                    formatted += "   💬 Top commenti:\n"
+                    for comment in top_comments:
+                        text = comment.get('text', '')[:150]
+                        likes_c = comment.get('like_count', 0)
+                        formatted += f"      - {text} (❤️ {likes_c})\n"
+
+        formatted += f"\n📊 TOTALE: {data.get('total_posts', 0)} post raccolti, {data.get('total_comments', 0)} commenti analizzati\n"
+
+        return formatted
+
+    except Exception as e:
+        return f"Errore formattazione dati Instagram: {str(e)}\n\nDati grezzi (primi 2000 char):\n{social_data_json[:2000]}"
+
+
 class StrategicAnalysisService:
     """
     Servizio principale per generare analisi strategiche complete.
@@ -38,21 +105,73 @@ class StrategicAnalysisService:
 
         client_name = client_info.get("name", "")
         industry = client_info.get("industry", "")
+        metadata = client_info.get("metadata", {})
+
+        # 🔥 ARRICCHIMENTO DATI DAL METADATA
+        swot = metadata.get("swot", {})
+        links = metadata.get("links", [])
+        competitors = metadata.get("competitors", [])
+        objectives = metadata.get("objectives", {})
+        preferences = metadata.get("preferences", {})
+        key_products = metadata.get("key_products", [])
+
+        # Formatta i link in modo leggibile
+        links_text = "\n".join([f"- {link.get('url', link) if isinstance(link, dict) else link}" for link in links[:10]])
+
+        # Formatta competitor
+        competitors_text = ""
+        for comp in competitors[:5]:
+            comp_name = comp.get("name", "")
+            comp_links = comp.get("links", [])
+            competitors_text += f"\n**{comp_name}:**\n"
+            for cl in comp_links[:3]:
+                competitors_text += f"  - {cl.get('label', '')}: {cl.get('url', '')}\n"
+
+        # Formatta prodotti chiave
+        products_text = "\n".join([f"- {p}" for p in key_products[:10]]) if key_products else "Non specificati"
+
+        # Formatta tone & vocabolario target
+        tone_pref = preferences.get("tone", "")
+        target_vocab = preferences.get("target_vocabulary", [])
+        vocab_text = ", ".join(target_vocab[:15]) if target_vocab else "Non specificato"
+
+        # 🔥 FORMATTA DATI INSTAGRAM IN MODO LEGGIBILE
+        instagram_formatted = format_instagram_data(social_data) if social_data else "Dati Instagram non disponibili"
 
         system_prompt = f"""Agisci come un Senior Brand Strategist & Marketing Analyst con esperienza in e-commerce D2C (Direct-to-Consumer).
 
-Il tuo compito è analizzare a fondo il sito web e i documenti forniti e creare la sezione "BRAND IDENTITY & POSIZIONAMENTO" della Knowledge Base Strategica.
+Il tuo compito è analizzare a fondo TUTTI i dati forniti e creare la sezione "BRAND IDENTITY & POSIZIONAMENTO" della Knowledge Base Strategica.
 
 CONTESTO CLIENTE:
 Nome: {client_name}
 Settore: {industry}
 Sito Web: {site_url}
 
-CONTENUTO SITO WEB:
-{site_content[:8000]}
+🌐 LINK E SORGENTI:
+{links_text}
 
-DATI SOCIAL E MARKETING:
-{social_data[:3000] if social_data else "Non disponibili"}
+📦 PRODOTTI CHIAVE:
+{products_text}
+
+💪 PUNTI DI FORZA (SWOT):
+{swot.get('strengths', 'Non specificati')}
+
+🎯 OPPORTUNITÀ:
+{swot.get('opportunities', 'Non specificato')}
+
+🗣️ TONO DI VOCE PREFERITO:
+{tone_pref if tone_pref else "Non specificato"}
+
+📝 VOCABOLARIO TARGET (come parla il pubblico):
+{vocab_text}
+
+⚔️ COMPETITOR PRINCIPALI:
+{competitors_text if competitors_text else "Non specificati"}
+
+CONTENUTO SITO WEB:
+{site_content[:8000] if site_content else "Non disponibile"}
+
+{instagram_formatted}
 
 DOCUMENTI AGGIUNTIVI:
 {raw_docs[:3000] if raw_docs else "Non disponibili"}
@@ -96,9 +215,11 @@ Genera un report dettagliato in italiano strutturato ESATTAMENTE nei seguenti pu
 REGOLE FONDAMENTALI:
 ✅ Usa formattazione Markdown con grassetti per evidenziare concetti chiave
 ✅ Sii specifico e concreto, NON generico
-✅ Basa tutto sui DATI forniti, non inventare
+✅ Basa tutto sui DATI forniti sopra (SWOT, prodotti, vocabolario, competitor, tone), non inventare
 ✅ Usa elenchi puntati per massima leggibilità
-✅ Ogni affermazione deve essere supportata da evidenze dal sito/documenti
+✅ Ogni affermazione deve essere supportata da evidenze dai dati forniti
+❌ VIETATO dire "dati non disponibili" o "impossibile determinare" - USA I DATI FORNITI SOPRA (SWOT, prodotti chiave, vocabolario target, tone preferito, competitor)
+✅ Se il sito web non è accessibile, usa comunque SWOT, prodotti, competitor e vocabolario per costruire l'analisi
 
 Rispondi SOLO con il JSON strutturato seguendo questo schema:
 {{
@@ -135,7 +256,7 @@ Rispondi SOLO con il JSON strutturato seguendo questo schema:
 
         try:
             response = await self.ai_service._call_ai(
-                model="perplexity/sonar-pro",
+                model="anthropic/claude-3.5-sonnet",
                 messages=[{"role": "user", "content": system_prompt}],
                 temperature=0.3,
                 max_tokens=4000
@@ -177,6 +298,9 @@ Rispondi SOLO con il JSON strutturato seguendo questo schema:
 
         client_name = client_info.get("name", "")
 
+        # 🔥 FORMATTA DATI INSTAGRAM
+        instagram_formatted = format_instagram_data(social_data) if social_data else "Dati Instagram non disponibili"
+
         system_prompt = f"""Agisci come un Senior Brand Strategist.
 
 Il tuo compito è identificare i VALORI DEL BRAND (Brand Pillars) - i pilastri etici e morali su cui si fonda {client_name}.
@@ -187,8 +311,7 @@ Sito Web: {site_url}
 CONTENUTO SITO:
 {site_content[:8000]}
 
-DATI SOCIAL:
-{social_data[:2000] if social_data else "Non disponibili"}
+{instagram_formatted}
 
 OUTPUT RICHIESTO:
 Identifica 3-5 PILASTRI DEL BRAND cercando evidenze di:
@@ -238,7 +361,7 @@ Rispondi SOLO con JSON:
 
         try:
             response = await self.ai_service._call_ai(
-                model="perplexity/sonar-pro",
+                model="anthropic/claude-3.5-sonnet",
                 messages=[{"role": "user", "content": system_prompt}],
                 temperature=0.3,
                 max_tokens=3000
@@ -346,7 +469,7 @@ REGOLE:
 
         try:
             response = await self.ai_service._call_ai(
-                model="perplexity/sonar-pro",
+                model="anthropic/claude-3.5-sonnet",
                 messages=[{"role": "user", "content": system_prompt}],
                 temperature=0.3,
                 max_tokens=6000
@@ -503,8 +626,30 @@ async def generate_complete_strategic_analysis(
     )
     print("✅ Visual Brief completato")
 
+    # ══════════════════════════════════════════════════════════════════
+    # SEZIONI AGGIUNTIVE PER METADATA (sostituiscono vecchio sistema)
+    # ══════════════════════════════════════════════════════════════════
+
+    print("\n🔄 BONUS 1/3 - SWOT ANALYSIS (aggiornato)...")
+    swot_analysis = await generate_swot_from_analysis(
+        ai_service, brand_identity, brand_values, battlecards, product_portfolio
+    )
+    print("✅ SWOT Analysis completata")
+
+    print("\n🔄 BONUS 2/3 - OBIETTIVI STRATEGICI (SMART)...")
+    strategic_objectives = await generate_strategic_objectives(
+        ai_service, client_info, brand_identity, swot_analysis
+    )
+    print("✅ Obiettivi Strategici completati")
+
+    print("\n🔄 BONUS 3/3 - STRATEGIA COMPLETA (Piano d'azione)...")
+    strategic_plan = await generate_strategic_plan(
+        ai_service, client_info, swot_analysis, strategic_objectives, battlecards
+    )
+    print("✅ Strategia Completa generata")
+
     print("\n" + "=" * 80)
-    print("🎉 ANALISI STRATEGICA COMPLETA - 14/14 SEZIONI GENERATE!")
+    print("🎉 ANALISI STRATEGICA COMPLETA - 14 SEZIONI + 3 BONUS GENERATE!")
     print("=" * 80)
 
     return {
@@ -522,11 +667,216 @@ async def generate_complete_strategic_analysis(
         "seasonal_roadmap": seasonal_roadmap,
         "psychographic_analysis": psychographic_analysis,
         "visual_brief": visual_brief,
+        # NUOVE SEZIONI CHE SOSTITUISCONO IL VECCHIO SISTEMA
+        "swot": swot_analysis,
+        "objectives": strategic_objectives,
+        "strategy": strategic_plan,
         "metadata": {
             "methodology": "Francesco Agostinis - Strategie Marketing Avanzate con Gemini",
-            "version": "2.0 - COMPLETO",
+            "version": "2.0 - COMPLETO + SWOT/OBIETTIVI/STRATEGIA",
             "sections_implemented": 14,
             "sections_total": 14,
             "generated_at": "NOW()"
         }
     }
+
+
+# ══════════════════════════════════════════════════════════════════
+# FUNZIONI BONUS: SWOT, OBIETTIVI, STRATEGIA
+# ══════════════════════════════════════════════════════════════════
+
+async def generate_swot_from_analysis(
+    ai_service,
+    brand_identity: Dict[str, Any],
+    brand_values: Dict[str, Any],
+    battlecards: Dict[str, Any],
+    product_portfolio: Dict[str, Any]
+) -> Dict[str, str]:
+    """
+    Genera SWOT Analysis aggiornata basandosi sull'analisi completa già generata.
+    """
+
+    prompt = f"""Sei un Senior Strategic Analyst. Basandoti sull'analisi strategica completa già generata, crea una SWOT Analysis professionale e dettagliata.
+
+BRAND IDENTITY:
+{json.dumps(brand_identity, ensure_ascii=False, indent=2)[:1500]}
+
+BRAND VALUES:
+{json.dumps(brand_values, ensure_ascii=False, indent=2)[:1500]}
+
+COMPETITOR BATTLECARDS:
+{json.dumps(battlecards, ensure_ascii=False, indent=2)[:1500]}
+
+PRODUCT PORTFOLIO:
+{json.dumps(product_portfolio, ensure_ascii=False, indent=2)[:1500]}
+
+Genera una SWOT Analysis in italiano, strutturata e dettagliata.
+
+OUTPUT JSON:
+{{
+  "strengths": "Punti di forza interni del brand (competenze, asset, differenziatori unici). 3-5 punti concreti.",
+  "weaknesses": "Punti deboli interni da migliorare (gap, limiti, aree di vulnerabilità). 3-5 punti onesti.",
+  "opportunities": "Opportunità esterne da cogliere (trend di mercato, cambiamenti nel comportamento clienti, nuovi canali). 3-5 punti strategici.",
+  "threats": "Minacce esterne (competitor, cambiamenti normativi, crisi settoriali). 3-5 punti realistici."
+}}
+
+REGOLE:
+✅ Basati SOLO sui dati forniti sopra
+✅ Sii specifico e concreto, NO genericità
+✅ Ogni punto deve essere actionable e rilevante per Meta Ads"""
+
+    try:
+        response = await ai_service._call_ai(
+            model="anthropic/claude-3.5-sonnet",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=2000
+        )
+
+        import re
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+        else:
+            return {
+                "strengths": response.split("Strengths:")[1].split("Weaknesses:")[0] if "Strengths:" in response else "",
+                "weaknesses": response.split("Weaknesses:")[1].split("Opportunities:")[0] if "Weaknesses:" in response else "",
+                "opportunities": response.split("Opportunities:")[1].split("Threats:")[0] if "Opportunities:" in response else "",
+                "threats": response.split("Threats:")[1] if "Threats:" in response else ""
+            }
+    except Exception as e:
+        print(f"Errore generazione SWOT: {e}")
+        return {"strengths": "", "weaknesses": "", "opportunities": "", "threats": ""}
+
+
+async def generate_strategic_objectives(
+    ai_service,
+    client_info: Dict[str, Any],
+    brand_identity: Dict[str, Any],
+    swot: Dict[str, str]
+) -> Dict[str, Any]:
+    """
+    Genera Obiettivi Strategici SMART basati su brand identity e SWOT.
+    """
+
+    client_name = client_info.get("name", "")
+    industry = client_info.get("industry", "")
+
+    prompt = f"""Sei un Growth Strategist per Meta Ads. Definisci 3-5 obiettivi strategici SMART per il cliente.
+
+CLIENTE: {client_name}
+SETTORE: {industry}
+
+BRAND IDENTITY:
+{json.dumps(brand_identity, ensure_ascii=False, indent=2)[:1500]}
+
+SWOT:
+{json.dumps(swot, ensure_ascii=False, indent=2)}
+
+Genera obiettivi SMART (Specific, Measurable, Achievable, Relevant, Time-bound) per i prossimi 6-12 mesi.
+
+OUTPUT JSON:
+{{
+  "obiettivo_1": {{
+    "titolo": "Titolo breve dell'obiettivo (es. 'Aumentare Lead Qualificati del 40%')",
+    "smart": "Descrizione completa SMART: Specifico, Misurabile, Achievable, Rilevante, Time-bound",
+    "valore_atteso": "Impatto economico/strategico stimato"
+  }},
+  "obiettivo_2": {{...}},
+  "obiettivo_3": {{...}}
+}}
+
+REGOLE:
+✅ Obiettivi concreti e misurabili
+✅ Realistici per una strategia Meta Ads
+✅ Allineati con i punti di forza e opportunità SWOT"""
+
+    try:
+        response = await ai_service._call_ai(
+            model="anthropic/claude-3.5-sonnet",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=3000
+        )
+
+        import re
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+        else:
+            return {"raw_text": response}
+    except Exception as e:
+        print(f"Errore generazione Obiettivi: {e}")
+        return {"error": str(e)}
+
+
+async def generate_strategic_plan(
+    ai_service,
+    client_info: Dict[str, Any],
+    swot: Dict[str, str],
+    objectives: Dict[str, Any],
+    battlecards: Dict[str, Any]
+) -> str:
+    """
+    Genera Piano Strategico completo 6-12 mesi basato su SWOT, obiettivi e competitive intelligence.
+    """
+
+    client_name = client_info.get("name", "")
+    industry = client_info.get("industry", "")
+
+    prompt = f"""Sei un Senior Marketing Strategist. Crea un piano strategico d'azione 6-12 mesi per Meta Ads.
+
+CLIENTE: {client_name}
+SETTORE: {industry}
+
+SWOT:
+{json.dumps(swot, ensure_ascii=False, indent=2)}
+
+OBIETTIVI:
+{json.dumps(objectives, ensure_ascii=False, indent=2)[:1500]}
+
+COMPETITOR INTELLIGENCE:
+{json.dumps(battlecards, ensure_ascii=False, indent=2)[:1500]}
+
+Genera un piano strategico in italiano strutturato per fasi temporali (MESE 1-2, MESE 3-4, MESE 5-6).
+
+STRUTTURA:
+### PIANO STRATEGICO: [Unique Strategic Position]
+
+**MESE 1-2: [Fase Iniziale - es. BRAND AWARENESS]**
+- Azione 1 concreta
+- Azione 2 concreta
+- KPI da monitorare
+
+**MESE 3-4: [Fase Crescita - es. LEAD GENERATION]**
+- Azione 1 concreta
+- Azione 2 concreta
+- KPI da monitorare
+
+**MESE 5-6: [Fase Scalabilità - es. CONVERSIONE]**
+- Azione 1 concreta
+- Azione 2 concreta
+- KPI da monitorare
+
+**STRATEGIA ANTAGONISTA:**
+Posizionamento differenziante rispetto ai competitor (analizza battlecards e definisci come distinguerti).
+
+REGOLE:
+✅ Azioni concrete e implementabili
+✅ Focus su Meta Ads (FB/IG/WhatsApp)
+✅ Sfrutta i punti di forza SWOT
+✅ Capitalizza sulle opportunità di mercato
+✅ Neutralizza i competitor (usa battlecards)"""
+
+    try:
+        response = await ai_service._call_ai(
+            model="anthropic/claude-3.5-sonnet",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            max_tokens=4000
+        )
+
+        return response
+    except Exception as e:
+        print(f"Errore generazione Strategia: {e}")
+        return f"Errore: {str(e)}"
