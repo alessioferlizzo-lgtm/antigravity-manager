@@ -3526,12 +3526,40 @@ async def generate_complete_client_analysis(client_id: str):
         except:
             pass
     
+    # 🔥 NUOVO: Scraping profondo del sito con Perplexity
+    print(f"🌐 Scraping sito web {site_url} con Perplexity...")
+    site_content = ""
+    try:
+        scraping_prompt = f"""Analizza il sito web {site_url} e fornisci un'estrazione completa e dettagliata del contenuto.
+
+Naviga e raccogli:
+1. **Homepage**: Testo completo, headline, value proposition
+2. **Chi Siamo / About**: Storia, mission, valori
+3. **Pagine Prodotto**: Nome prodotti, descrizioni, ingredienti, prezzi
+4. **FAQ**: Domande frequenti e risposte
+5. **Blog** (se presente): Temi principali
+6. **Footer**: Informazioni aziendali, certificazioni
+
+Fornisci un report strutturato con TUTTO il testo trovato, senza riassumere."""
+
+        site_content = await ai_service._call_ai(
+            model="perplexity/sonar-pro",
+            messages=[{"role": "user", "content": scraping_prompt}],
+            temperature=0.1,
+            max_tokens=8000
+        )
+        print(f"✅ Scraping completato: {len(site_content)} caratteri")
+    except Exception as e:
+        print(f"⚠️  Errore scraping sito: {e}")
+        site_content = f"Sito: {site_url} (scraping fallito)"
+
     # Chiama l'orchestrator
     print(f"🚀 Inizio generazione analisi completa per {client_info['name']}...")
-    
+
     complete_analysis = await ai_service.generate_complete_analysis(
         client_info=client_info,
         site_url=site_url,
+        site_content=site_content,  # 🔥 NUOVO
         social_data=social_data,
         ads_data=ads_data,
         raw_docs=raw_docs,

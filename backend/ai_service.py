@@ -513,6 +513,7 @@ Rispondi SOLO con JSON:
         self,
         client_info: Dict[str, Any],
         site_url: str,
+        site_content: str = "",
         social_data: str = "",
         ads_data: str = "",
         raw_docs: str = "",
@@ -520,12 +521,16 @@ Rispondi SOLO con JSON:
         instagram_comments: str = ""
     ) -> Dict[str, Any]:
         """
-        Genera l'analisi completa in 12 sezioni seguendo la metodologia della guida.
-        Orchestrator che chiama tutte le funzioni di analisi.
+        🔥 NUOVO SISTEMA - Metodologia Francesco Agostinis
+
+        Genera analisi strategica completa in 14 sezioni seguendo ESATTAMENTE
+        i prompt della guida "Strategie Di Marketing Avanzate Con Gemini Per Meta Ads"
+
+        Sostituisce completamente il vecchio sistema generico.
         """
-        from .ai_service_complete_analysis_part3 import generate_complete_analysis_orchestrator
-        return await generate_complete_analysis_orchestrator(
-            self, client_info, site_url, social_data, ads_data,
+        from .ai_service_strategic_analysis import generate_complete_strategic_analysis
+        return await generate_complete_strategic_analysis(
+            self, client_info, site_url, site_content, social_data, ads_data,
             raw_docs, google_reviews, instagram_comments
         )
 
