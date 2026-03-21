@@ -32,8 +32,9 @@ def extract_ig_handle(url: str) -> str:
 load_dotenv(Path(__file__).parent / ".env")
 
 from .ai_service import AIService
-from .storage_service import StorageService, CLIENTS_DIR, TASKS_FILE
+from .storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
 from .notion_service import notion_service
+from .strategic_context_loader import get_strategic_context_for_generator
 
 app = FastAPI(title="Antigravity Script Manager")
 
@@ -1194,17 +1195,15 @@ Sei in una conversazione diretta con il marketer/imprenditore che gestisce quest
 @app.post("/clients/{client_id}/angles")
 async def get_angles(client_id: str, request: AngleRequest = AngleRequest()):
     metadata = storage_service.get_metadata(client_id)
-    research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
-    if not research_path.exists():
-        raise HTTPException(status_code=400, detail="Perform research first")
 
-    with open(research_path, "r") as f:
-        research_content = f.read()
-
-    buyer_personas = metadata.get("brand_identity", {}).get("buyer_personas", [])
-    if buyer_personas:
-        research_content += "\n\n### BUYER PERSONAS E PAURE PROFONDE (CRITICO DA STUDIARE):\n"
-        research_content += json.dumps(buyer_personas, ensure_ascii=False, indent=2)
+    # 🔥 NUOVO: Carica TUTTA l'Analisi Strategica (14 sezioni)
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id,
+        metadata=metadata,
+        supabase_client=supabase,
+        focus_areas=["battlecards", "customer_personas", "psychographic_analysis", "reasons_to_buy", "objections"]
+    )
 
     # Enrich with creative intelligence from real ad performance if available
     intel_path = CLIENTS_DIR / client_id / "creative_intelligence.json"
@@ -1213,9 +1212,9 @@ async def get_angles(client_id: str, request: AngleRequest = AngleRequest()):
             intel_data = json.load(f)
         creative_intel = intel_data.get("analysis", "")[:2000]
         if creative_intel:
-            research_content += f"\n\n### INTELLIGENCE DALLE ADS REALI ({intel_data.get('period', 'storico')}, {intel_data.get('ads_count', '?')} ads analizzate):\nQuesti dati provengono dall'analisi delle inserzioni realmente mandate in pubblicazione. Usali come FONTE PRIMARIA per capire cosa ha già funzionato e cosa no. Gli angoli vincitori reali devono guidare i nuovi angoli suggeriti:\n{creative_intel}"
+            strategic_context += f"\n\n### INTELLIGENCE DALLE ADS REALI ({intel_data.get('period', 'storico')}, {intel_data.get('ads_count', '?')} ads analizzate):\nQuesti dati provengono dall'analisi delle inserzioni realmente mandate in pubblicazione. Usali come FONTE PRIMARIA per capire cosa ha già funzionato e cosa no. Gli angoli vincitori reali devono guidare i nuovi angoli suggeriti:\n{creative_intel}"
 
-    angles_data = await ai_service.generate_communication_angles(research_content, request.user_prompt, request.funnel_stage)
+    angles_data = await ai_service.generate_communication_angles(strategic_context, request.user_prompt, request.funnel_stage)
     
     # Save angles
     angles_path = CLIENTS_DIR / client_id / "angles.json"
@@ -1472,27 +1471,15 @@ async def generate_copy(client_id: str, request: CopyRequest):
     """Genera copy strutturato per Meta Ads usando framework professionali di copywriting."""
     metadata = storage_service.get_metadata(client_id)
     client_name = metadata.get("name", client_id)
-    brand_identity = metadata.get("brand_identity", {})
-    tone = brand_identity.get("tone", "")
 
-    # Pull context: research + VoC
-    research_text = ""
-    research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
-    if research_path.exists():
-        with open(research_path, "r") as f:
-            research_text = f.read()[:3000]
-
-    voc_text = ""
-    voc_path = CLIENTS_DIR / client_id / "voc_analysis.json"
-    if voc_path.exists():
-        with open(voc_path, "r") as f:
-            voc_data = json.load(f)
-        voc_analysis = voc_data.get("data", {})
-        if voc_analysis:
-            hooks = voc_analysis.get("golden_hooks", [])[:5]
-            pains = voc_analysis.get("pain_points", [])[:5]
-            desires = voc_analysis.get("desires_outcomes", [])[:5]
-            voc_text = f"\nGOLDEN HOOKS (usa queste frasi letteralmente): {', '.join(hooks)}\nPAIN POINTS: {', '.join(pains)}\nDESIDERI: {', '.join(desires)}"
+    # 🔥 NUOVO: Carica TUTTA l'Analisi Strategica (14 sezioni)
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id,
+        metadata=metadata,
+        supabase_client=supabase,
+        focus_areas=["brand_voice", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
+    )
 
     framework_guides = {
         "PAS": "PAS (Problem-Agitate-Solution): 1) Hook che identifica il problema 2) Agita il dolore/frustrazione 3) Presenta la soluzione come unica via d'uscita",
@@ -1506,14 +1493,17 @@ async def generate_copy(client_id: str, request: CopyRequest):
     system_prompt = f"""Sei un copywriter esperto di Meta Ads con un track record di €10M+ in ad spend ottimizzate.
 Il tuo copy converte perché usa le parole esatte del cliente ideale, non il linguaggio del brand.
 
-BRAND: {client_name}
-TONO: {tone or "professionale ma diretto"}
 ANGOLO DA SVILUPPARE: {request.angle_title}
 {f"DESCRIZIONE ANGOLO: {request.angle_description}" if request.angle_description else ""}
-{f"PRODOTTO/SERVIZIO: {request.product_name}" if request.product_name else ""}
-{voc_text}
+{f"PRODOTTO/SERVIZIO SPECIFICO: {request.product_name}" if request.product_name else ""}
 
 FRAMEWORK DA USARE: {fw_guide}
+
+═══════════════════════════════════════════════════════════
+CONTESTO STRATEGICO COMPLETO DEL CLIENTE
+═══════════════════════════════════════════════════════════
+
+{strategic_context}
 
 REGOLE FONDAMENTALI:
 - Il PRIMARY TEXT deve essere scroll-stopping dal primo carattere
@@ -1541,7 +1531,7 @@ FORMATO OUTPUT (JSON):
 
 Genera {min(request.variations, 3)} variazioni. Rispondi SOLO con JSON valido."""
 
-    user_msg = f"Genera copy Meta Ads per l'angolo: {request.angle_title}\n\nContesto ricerca:\n{research_text[:1500]}"
+    user_msg = f"Genera copy Meta Ads per l'angolo: '{request.angle_title}'.\n\nUsa TUTTO il contesto strategico fornito, soprattutto Brand Voice, Voice of Customer, Obiezioni e Reasons to Buy."
 
     try:
         raw = await ai_service._call_ai(
@@ -2733,16 +2723,15 @@ class ScriptRequest(BaseModel):
 @app.post("/clients/{client_id}/scripts")
 async def generate_script_endpoint(client_id: str, request: ScriptRequest):
     metadata = storage_service.get_metadata(client_id)
-    research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
-    if not research_path.exists():
-        raise HTTPException(status_code=400, detail="Perform research first")
-    with open(research_path, "r") as f:
-        research = f.read()
-        
-    buyer_personas = metadata.get("brand_identity", {}).get("buyer_personas", [])
-    if buyer_personas:
-        research += "\n\n### BUYER PERSONAS E PAURE PROFONDE (CRITICO DA STUDIARE):\n"
-        research += json.dumps(buyer_personas, ensure_ascii=False, indent=2)
+
+    # 🔥 NUOVO: Carica TUTTA l'Analisi Strategica (14 sezioni)
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id,
+        metadata=metadata,
+        supabase_client=supabase,
+        focus_areas=["customer_personas", "brand_voice", "visual_brief", "product_vertical", "psychographic_analysis"]
+    )
     
     # Read Output-script rules (optional, best-effort)
     rules = ""
@@ -2758,7 +2747,7 @@ async def generate_script_endpoint(client_id: str, request: ScriptRequest):
     scripts = []
     for i in range(count):
         script = await ai_service.generate_script(
-            angle, research, rules, metadata["preferences"],
+            angle, strategic_context, rules, metadata.get("preferences", {}),
             script_instructions=request.script_instructions,
             variation_index=i,
             total_variations=count
