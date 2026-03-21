@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use, useRef } from "react";
+import CompleteAnalysisSection from "@/components/CompleteAnalysisSection";
 import {
     ArrowLeftIcon,
     UserGroupIcon,
@@ -26,11 +27,14 @@ import {
     CheckIcon,
     EyeIcon,
     XMarkIcon,
+    DocumentTextIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "${API}";
 
-type SectionType = "sorgenti" | "identita" | "analisi" | "personas" | "reports" | "intelligence";
+type SectionType = "sorgenti" | "identita" | "analisi" | "personas" | "reports" | "intelligence" | "analisi-completa";
 
 
 interface Report {
@@ -686,6 +690,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         { key: "sorgenti", icon: LinkIcon, label: "Sorgenti" },
         { key: "identita", icon: PaintBrushIcon, label: "Identità" },
         { key: "analisi", icon: ChartBarIcon, label: "Analisi & VoC" },
+        { key: "analisi-completa", icon: DocumentTextIcon, label: "Analisi Completa" },
         { key: "intelligence", icon: BoltIcon, label: "Strategia Avanzata" },
         { key: "personas", icon: UserGroupIcon, label: "Buyer Personas" },
         { key: "reports", icon: ChartBarIcon, label: "Reports" },
@@ -2105,6 +2110,11 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                             </div>
                         )}
                     </div>
+                )}
+
+                {/* ══ ANALISI COMPLETA ══ */}
+                {section === "analisi-completa" && (
+                    <CompleteAnalysisSection clientId={id} apiUrl={API} />
                 )}
             </main>
         </div>
