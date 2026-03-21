@@ -3027,18 +3027,31 @@ async def generate_image(request: ImageGenerateRequest):
                 request.references.insert(0, ImageReference(type="context", data=ref_data, mime="image/png"))
 
     # ── STEP 1: Load client context (shared for ALL models) ───────────────────
-    client_context = ""
     metadata = {}
+    client_context = ""
     try:
         metadata = storage_service.get_metadata(request.client_id)
-        brand = metadata.get("brand_identity", {})
-        client_context = f"""Cliente: {metadata.get('name', '')}
+
+        # 🔥 NUOVO: Carica TUTTA l'Analisi Strategica (14 sezioni)
+        supabase = _get_sb()
+        client_context = await get_strategic_context_for_generator(
+            client_id=request.client_id,
+            metadata=metadata,
+            supabase_client=supabase,
+            focus_areas=["visual_brief", "brand_voice", "brand_identity", "psychographic_analysis", "customer_personas"]
+        )
+    except Exception as e:
+        print(f"Error loading strategic context for graphics: {e}")
+        # Fallback to basic context if strategic context fails
+        try:
+            brand = metadata.get("brand_identity", {})
+            client_context = f"""Cliente: {metadata.get('name', '')}
 Settore: {metadata.get('industry', 'non specificato')}
 Tono: {brand.get('tone', 'non specificato')}
 Colori brand: {', '.join(brand.get('colors', []))}
 Stile visivo: {brand.get('visuals', 'non specificato')}"""
-    except Exception:
-        pass
+        except Exception:
+            pass
 
     # ── STEP 2: Fetch Notion RAG data if requested ────────────────────────────
     rag_context_text = ""
