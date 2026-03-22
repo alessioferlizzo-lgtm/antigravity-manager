@@ -441,6 +441,31 @@ function ReviewsVoCRenderer({ data }: { data: any }) {
                     </div>
                 </div>
             )}
+            {data.pain_points && Array.isArray(data.pain_points) && data.pain_points.length > 0 && (
+                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 12, padding: "16px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: 14 }}>🔴 Pain Points (Lamentele & Obiezioni)</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {data.pain_points.map((p: any, i: number) => (
+                            <div key={i} style={{ border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, overflow: "hidden" }}>
+                                <div style={{ background: "rgba(239,68,68,0.1)", padding: "8px 12px", borderBottom: "1px solid rgba(239,68,68,0.2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <div style={{ fontWeight: 700, color: "#b91c1c", fontSize: 13 }}>Gancio a contrasto: {p.pain || `Dolore #${i + 1}`}</div>
+                                    {p.source && <div style={{ fontSize: 11, background: "#fff", padding: "2px 8px", borderRadius: 12, border: "1px solid rgba(239,68,68,0.3)", color: "#b91c1c" }}>{p.source}</div>}
+                                </div>
+                                <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: 10 }}>
+                                    <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--navy)", borderLeft: "3px solid #ef4444", paddingLeft: 10 }}>
+                                        "{p.verbatim || "Citazione non disponibile"}"
+                                    </div>
+                                    {p.marketing_use && (
+                                        <div style={{ fontSize: 12, color: "#475569", display: "flex", gap: 6 }}>
+                                            <span>💡</span> <span><strong>Copy Ads:</strong> {p.marketing_use}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             {data.sentiment_analysis && (
                 <SCard>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", textTransform: "uppercase", marginBottom: 8 }}>📊 Sentiment</div>
@@ -594,9 +619,9 @@ function PsychographicRenderer({ data }: { data: any }) {
                                             );
                                         }
                                         // The AI might use "characteristic" or "trait" or "name", etc.
-                                        const attrKey = Object.keys(item).find(k => k.match(/characteristic|trait|name|caratteristica|titolo/i)) || Object.keys(item)[0];
-                                        const descKey = Object.keys(item).find(k => k.match(/description|descrizione|detail/i)) || Object.keys(item)[1];
-                                        const promoKey = Object.keys(item).find(k => k.match(/promo|headline/i));
+                                        const attrKey = Object.keys(item).find(k => k.match(/characteristic|trait|name|caratteristica|titolo|target/i)) || Object.keys(item)[0];
+                                        const descKey = Object.keys(item).find(k => k.match(/description|descrizione|detail|drive/i)) || Object.keys(item)[1];
+                                        const promoKey = Object.keys(item).find(k => k.match(/promo|headline|hook/i));
                                         
                                         return (
                                             <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>

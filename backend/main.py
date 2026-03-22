@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
 import io
+import pypdf
 import json
 import json_repair
 import base64
@@ -3436,13 +3437,26 @@ async def generate_complete_client_analysis(client_id: str):
                     services_txt = f.read()[:8000]  # Limite 8K caratteri per TXT
                     print(f"✅ Trovato TXT servizi: {file_path.name}")
 
-            # Altri documenti generici
-            elif len(raw_files) <= 5:
+            # Cerca PDF (Analisi manuali, Knowledge Base)
+            elif file_name_lower.endswith('.pdf'):
+                try:
+                    reader = pypdf.PdfReader(file_path)
+                    text = ""
+                    for page in reader.pages[:20]: # Leggi prime 20 pagine
+                        text += page.extract_text() + "\n"
+                    raw_docs += f"\n\n--- PDF: {file_path.name} ---\n{text[:20000]}"
+                    print(f"✅ Estratto testo da PDF: {file_path.name} ({len(text)} caratteri)")
+                except Exception as e:
+                    print(f"❌ Errore lettura PDF {file_path.name}: {e}")
+
+            # Altri documenti generici (TXT)
+            elif file_name_lower.endswith(('.txt', '.md', '.json')):
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    content = f.read()[:3000]
+                    content = f.read()[:10000]
                     raw_docs += f"\n\n--- {file_path.name} ---\n{content}"
-        except:
-            pass
+                    print(f"✅ Letto documento: {file_path.name}")
+        except Exception as e:
+            print(f"⚠️ Errore processamento file {file_path.name}: {e}")
 
     # Formatta dati per l'analisi
     import json

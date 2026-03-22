@@ -32,34 +32,58 @@ class DataCollectionService:
         client_name = metadata.get("name", "")
         links = metadata.get("links", [])
 
-        # Trova sito web e Instagram
-        site_url = ""
+        # Trova sito web, Instagram e Google Maps
+        site_urls = [] # Will now store dicts: {"url": "...", "context": "..."}
         instagram_handle = ""
-
-        for link in links:
-            url = link.get("url", "") if isinstance(link, dict) else str(link)
-            if url and "http" in url.lower():
-                if "instagram.com" in url:
-                    instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
-                elif not site_url:
-                    site_url = url
-
-        if not site_url:
-            raise Exception("Nessun sito web fornito nelle sorgenti")
-
-        # Trova URL specifici per i servizi
         google_maps_url = ""
+
         for link in links:
-            url = link.get("url", "") if isinstance(link, dict) else str(link)
-            if url and ("google.com/maps" in url or "business.google.com" in url or "g.page" in url):
+            if not isinstance(link, dict):
+                url = str(link)
+                label = ""
+                desc = ""
+            else:
+                url = link.get("url", "")
+                label = link.get("label", "")
+                desc = link.get("description", "")
+
+            if not url or "http" not in url.lower():
+                continue
+                
+            if "instagram.com" in url:
+                instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
+            elif any(x in url for x in ["google.com/maps", "business.google.com", "g.page", "google.com/search"]):
                 google_maps_url = url
-                break
+            else:
+                # Salva sia URL che contesto
+                site_urls.append({"url": url, "context": f"{label} {desc}".strip()})
+
+        if not site_urls:
+            raise Exception("Nessun sito web fornito nelle sorgenti")
 
         # Raccogli dati in parallelo - TIMEOUT GLOBALE 9 MINUTI per evitare freeze infiniti
         try:
+            # 1. Scraping Siti Web (In parallelo per ogni URL con il suo contesto)
+            site_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in site_urls]
+            site_results = await asyncio.gather(*site_tasks, return_exceptions=True)
+            
+            # Unisci i contenuti
+            combined_site_content = ""
+            processed_site_results = []
+            for i, res in enumerate(site_results):
+                url = site_urls[i]["url"]
+                if isinstance(res, Exception):
+                    print(f"❌ Errore scraping pagina {url}: {res}")
+                    processed_site_results.append({"url": url, "error": str(res)})
+                    combined_site_content += f"\n\n--- ERRORE DA: {url} ---\n{str(res)}"
+                else:
+                    processed_site_results.append({"url": url, "data": res})
+                    combined_site_content += f"\n\n--- CONTENUTO DA: {url} ---\n{res.get('raw_text', str(res))}"
+            
+            site_content_combined = {"combined_raw_text": combined_site_content, "pages": processed_site_results}
+
             results = await asyncio.wait_for(
                 asyncio.gather(
-                    self._scrape_website_complete(site_url, client_name),
                     self._collect_google_reviews(client_name, metadata.get("location", ""), google_maps_url),
                     self._collect_instagram_data_complete(instagram_handle, metadata),
                     self._collect_meta_ads_data(metadata),
@@ -70,12 +94,12 @@ class DataCollectionService:
             )
         except asyncio.TimeoutError:
             print("⚠️ TIMEOUT GLOBALE RACCOLTA DATI (9 min) - Procedo con i dati parziali")
-            results = [{}, {}, {}, {}, {}] 
+            site_content_combined = {"error": "Timeout globale durante lo scraping dei siti"}
+            results = [{}, {}, {}, {}] 
 
-        site_data, reviews_data, instagram_data, ads_data, competitor_data = results
+        reviews_data, instagram_data, ads_data, competitor_data = results
 
         # Gestisci errori
-        site_content = site_data if not isinstance(site_data, Exception) else {"error": str(site_data)}
         google_reviews = reviews_data if not isinstance(reviews_data, Exception) else {"error": str(reviews_data)}
         instagram_full = instagram_data if not isinstance(instagram_data, Exception) else {"error": str(instagram_data)}
         meta_ads = ads_data if not isinstance(ads_data, Exception) else {"error": str(ads_data)}
@@ -85,23 +109,71 @@ class DataCollectionService:
         print("✅ RACCOLTA DATI COMPLETATA")
 
         return {
-            "site_url": site_url,
-            "site_content": site_content,
+            "site_url": site_urls[0]["url"] if site_urls else "",
+            "site_urls": site_urls,
+            "site_content": site_content_combined,
             "google_reviews": google_reviews,
             "instagram_data": instagram_full,
             "meta_ads": meta_ads,
             "competitor_data": competitors
         }
 
-    async def _scrape_website_complete(self, site_url: str, client_name: str) -> Dict[str, Any]:
+    async def _scrape_single_website_page(self, url: str, context: str = "") -> Dict[str, Any]:
         """
-        Scraping COMPLETO del sito web
+        Scraping profondo di un URL specifico usando contesto se fornito
+        """
+        print(f"   🌐 Scraping {url} {'(' + context + ')' if context else ''}...")
+        
+        prompt = f"""Analizza approfonditamente questa pagina web: {url}
+{"Contesto fornito dall'utente: " + context if context else ""}
+
+Estrai TUTTE le informazioni rilevanti per un media buyer:
+1. Prodotti/Servizi principali con relativi prezzi o offerte
+2. Angoli di attacco (Pain points risolti, promesse, trasformazione)
+3. Elementi di trust (Anni di esperienza, certificazioni, premi)
+4. Linguaggio e terminologia specifica usata dal brand
+5. Obiezioni prevenute o gestite nel testo
+
+Rispondi con un JSON strutturato con queste chiavi."""
+
+        try:
+            response = await self.ai_service._call_ai(
+                model="perplexity/sonar-pro",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=16000  # Massimo per avere TUTTO
+            )
+
+            # Prova a parsare JSON
+            import re
+            import json
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                print(f"   ✅ Scraping pagina completato: {len(str(data))} caratteri")
+                return data
+            else:
+                print(f"   ✅ Scraping pagina completato (testo): {len(response)} caratteri")
+                return {"raw_text": response}
+
+        except Exception as e:
+            print(f"   ❌ Errore scraping pagina {url}: {e}")
+            raise # Re-raise to be caught by asyncio.gather's return_exceptions
+
+    async def _scrape_website_complete(self, site_urls: List[str], client_name: str) -> Dict[str, Any]:
+        """
+        Scraping COMPLETO di più pagine del sito web
         - Homepage, About, Prodotti, Servizi, FAQ, Blog, Prezzi
         """
 
-        print(f"\n🌐 Scraping COMPLETO sito: {site_url}")
+        primary_url = site_urls[0] if site_urls else ""
+        all_links_str = "\n".join([f"- {u}" for u in site_urls])
+        
+        print(f"\n🌐 Scraping COMPLETO sito: {primary_url} ({len(site_urls)} pagine)")
 
-        prompt = f"""Analizza in modo ESTREMAMENTE DETTAGLIATO il sito web {site_url} di {client_name}.
+        prompt = f"""Analizza in modo ESTREMAMENTE DETTAGLIATO il sito web di {client_name}.
+Hai a disposizione questi link specifici da scansionare:
+{all_links_str}
 
 RACCOGLI TUTTO:
 
@@ -222,7 +294,14 @@ Formato JSON:
 
         print(f"\n⭐ Raccolta recensioni Google: {client_name}")
         
-        url_instruction = f"Utilizza questo link esatto di Google Maps / My Business per analizzare le recensioni: {gmb_url}" if gmb_url else f"Cerca il Profilo Google My Business di {client_name} a {location}"
+        url_instruction = ""
+        if gmb_url:
+            if "google.com/search" in gmb_url:
+                url_instruction = f"Analizza questo link di ricerca Google che porta alle recensioni: {gmb_url}. TROVA IL BOX DELLE RECENSIONI E ESTRAILE."
+            else:
+                url_instruction = f"Utilizza questo link esatto di Google Maps / My Business per analizzare le recensioni: {gmb_url}"
+        else:
+            url_instruction = f"Cerca il Profilo Google My Business di {client_name} a {location} ed estrai le recensioni."
 
         prompt = f"""Raccogli e analizza TUTTE le recensioni Google per "{client_name}".
 
@@ -486,10 +565,20 @@ Formato JSON:
         if user_competitors and len(user_competitors) > 0:
             print(f"✅ Utilizzando {len(user_competitors)} competitor forniti dall'utente (Sorgenti)")
             for comp in user_competitors:
+                links = comp.get("links", [])
+                website = ""
+                gmaps = ""
+                for l in links:
+                    u = l.get("url", "") if isinstance(l, dict) else str(l)
+                    if not u: continue
+                    if "maps" in u or "g.page" in u: gmaps = u
+                    elif not website: website = u
+                
                 all_competitors.append({
                     "name": comp.get("name", ""),
                     "address": "",
-                    "website": comp.get("links", [{}])[0].get("url", "") if comp.get("links") else "",
+                    "website": website,
+                    "google_maps": gmaps
                 })
         else:
             print("⚠️ Nessun competitor fornito nelle Sorgenti. Ricerca online...")
@@ -561,7 +650,16 @@ Formato JSON:
         
         async def fetch_comp_reviews(comp):
             comp_name = comp.get("name", "")
+            comp_url = comp.get("website", "")
+            comp_maps = comp.get("google_maps", "")
+            
+            url_context = ""
+            if comp_maps: url_context = f"Utilizza questo link esatto di Google Maps per le recensioni: {comp_maps}"
+            elif comp_url: url_context = f"Il sito web del competitor è: {comp_url}"
+            
             reviews_prompt = f"""Raccogli TUTTE le recensioni Google disponibili per "{comp_name}".
+{url_context}
+
 Fornisci:
 - Numero totale recensioni
 - Media stelle
@@ -600,7 +698,8 @@ JSON:
                 }
 
         # Esegui i comp tasks in parallelo
-        comp_tasks = [fetch_comp_reviews(c) for c in all_competitors[:10]]
+        limited_competitors = all_competitors[0:10]
+        comp_tasks = [fetch_comp_reviews(c) for c in limited_competitors]
         competitor_data = await asyncio.gather(*comp_tasks)
 
         total_comp_reviews = sum(c.get("reviews", {}).get("total", 0) for c in competitor_data if c.get("reviews"))

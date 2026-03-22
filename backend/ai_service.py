@@ -38,6 +38,28 @@ class AIService:
             "X-Title": "Antigravity App"
         }
 
+    def _truncate_text(self, text: str, max_chars: int = 200000) -> str:
+        """Tronca il testo se troppo lungo per evitare 400 Bad Request (limite cautelativo 200k chars)"""
+        if not text:
+            return ""
+        if len(text) > max_chars:
+            print(f"✂️  TRONCAMENTO CONTESTO: {len(text)} -> {max_chars} caratteri")
+            return text[:max_chars] + "\n... [testo troncato per limite context window]"
+        return text
+
+    def _truncate_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Tronca il contenuto dei messaggi user per evitare errori di payload"""
+        truncated_msgs = []
+        for msg in messages:
+            if msg["role"] == "user":
+                truncated_msgs.append({
+                    "role": "user",
+                    "content": self._truncate_text(msg["content"])
+                })
+            else:
+                truncated_msgs.append(msg)
+        return truncated_msgs
+
     async def _call_ai(self, model: str, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000, timeout: float = 600.0) -> str:
         """Call AI with automatic fallback to Google Gemini if OpenRouter fails (402 Payment Required)"""
         
@@ -46,12 +68,15 @@ class AIService:
             timeout = 180.0 # 3 minuti per la ricerca web sono più che sufficienti
             print(f"🕒 Timeout impostato a {timeout}s per modello di ricerca: {model}")
 
+        # Tronca messaggi per evitare 400 Bad Request
+        truncated_messages = self._truncate_messages(messages)
+
         # Try OpenRouter first
         if OPENROUTER_API_KEY:
             try:
                 payload = {
                     "model": model,
-                    "messages": messages,
+                    "messages": truncated_messages,
                     "temperature": temperature,
                     "max_tokens": max_tokens
                 }
@@ -99,7 +124,10 @@ class AIService:
         gemini_contents = []
         system_instruction = None
 
-        for msg in messages:
+        # Tronca preventivamente
+        truncated_messages = self._truncate_messages(messages)
+
+        for msg in truncated_messages:
             role = msg["role"]
             content = msg["content"]
 
