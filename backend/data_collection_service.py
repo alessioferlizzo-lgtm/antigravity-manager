@@ -47,13 +47,21 @@ class DataCollectionService:
         if not site_url:
             raise Exception("Nessun sito web fornito nelle sorgenti")
 
+        # Trova URL specifici per i servizi
+        google_maps_url = ""
+        for link in links:
+            url = link.get("url", "") if isinstance(link, dict) else str(link)
+            if url and ("google.com/maps" in url or "business.google.com" in url or "g.page" in url):
+                google_maps_url = url
+                break
+
         # Raccogli dati in parallelo
         results = await asyncio.gather(
             self._scrape_website_complete(site_url, client_name),
-            self._collect_google_reviews(client_name, metadata.get("location", "")),
+            self._collect_google_reviews(client_name, metadata.get("location", ""), google_maps_url),
             self._collect_instagram_data_complete(instagram_handle, metadata),
             self._collect_meta_ads_data(metadata),
-            self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata),
+            self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata.get("competitors", [])),
             return_exceptions=True
         )
 
@@ -199,18 +207,23 @@ Formato JSON:
             print(f"❌ Errore scraping sito: {e}")
             return {"error": str(e)}
 
-    async def _collect_google_reviews(self, client_name: str, location: str) -> Dict[str, Any]:
+    async def _collect_google_reviews(self, client_name: str, location: str, gmb_url: str = "") -> Dict[str, Any]:
         """
         Raccolta TUTTE le recensioni Google (150+)
+        Usa URL fornito se disponibile
         """
 
         print(f"\n⭐ Raccolta recensioni Google: {client_name}")
+        
+        url_instruction = f"Utilizza questo link esatto di Google Maps / My Business per analizzare le recensioni: {gmb_url}" if gmb_url else f"Cerca il Profilo Google My Business di {client_name} a {location}"
 
-        prompt = f"""Cerca e raccogli TUTTE le recensioni Google per "{client_name}" {location}.
+        prompt = f"""Raccogli e analizza TUTTE le recensioni Google per "{client_name}".
+
+{url_instruction}
 
 CERCA:
-1. Profilo Google My Business di {client_name}
-2. Raccogli TUTTE le recensioni disponibili (minimo 100-150)
+1. Raccogli TUTTE le recensioni disponibili (minimo 100-150)
+
 
 Per OGNI recensione fornisci:
 - Numero stelle (1-5)
@@ -449,19 +462,32 @@ Formato JSON:
         client_name: str,
         industry: str,
         location: str,
-        metadata: Dict[str, Any]
+        user_competitors: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Trova e analizza COMPETITOR:
-        - Competitor diretti (zona)
-        - Competitor top Italia
-        - Raccoglie loro recensioni + Instagram
+        - Usa PRIMA quelli forniti dall'utente nella sezione Sorgenti
+        - Altrimenti cercali online
+        - Raccoglie loro recensioni
         """
 
         print(f"\n🎯 Ricerca e analisi competitor: {industry} in {location}")
 
-        # STEP 1: Trova competitor
-        search_prompt = f"""Trova i COMPETITOR DIRETTI di {client_name} ({industry}) in {location} e in tutta Italia.
+        all_competitors = []
+        
+        # STEP 1: Use user-provided competitors if available
+        if user_competitors and len(user_competitors) > 0:
+            print(f"✅ Utilizzando {len(user_competitors)} competitor forniti dall'utente (Sorgenti)")
+            for comp in user_competitors:
+                all_competitors.append({
+                    "name": comp.get("name", ""),
+                    "address": "",
+                    "website": comp.get("links", [{}])[0].get("url", "") if comp.get("links") else "",
+                })
+        else:
+            print("⚠️ Nessun competitor fornito nelle Sorgenti. Ricerca online...")
+            # STEP 1b: Fallback to finding competitors
+            search_prompt = f"""Trova i COMPETITOR DIRETTI di {client_name} ({industry}) in {location} e in tutta Italia.
 
 CERCA:
 
@@ -499,37 +525,41 @@ Formato JSON:
   "top_italy_competitors": [...]
 }}"""
 
-        try:
-            competitors_search = await self.ai_service._call_ai(
-                model="perplexity/sonar-pro",
-                messages=[{"role": "user", "content": search_prompt}],
-                temperature=0.2,
-                max_tokens=8000
-            )
+            try:
+                competitors_search = await self.ai_service._call_ai(
+                    model="perplexity/sonar-pro",
+                    messages=[{"role": "user", "content": search_prompt}],
+                    temperature=0.2,
+                    max_tokens=8000
+                )
 
-            import re
-            import json
-            json_match = re.search(r'\{.*\}', competitors_search, re.DOTALL)
-            if not json_match:
-                print("❌ Competitor non trovati")
-                return {"error": "Competitor non trovati"}
+                import re
+                import json
+                json_match = re.search(r'\{.*\}', competitors_search, re.DOTALL)
+                if not json_match:
+                    print("❌ Competitor non trovati tramite ricerca")
+                else:
+                    competitors = json.loads(json_match.group())
+                    all_competitors = competitors.get("local_competitors", []) + competitors.get("top_italy_competitors", [])
+            except Exception as e:
+                print(f"⚠️ Errore ricerca competitor: {e}")
 
-            competitors = json.loads(json_match.group())
-            all_competitors = competitors.get("local_competitors", []) + competitors.get("top_italy_competitors", [])
+        if not all_competitors:
+            return {"error": "Nessun competitor disponibile"}
 
-            print(f"   Trovati {len(all_competitors)} competitor")
+        print(f"   Analizzando {len(all_competitors)} competitor")
 
-            # STEP 2: Per ogni competitor, raccogli recensioni
-            print(f"   Raccolta recensioni competitor...")
+        # STEP 2: Per ogni competitor, raccogli recensioni
+        print(f"   Raccolta recensioni competitor...")
 
-            competitor_data = []
+        competitor_data = []
 
-            for comp in all_competitors[:10]:  # Max 10 competitor
-                comp_name = comp.get("name", "")
-                print(f"      - {comp_name}")
+        for comp in all_competitors[:10]:  # Max 10 competitor
+            comp_name = comp.get("name", "")
+            print(f"      - {comp_name}")
 
-                # Recensioni Google
-                reviews_prompt = f"""Raccogli TUTTE le recensioni Google disponibili per "{comp_name}".
+            # Recensioni Google
+            reviews_prompt = f"""Raccogli TUTTE le recensioni Google disponibili per "{comp_name}".
 
 Fornisci:
 - Numero totale recensioni
@@ -545,34 +575,32 @@ JSON:
   "reviews_low": [{{"text": "...", "stars": 2}}]
 }}"""
 
-                try:
-                    comp_reviews = await self.ai_service._call_ai(
-                        model="perplexity/sonar-pro",
-                        messages=[{"role": "user", "content": reviews_prompt}],
-                        temperature=0.1,
-                        max_tokens=8000
-                    )
+            try:
+                comp_reviews = await self.ai_service._call_ai(
+                    model="perplexity/sonar-pro",
+                    messages=[{"role": "user", "content": reviews_prompt}],
+                    temperature=0.1,
+                    max_tokens=8000
+                )
 
-                    json_match = re.search(r'\{.*\}', comp_reviews, re.DOTALL)
-                    reviews_data = json.loads(json_match.group()) if json_match else {}
-                except:
-                    reviews_data = {}
+                import re
+                import json
+                json_match = re.search(r'\{.*\}', comp_reviews, re.DOTALL)
+                reviews_data = json.loads(json_match.group()) if json_match else {}
+            except:
+                reviews_data = {}
 
-                competitor_data.append({
-                    "name": comp_name,
-                    "info": comp,
-                    "reviews": reviews_data
-                })
+            competitor_data.append({
+                "name": comp_name,
+                "info": comp,
+                "reviews": reviews_data
+            })
 
-            total_comp_reviews = sum(c.get("reviews", {}).get("total", 0) for c in competitor_data)
-            print(f"✅ Competitor: {len(competitor_data)} analizzati, {total_comp_reviews} recensioni")
+        total_comp_reviews = sum(c.get("reviews", {}).get("total", 0) for c in competitor_data)
+        print(f"✅ Competitor: {len(competitor_data)} analizzati, {total_comp_reviews} recensioni")
 
-            return {
+        return {
                 "competitors": competitor_data,
                 "total_competitors": len(competitor_data),
                 "total_reviews_analyzed": total_comp_reviews
-            }
-
-        except Exception as e:
-            print(f"❌ Errore competitor analysis: {e}")
-            return {"error": str(e)}
+        }
