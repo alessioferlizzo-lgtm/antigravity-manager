@@ -1,378 +1,776 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowPathIcon, DocumentTextIcon, ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { useState, useEffect } from "react";
+import { ArrowPathIcon, DocumentTextIcon, ChevronDownIcon, ChevronRightIcon, SparklesIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 
-interface AnalisiStrategicaSectionProps {
-    clientId: string;
-    apiUrl: string;
+interface Props { clientId: string; apiUrl: string; }
+
+// ── Markdown-aware text renderer ──────────────────────────────────────────────
+function MD({ text }: { text: string }) {
+    if (!text) return null;
+    const lines = String(text).split("\n");
+    return (
+        <div style={{ lineHeight: 1.8 }}>
+            {lines.map((line, i) => {
+                const trimmed = line.trim();
+                if (!trimmed) return <br key={i} />;
+                // Bold **text**
+                const parts = trimmed.split(/(\*\*.*?\*\*)/g);
+                return (
+                    <p key={i} style={{ marginBottom: 6 }}>
+                        {parts.map((p, j) =>
+                            p.startsWith("**") && p.endsWith("**")
+                                ? <strong key={j} style={{ color: "var(--navy)" }}>{p.slice(2, -2)}</strong>
+                                : <span key={j}>{p}</span>
+                        )}
+                    </p>
+                );
+            })}
+        </div>
+    );
 }
 
-export default function AnalisiStrategicaSection({ clientId, apiUrl }: AnalisiStrategicaSectionProps) {
-    const [analysis, setAnalysis] = useState<any>(null);
-    const [generating, setGenerating] = useState(false);
-    const [expandedMacros, setExpandedMacros] = useState<Set<number>>(new Set([0]));
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-
-    // Fetch analisi esistente
-    const fetchAnalysis = async () => {
-        try {
-            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`);
-            if (res.ok) {
-                const data = await res.json();
-                setAnalysis(data);
-            }
-        } catch (error) {
-            console.error("Errore caricamento analisi:", error);
-        }
-    };
-
-    // Genera nuova analisi
-    const generateAnalysis = async () => {
-        setGenerating(true);
-        try {
-            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`, { method: "POST" });
-            if (res.ok) {
-                const result = await res.json();
-                setAnalysis(result.analysis);
-            }
-        } catch (error) {
-            console.error("Errore generazione:", error);
-        } finally {
-            setGenerating(false);
-        }
-    };
-
-    // Toggle macro area
-    const toggleMacro = (index: number) => {
-        const newSet = new Set(expandedMacros);
-        if (newSet.has(index)) {
-            newSet.delete(index);
-        } else {
-            newSet.add(index);
-        }
-        setExpandedMacros(newSet);
-    };
-
-    // Toggle sezione interna
-    const toggleSection = (key: string) => {
-        const newSet = new Set(expandedSections);
-        if (newSet.has(key)) {
-            newSet.delete(key);
-        } else {
-            newSet.add(key);
-        }
-        setExpandedSections(newSet);
-    };
-
-    // Render valore intelligente con supporto tabelle e formattazione avanzata
-    const renderValue = (value: any, key?: string): React.ReactNode => {
-        if (!value) return <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>Non disponibile</span>;
-
-        // Gestione stringhe (con supporto markdown base)
-        if (typeof value === "string") {
-            // Se è un testo lungo, aggiungi più spaziatura
-            const lines = value.split('\n');
-            return (
-                <div style={{ lineHeight: 1.8, marginBottom: 16 }}>
-                    {lines.map((line, idx) => {
-                        // Supporto base per grassetto **text**
-                        const parts = line.split(/(\*\*.*?\*\*)/g);
-                        return (
-                            <p key={idx} style={{ marginBottom: 12, whiteSpace: "pre-wrap" }}>
-                                {parts.map((part, i) => {
-                                    if (part.startsWith('**') && part.endsWith('**')) {
-                                        return <strong key={i} style={{ color: "var(--navy)" }}>{part.slice(2, -2)}</strong>;
-                                    }
-                                    return <span key={i}>{part}</span>;
-                                })}
-                            </p>
-                        );
-                    })}
+// ── Generic object/array fallback ─────────────────────────────────────────────
+function GenericValue({ value }: { value: any }) {
+    if (value === null || value === undefined) return <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>—</span>;
+    if (typeof value === "string") return <MD text={value} />;
+    if (typeof value === "number" || typeof value === "boolean") return <span>{String(value)}</span>;
+    if (Array.isArray(value)) {
+        return (
+            <ul style={{ paddingLeft: 20, margin: "8px 0" }}>
+                {value.map((item, i) => (
+                    <li key={i} style={{ marginBottom: 6 }}>
+                        {typeof item === "object" ? <GenericValue value={item} /> : String(item)}
+                    </li>
+                ))}
+            </ul>
+        );
+    }
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {Object.entries(value).map(([k, v]) => (
+                <div key={k} style={{ paddingLeft: 10, borderLeft: "3px solid var(--lime)", paddingBottom: 8 }}>
+                    <strong style={{ fontSize: 12, textTransform: "capitalize", color: "var(--navy)", display: "block", marginBottom: 4 }}>
+                        {k.replace(/_/g, " ")}
+                    </strong>
+                    <GenericValue value={v} />
                 </div>
-            );
-        }
+            ))}
+        </div>
+    );
+}
 
-        // Gestione array - TABELLE per analisi psicografica
-        if (Array.isArray(value)) {
-            // Se è analisi psicografica (level_1_primary, level_2_secondary, level_3_tertiary)
-            if (key && (key.includes('level_') || key === 'customer_personas')) {
+// ── Chip / Tag ────────────────────────────────────────────────────────────────
+function Chip({ label, color = "#3b82f6" }: { label: string; color?: string }) {
+    return (
+        <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${color}18`, color, border: `1px solid ${color}40`, marginRight: 6, marginBottom: 4 }}>
+            {label}
+        </span>
+    );
+}
+
+// ── Section card wrapper ──────────────────────────────────────────────────────
+function SCard({ children }: { children: React.ReactNode }) {
+    return <div style={{ background: "#fafafa", borderRadius: 10, padding: "14px 16px", border: "1px solid var(--border)" }}>{children}</div>;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SECTION-SPECIFIC RENDERERS
+// ══════════════════════════════════════════════════════════════════════════════
+
+function BrandIdentityRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {data.mission && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🎯 Mission</div>
+                    <MD text={data.mission} />
+                    {data.mission_transformation && <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(99,102,241,0.06)", borderRadius: 8, fontSize: 13, color: "#4f46e5" }}><strong>Trasformazione:</strong> {data.mission_transformation}</div>}
+                </SCard>
+            )}
+            {data.tone_of_voice && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🗣️ Tono di Voce</div>
+                    {data.tone_of_voice.style && <p style={{ marginBottom: 8 }}><strong>Stile:</strong> {data.tone_of_voice.style}</p>}
+                    {data.tone_of_voice.target_audience && <p style={{ marginBottom: 8 }}><strong>Target:</strong> {data.tone_of_voice.target_audience}</p>}
+                    {data.tone_of_voice.linguistic_approach && <p style={{ marginBottom: 8 }}><strong>Approccio:</strong> {data.tone_of_voice.linguistic_approach}</p>}
+                    {Array.isArray(data.tone_of_voice.vocabulary) && data.tone_of_voice.vocabulary.length > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                            <strong style={{ fontSize: 12, display: "block", marginBottom: 6 }}>Vocabolario chiave:</strong>
+                            <div>{data.tone_of_voice.vocabulary.map((w: string, i: number) => <Chip key={i} label={w} color="#0ea5e9" />)}</div>
+                        </div>
+                    )}
+                </SCard>
+            )}
+            {data.positioning && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>📊 Posizionamento</div>
+                    {data.positioning.market_tier && <Chip label={data.positioning.market_tier} color="#10b981" />}
+                    {data.positioning.segment && <p style={{ marginTop: 8, marginBottom: 8 }}>{data.positioning.segment}</p>}
+                    {Array.isArray(data.positioning.differentiators) && (
+                        <ul style={{ paddingLeft: 18, margin: 0 }}>
+                            {data.positioning.differentiators.map((d: string, i: number) => <li key={i} style={{ marginBottom: 4 }}>{d}</li>)}
+                        </ul>
+                    )}
+                </SCard>
+            )}
+            {data.brand_statement && (
+                <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(16,185,129,0.08))", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10, padding: "14px 18px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", marginBottom: 6 }}>✨ BRAND STATEMENT</div>
+                    <p style={{ fontStyle: "italic", fontSize: 15, fontWeight: 600, color: "var(--navy)", margin: 0 }}>"{data.brand_statement}"</p>
+                </div>
+            )}
+            {Array.isArray(data.strategic_notes) && data.strategic_notes.length > 0 && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>💡 Note Strategiche</div>
+                    <ul style={{ paddingLeft: 18, margin: 0 }}>
+                        {data.strategic_notes.map((n: string, i: number) => <li key={i} style={{ marginBottom: 4 }}>{n}</li>)}
+                    </ul>
+                </SCard>
+            )}
+        </div>
+    );
+}
+
+function BrandValuesRenderer({ data }: { data: any }) {
+    const pillars = data?.brand_pillars || (Array.isArray(data) ? data : null);
+    if (!pillars) return <GenericValue value={data} />;
+    const colors = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#0ea5e9"];
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {pillars.map((p: any, i: number) => {
+                const col = colors[i % colors.length];
                 return (
-                    <div style={{ overflowX: "auto", marginTop: 16 }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                            <thead>
-                                <tr style={{ background: "var(--navy)", color: "white" }}>
-                                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>
-                                        {key.includes('level_') ? 'Caratteristica' : 'Persona'}
-                                    </th>
-                                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Descrizione</th>
-                                    {value[0]?.headline && (
-                                        <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Headline</th>
-                                    )}
-                                    {value[0]?.subtitle && (
-                                        <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Sottotitolo</th>
-                                    )}
-                                </tr>
-                            </thead>
+                    <div key={i} style={{ borderLeft: `4px solid ${col}`, paddingLeft: 14, paddingBottom: 10 }}>
+                        <div style={{ fontWeight: 700, color: col, fontSize: 14, marginBottom: 6 }}>{p.name || p.pillar || `Pilastro ${i + 1}`}</div>
+                        <MD text={p.description || p.content || ""} />
+                        {Array.isArray(p.evidence) && p.evidence.length > 0 && (
+                            <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
+                                <strong>Evidenze: </strong>{p.evidence.join(" • ")}
+                            </div>
+                        )}
+                        {p.customer_impact && <div style={{ marginTop: 6, padding: "6px 10px", background: `${col}10`, borderRadius: 6, fontSize: 12, color: col }}>👤 {p.customer_impact}</div>}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function ProductPortfolioRenderer({ data }: { data: any }) {
+    const items = data?.items || data?.products || (Array.isArray(data) ? data : null);
+    if (!items) return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {items.map((item: any, i: number) => (
+                <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{item.name}</span>
+                        <div style={{ display: "flex", gap: 6 }}>
+                            {item.category && <Chip label={item.category} color="#94a3b8" />}
+                            {item.type && <Chip label={item.type === "service" ? "Servizio" : "Prodotto"} color={item.type === "service" ? "#6366f1" : "#10b981"} />}
+                        </div>
+                    </div>
+                    <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                        {item.technical_analysis && (
+                            <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase" }}>🔬 Analisi Tecnica</div>
+                                {item.technical_analysis.description && <MD text={item.technical_analysis.description} />}
+                                {item.technical_analysis.technology && <p style={{ marginBottom: 4 }}><strong>Tecnologia:</strong> {item.technical_analysis.technology}</p>}
+                                {Array.isArray(item.technical_analysis.key_elements) && <div style={{ marginTop: 4 }}>{item.technical_analysis.key_elements.map((e: string, j: number) => <Chip key={j} label={e} color="#64748b" />)}</div>}
+                            </div>
+                        )}
+                        {item.marketing_strategy && (
+                            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", marginBottom: 6, textTransform: "uppercase" }}>🎯 Strategia</div>
+                                {item.marketing_strategy.customer_problem && <div style={{ padding: "6px 10px", background: "rgba(239,68,68,0.06)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>❗ <strong>Problema cliente:</strong> {item.marketing_strategy.customer_problem}</div>}
+                                {Array.isArray(item.marketing_strategy.reasons_to_buy) && (
+                                    <ul style={{ paddingLeft: 18, margin: "0 0 8px" }}>
+                                        {item.marketing_strategy.reasons_to_buy.map((r: string, j: number) => <li key={j} style={{ marginBottom: 4 }}>{r}</li>)}
+                                    </ul>
+                                )}
+                                {item.marketing_strategy.usp && <div style={{ padding: "6px 10px", background: "rgba(16,185,129,0.06)", borderRadius: 6, fontSize: 13 }}>⭐ <strong>USP:</strong> {item.marketing_strategy.usp}</div>}
+                            </div>
+                        )}
+                        {Array.isArray(item.marketing_hooks) && item.marketing_hooks.length > 0 && (
+                            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", marginBottom: 8, textTransform: "uppercase" }}>🎣 Marketing Hooks</div>
+                                {item.marketing_hooks.map((h: string, j: number) => (
+                                    <div key={j} style={{ padding: "6px 12px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 6, marginBottom: 6, fontStyle: "italic", fontSize: 13 }}>"{h}"</div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function ReasonsToByRenderer({ data }: { data: any }) {
+    const rational = data?.rational || data?.razionali || data?.rtb_rational || [];
+    const emotional = data?.emotional || data?.emotivi || data?.rtb_emotional || [];
+    const hasLists = Array.isArray(rational) || Array.isArray(emotional);
+    if (!hasLists) return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#0ea5e9", marginBottom: 10 }}>🧠 Razionali (Logica)</div>
+                {(Array.isArray(rational) ? rational : [rational]).map((r: any, i: number) => (
+                    <div key={i} style={{ padding: "8px 12px", background: "rgba(14,165,233,0.06)", border: "1px solid rgba(14,165,233,0.2)", borderRadius: 8, marginBottom: 8, fontSize: 13 }}>
+                        {typeof r === "string" ? r : r.description || r.reason || JSON.stringify(r)}
+                    </div>
+                ))}
+            </div>
+            <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#ec4899", marginBottom: 10 }}>❤️ Emotivi (Cuore)</div>
+                {(Array.isArray(emotional) ? emotional : [emotional]).map((e: any, i: number) => (
+                    <div key={i} style={{ padding: "8px 12px", background: "rgba(236,72,153,0.06)", border: "1px solid rgba(236,72,153,0.2)", borderRadius: 8, marginBottom: 8, fontSize: 13 }}>
+                        {typeof e === "string" ? e : e.description || e.reason || JSON.stringify(e)}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function PersonasRenderer({ data }: { data: any }) {
+    const personas = Array.isArray(data) ? data : data?.personas || data?.customer_personas || [];
+    if (!personas.length) return <GenericValue value={data} />;
+    const colors = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#0ea5e9", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#84cc16"];
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+            {personas.map((p: any, i: number) => {
+                const col = colors[i % colors.length];
+                const name = p.persona_name || p.name || p.type || `Persona ${i + 1}`;
+                return (
+                    <div key={i} style={{ border: `1px solid ${col}30`, borderRadius: 12, overflow: "hidden" }}>
+                        <div style={{ background: `${col}12`, borderBottom: `1px solid ${col}20`, padding: "10px 14px" }}>
+                            <div style={{ fontWeight: 700, color: col, fontSize: 14 }}>{name}</div>
+                            {p.type && p.type !== name && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{p.type}</div>}
+                        </div>
+                        <div style={{ padding: "10px 14px", fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                            {p.who && <div><strong>Chi è:</strong> {p.who}</div>}
+                            {p.profile && <div><strong>Profilo:</strong> {p.profile}</div>}
+                            {p.pain_point && <div style={{ color: "#ef4444" }}>❗ {p.pain_point}</div>}
+                            {p.fears && <div style={{ color: "#ef4444" }}>😟 <strong>Paure:</strong> {p.fears}</div>}
+                            {p.desires && <div style={{ color: "#10b981" }}>✨ <strong>Desideri:</strong> {p.desires}</div>}
+                            {p.what_seeks && <div style={{ color: "#10b981" }}>🎯 {p.what_seeks}</div>}
+                            {p.critical_info && <div style={{ color: col, padding: "4px 8px", background: `${col}10`, borderRadius: 6, marginTop: 4 }}>💡 {p.critical_info}</div>}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function ContentMatrixRenderer({ data }: { data: any }) {
+    const rows = Array.isArray(data) ? data : data?.matrix || data?.rows || [];
+    if (!rows.length) return <GenericValue value={data} />;
+    return (
+        <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                    <tr style={{ background: "linear-gradient(135deg, #1e293b, #334155)" }}>
+                        {["ICP Target", "Hook Principale", "Paid Ads Strategy", "Organic Social Strategy"].map(h => (
+                            <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#fff", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((row: any, i: number) => (
+                        <tr key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
+                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--navy)", verticalAlign: "top", minWidth: 120 }}>{row.icp || row.persona || row.target || `ICP ${i + 1}`}</td>
+                            <td style={{ padding: "10px 12px", fontStyle: "italic", verticalAlign: "top", color: "#6366f1" }}>"{row.hook || row.hook_principale || row.headline || "—"}"</td>
+                            <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{row.paid_ads || row.paid || row.paid_strategy || "—"}</td>
+                            <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{row.organic_social || row.organic || row.organic_strategy || "—"}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+function BrandVoiceRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {data.brand_persona && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", marginBottom: 8 }}>🎭 Brand Persona</div>
+                    <MD text={typeof data.brand_persona === "string" ? data.brand_persona : JSON.stringify(data.brand_persona)} />
+                </SCard>
+            )}
+            {(data.communication_pillars || data.pillars || data.i_pilastri) && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", textTransform: "uppercase", marginBottom: 8 }}>🏛️ Pilastri Comunicazione</div>
+                    <GenericValue value={data.communication_pillars || data.pillars || data.i_pilastri} />
+                </SCard>
+            )}
+            {data.glossary && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>📖 Glossario Brand</div>
+                    <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead><tr style={{ background: "#f1f5f9" }}><th style={{ padding: "8px 12px", textAlign: "left" }}>Invece di...</th><th style={{ padding: "8px 12px", textAlign: "left" }}>Usa...</th></tr></thead>
                             <tbody>
-                                {value.map((item: any, idx: number) => (
-                                    <tr key={idx} style={{ borderBottom: "1px solid var(--border)" }}>
-                                        <td style={{ padding: "12px", fontWeight: 600, color: "var(--navy)", verticalAlign: "top" }}>
-                                            {item.characteristic || item.persona_name || item.name || `Item ${idx + 1}`}
-                                        </td>
-                                        <td style={{ padding: "12px", lineHeight: 1.6, verticalAlign: "top" }}>
-                                            {item.description || item.who || renderValue(item)}
-                                        </td>
-                                        {item.headline && (
-                                            <td style={{ padding: "12px", fontStyle: "italic", color: "var(--text-muted)", verticalAlign: "top" }}>
-                                                "{item.headline}"
-                                            </td>
-                                        )}
-                                        {item.subtitle && (
-                                            <td style={{ padding: "12px", fontSize: 12, color: "var(--text-muted)", verticalAlign: "top" }}>
-                                                {item.subtitle}
-                                            </td>
-                                        )}
+                                {(Array.isArray(data.glossary) ? data.glossary : Object.entries(data.glossary)).map((item: any, i: number) => (
+                                    <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                                        <td style={{ padding: "8px 12px", color: "#ef4444" }}>{Array.isArray(item) ? item[0] : item.instead_of || item.old}</td>
+                                        <td style={{ padding: "8px 12px", color: "#10b981", fontWeight: 600 }}>{Array.isArray(item) ? item[1] : item.use || item.new}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                );
-            }
+                </SCard>
+            )}
+            {data.dos_donts && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <SCard>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", marginBottom: 8 }}>✅ DO</div>
+                        <GenericValue value={data.dos_donts.dos || data.dos_donts.do} />
+                    </SCard>
+                    <SCard>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 8 }}>❌ DON'T</div>
+                        <GenericValue value={data.dos_donts.donts || data.dos_donts.dont} />
+                    </SCard>
+                </div>
+            )}
+            {data.emoji_strategy && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 8 }}>😀 Emoji Strategy</div>
+                    <MD text={typeof data.emoji_strategy === "string" ? data.emoji_strategy : JSON.stringify(data.emoji_strategy)} />
+                </SCard>
+            )}
+        </div>
+    );
+}
 
-            // Array normale (non tabella)
-            return (
-                <ul style={{ margin: "12px 0", paddingLeft: 24, lineHeight: 1.8 }}>
-                    {value.map((item, idx) => (
-                        <li key={idx} style={{ marginBottom: 12 }}>
-                            {typeof item === "object" ? renderValue(item) : item}
-                        </li>
-                    ))}
-                </ul>
-            );
-        }
+function ObjectionsRenderer({ data }: { data: any }) {
+    const items = Array.isArray(data) ? data : data?.objections || data?.gestione || [];
+    if (!items.length) return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {items.map((obj: any, i: number) => (
+                <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ background: "rgba(239,68,68,0.06)", borderBottom: "1px solid rgba(239,68,68,0.15)", padding: "10px 14px" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#ef4444" }}>❗ Obiezione #{i + 1}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{obj.objection || obj.obiezione || obj.title || obj.question}</div>
+                    </div>
+                    <div style={{ padding: "10px 14px", background: "rgba(16,185,129,0.04)" }}>
+                        <div style={{ fontSize: 11, color: "#10b981", fontWeight: 700, marginBottom: 4 }}>✅ Risposta</div>
+                        <MD text={obj.response || obj.risposta || obj.answer || ""} />
+                        {obj.psychology && <div style={{ marginTop: 8, padding: "6px 10px", background: "rgba(99,102,241,0.08)", borderRadius: 6, fontSize: 12, color: "#6366f1" }}>🧠 Psicologia: {obj.psychology}</div>}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
 
-        // Gestione oggetti
-        if (typeof value === "object") {
-            return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
-                    {Object.entries(value).map(([k, v]) => (
-                        <div key={k} style={{ paddingLeft: 12, borderLeft: "3px solid var(--lime)", paddingBottom: 12 }}>
-                            <strong style={{ color: "var(--navy)", textTransform: "capitalize", fontSize: 14, display: "block", marginBottom: 8 }}>
-                                {k.replace(/_/g, " ")}
-                            </strong>
-                            <div style={{ marginTop: 4, paddingLeft: 8 }}>{renderValue(v, k)}</div>
+function ReviewsVoCRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {(data.golden_hooks || data.hooks) && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 10 }}>🏆 Golden Hooks (dalle recensioni)</div>
+                    {(Array.isArray(data.golden_hooks || data.hooks) ? (data.golden_hooks || data.hooks) : [data.golden_hooks || data.hooks]).map((h: any, i: number) => (
+                        <div key={i} style={{ padding: "8px 14px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, marginBottom: 8, fontStyle: "italic", fontSize: 13 }}>
+                            "{typeof h === "string" ? h : h.hook || h.text}"
+                            {h.source && <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", fontStyle: "normal", marginTop: 2 }}>— {h.source}</span>}
                         </div>
                     ))}
-                </div>
-            );
-        }
+                </SCard>
+            )}
+            {data.sentiment_analysis && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", textTransform: "uppercase", marginBottom: 8 }}>📊 Sentiment</div>
+                    <GenericValue value={data.sentiment_analysis} />
+                </SCard>
+            )}
+            {data.key_vocabulary && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", marginBottom: 8 }}>💬 Vocabolario Reale</div>
+                    <div>{(Array.isArray(data.key_vocabulary) ? data.key_vocabulary : [data.key_vocabulary]).map((v: string, i: number) => <Chip key={i} label={v} color="#8b5cf6" />)}</div>
+                </SCard>
+            )}
+            {data.recurring_patterns && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>🔄 Pattern Ricorrenti</div>
+                    <GenericValue value={data.recurring_patterns} />
+                </SCard>
+            )}
+        </div>
+    );
+}
 
-        return String(value);
+function BattlecardsRenderer({ data }: { data: any }) {
+    const cards = Array.isArray(data) ? data : data?.battlecards || data?.competitors || [];
+    if (!cards.length) return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {cards.map((card: any, i: number) => (
+                <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "10px 16px" }}>
+                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>⚔️ {card.competitor || card.name || `Competitor ${i + 1}`}</div>
+                        {card.positioning && <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>{card.positioning}</div>}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "12px 16px", gap: 12 }}>
+                        {card.their_strengths && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>💪 I loro punti forza</div><GenericValue value={card.their_strengths} /></div>}
+                        {card.their_weaknesses && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", marginBottom: 4 }}>🎯 Le loro debolezze</div><GenericValue value={card.their_weaknesses} /></div>}
+                        {card.our_differentiators && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", marginBottom: 4 }}>⭐ I nostri differenziatori</div><GenericValue value={card.our_differentiators} /></div>}
+                        {card.strategy && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", marginBottom: 4 }}>📋 Strategia vs questo competitor</div><GenericValue value={card.strategy} /></div>}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function SeasonalRoadmapRenderer({ data }: { data: any }) {
+    const months = Array.isArray(data) ? data : data?.months || data?.roadmap || [];
+    const mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+    if (!months.length) return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+            {months.map((m: any, i: number) => {
+                const month = m.month || m.mese || mesi[i] || `Mese ${i + 1}`;
+                const focus = m.focus || m.obiettivo || m.theme || "";
+                const actions = m.actions || m.azioni || m.initiatives || [];
+                return (
+                    <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                        <div style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)", padding: "8px 12px" }}>
+                            <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{month}</div>
+                        </div>
+                        <div style={{ padding: "10px 12px" }}>
+                            {focus && <div style={{ fontSize: 12, fontWeight: 600, color: "#6366f1", marginBottom: 6 }}>🎯 {focus}</div>}
+                            {Array.isArray(actions) && actions.length > 0 && (
+                                <ul style={{ paddingLeft: 14, margin: 0, fontSize: 12 }}>
+                                    {actions.slice(0, 3).map((a: any, j: number) => <li key={j} style={{ marginBottom: 4 }}>{typeof a === "string" ? a : a.action || a.title}</li>)}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function PsychographicRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    const levels = [
+        { key: "level_1_primary", label: "Livello 1 — Primario", color: "#6366f1" },
+        { key: "level_2_secondary", label: "Livello 2 — Secondario", color: "#0ea5e9" },
+        { key: "level_3_tertiary", label: "Livello 3 — Terziario", color: "#10b981" },
+    ];
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {levels.map(({ key, label, color }) => {
+                const items = data[key];
+                if (!items) return null;
+                const arr = Array.isArray(items) ? items : [items];
+                return (
+                    <div key={key}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 10 }}>{label}</div>
+                        <div style={{ overflowX: "auto" }}>
+                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                <thead><tr style={{ background: `${color}10` }}>
+                                    {["Caratteristica", "Descrizione"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", color, borderBottom: `2px solid ${color}30` }}>{h}</th>)}
+                                </tr></thead>
+                                <tbody>
+                                    {arr.map((item: any, i: number) => (
+                                        <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                                            <td style={{ padding: "8px 12px", fontWeight: 600, color: "var(--navy)", verticalAlign: "top", width: "35%" }}>{item.characteristic || item.name || item.trait || `${i + 1}`}</td>
+                                            <td style={{ padding: "8px 12px", verticalAlign: "top" }}>{item.description || item.who || item.detail || ""}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function VisualBriefRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {data.color_palette && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#ec4899", textTransform: "uppercase", marginBottom: 10 }}>🎨 Palette Colori</div>
+                    {Array.isArray(data.color_palette) ? (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                            {data.color_palette.map((c: any, i: number) => {
+                                const hex = typeof c === "string" ? c : c.color || c.hex || "#cccccc";
+                                const label = typeof c === "string" ? c : c.name || c.label || hex;
+                                return (
+                                    <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                                        <div style={{ width: 48, height: 48, borderRadius: 8, background: hex, border: "2px solid rgba(0,0,0,0.1)" }} />
+                                        <span style={{ fontSize: 10, fontFamily: "monospace" }}>{label}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : <MD text={String(data.color_palette)} />}
+                </SCard>
+            )}
+            {(data.visual_style || data.style) && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", marginBottom: 8 }}>🖼️ Stile Visivo</div>
+                    <MD text={typeof (data.visual_style || data.style) === "string" ? (data.visual_style || data.style) : JSON.stringify(data.visual_style || data.style)} />
+                </SCard>
+            )}
+            {data.mood_board && <SCard><div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 8 }}>🌟 Mood Board</div><GenericValue value={data.mood_board} /></SCard>}
+            {data.ad_formats && <SCard><div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>📐 Formati Consigliati</div><GenericValue value={data.ad_formats} /></SCard>}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MACRO-AREAS CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+
+const MACRO_AREAS = [
+    {
+        title: "🏢 Brand & Posizionamento",
+        color: "#6366f1",
+        sections: [
+            { key: "brand_identity", label: "1. Brand Identity & Posizionamento", Renderer: BrandIdentityRenderer },
+            { key: "brand_values", label: "2. Valori del Brand (Brand Pillars)", Renderer: BrandValuesRenderer },
+            { key: "brand_voice", label: "8. Brand Voice & Communication", Renderer: BrandVoiceRenderer },
+        ],
+    },
+    {
+        title: "🛍️ Prodotti & Mercato",
+        color: "#10b981",
+        sections: [
+            { key: "product_portfolio", label: "3. Portafoglio Prodotti/Servizi", Renderer: ProductPortfolioRenderer },
+            { key: "product_vertical", label: "7. Analisi Verticale Prodotti", Renderer: ProductPortfolioRenderer },
+            { key: "reasons_to_buy", label: "4. Reasons to Buy (RTB)", Renderer: ReasonsToByRenderer },
+            { key: "objections", label: "9. Gestione Obiezioni", Renderer: ObjectionsRenderer },
+        ],
+    },
+    {
+        title: "👥 Personas & Contenuti",
+        color: "#8b5cf6",
+        sections: [
+            { key: "customer_personas", label: "5. Customer Personas (10 ICP)", Renderer: PersonasRenderer },
+            { key: "psychographic_analysis", label: "13. Analisi Psicografica (3 Livelli)", Renderer: PsychographicRenderer },
+            { key: "content_matrix", label: "6. Matrice Strategia Contenuti", Renderer: ContentMatrixRenderer },
+            { key: "reviews_voc", label: "10. Voice of Customer (Recensioni)", Renderer: ReviewsVoCRenderer },
+        ],
+    },
+    {
+        title: "⚔️ Competitive Intelligence",
+        color: "#f59e0b",
+        sections: [
+            { key: "battlecards", label: "11. Competitor Battlecards", Renderer: BattlecardsRenderer },
+            { key: "seasonal_roadmap", label: "12. Roadmap Stagionale (12 mesi)", Renderer: SeasonalRoadmapRenderer },
+            { key: "visual_brief", label: "14. Visual Brief", Renderer: VisualBriefRenderer },
+        ],
+    },
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════════════════════
+
+export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
+    const [analysis, setAnalysis] = useState<any>(null);
+    const [generating, setGenerating] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [expandedMacros, setExpandedMacros] = useState<Set<number>>(new Set([0]));
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+    const [generationStatus, setGenerationStatus] = useState<string>("");
+
+    // ── Fetch on mount ─────────────────────────────────────────────────────────
+    useEffect(() => {
+        fetchAnalysis();
+    }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const fetchAnalysis = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && typeof data === "object" && Object.keys(data).length > 0) {
+                    setAnalysis(data);
+                }
+            }
+        } catch (e) { /* ignore */ }
+        setLoading(false);
     };
 
-    // Macro aree con sezioni
-    const macroAreas = [
-        {
-            title: "🏢 BRAND & POSIZIONAMENTO",
-            icon: "🏢",
-            color: "#3b82f6",
-            sections: [
-                { key: "brand_identity", label: "1. Brand Identity & Posizionamento" },
-                { key: "brand_values", label: "2. Valori del Brand" },
-                { key: "brand_voice", label: "8. Brand Voice & Guidelines" },
-            ],
-        },
-        {
-            title: "🛍️ PRODOTTI & MERCATO",
-            icon: "🛍️",
-            color: "#10b981",
-            sections: [
-                { key: "product_portfolio", label: "3. Portafoglio Prodotti" },
-                { key: "product_vertical", label: "7. Analisi Verticale Prodotti" },
-                { key: "reasons_to_buy", label: "4. Reasons to Buy (RTB)" },
-                { key: "objections", label: "9. Gestione Obiezioni" },
-            ],
-        },
-        {
-            title: "👥 PERSONAS & STRATEGIA CONTENUTI",
-            icon: "👥",
-            color: "#8b5cf6",
-            sections: [
-                { key: "customer_personas", label: "5. Customer Personas (10 ICP)" },
-                { key: "psychographic_analysis", label: "13. Analisi Psicografica (3 livelli)" },
-                { key: "content_matrix", label: "6. Matrice Strategia Contenuti" },
-                { key: "reviews_voc", label: "10. Voice of Customer (Recensioni)" },
-            ],
-        },
-        {
-            title: "⚔️ COMPETITIVE INTELLIGENCE",
-            icon: "⚔️",
-            color: "#f59e0b",
-            sections: [
-                { key: "battlecards", label: "11. Competitor Battlecards" },
-                { key: "seasonal_roadmap", label: "12. Roadmap Stagionale" },
-                { key: "visual_brief", label: "14. Visual Brief" },
-            ],
-        },
-    ];
+    const generateAnalysis = async () => {
+        setGenerating(true);
+        setGenerationStatus("Raccolta dati: sito web, social, recensioni e competitor…");
+        const steps = [
+            "🔍 Analisi sito web e contenuti…",
+            "📸 Elaborazione dati Instagram…",
+            "⭐ Analisi recensioni Google…",
+            "📊 Lettura Meta Ads…",
+            "🏢 Generazione Brand Identity…",
+            "🧠 Creazione Customer Personas…",
+            "📈 Matrice contenuti e angoli…",
+            "⚔️ Battlecard competitor…",
+            "📅 Roadmap stagionale…",
+        ];
+        let step = 0;
+        const interval = setInterval(() => {
+            step = (step + 1) % steps.length;
+            setGenerationStatus(steps[step]);
+        }, 15000);
+        try {
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`, { method: "POST" });
+            if (res.ok) {
+                const result = await res.json();
+                setAnalysis(result.analysis || result);
+            }
+        } catch (e) { /* ignore */ }
+        clearInterval(interval);
+        setGenerating(false);
+        setGenerationStatus("");
+    };
 
-    // Fetch on mount
-    useState(() => {
-        fetchAnalysis();
-    });
+    const toggleMacro = (i: number) => {
+        const s = new Set(expandedMacros);
+        s.has(i) ? s.delete(i) : s.add(i);
+        setExpandedMacros(s);
+    };
 
+    const toggleSection = (key: string) => {
+        const s = new Set(expandedSections);
+        s.has(key) ? s.delete(key) : s.add(key);
+        setExpandedSections(s);
+    };
+
+    // ── Loading ────────────────────────────────────────────────────────────────
+    if (loading) {
+        return (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, gap: 12 }}>
+                <div className="spinner" style={{ width: 20, height: 20 }} />
+                <span style={{ color: "var(--text-muted)", fontSize: 14 }}>Caricamento analisi…</span>
+            </div>
+        );
+    }
+
+    // ── Empty state ────────────────────────────────────────────────────────────
     if (!analysis) {
         return (
             <div style={{ maxWidth: "100%" }}>
                 <h1 className="page-title" style={{ marginBottom: 6 }}>Analisi Strategica</h1>
                 <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 24 }}>
-                    Analisi completa in 14 sezioni divise per macro-aree strategiche
+                    Analisi completa in 14 sezioni — Brand, Prodotti, Personas, Competitive Intelligence
                 </p>
-
-                <div className="card" style={{ textAlign: "center", padding: "60px 20px" }}>
-                    <DocumentTextIcon style={{ width: 48, height: 48, color: "var(--text-muted)", margin: "0 auto 16px" }} />
-                    <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-header)", marginBottom: 8 }}>
-                        Analisi Strategica Completa
-                    </h3>
-                    <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20, maxWidth: 500, margin: "0 auto 24px" }}>
-                        Genera l&apos;analisi strategica completa in 14 sezioni basata su metodologia Francesco Agostinis per Meta Ads.
+                <div className="card" style={{ textAlign: "center", padding: "60px 24px" }}>
+                    <DocumentTextIcon style={{ width: 52, height: 52, color: "var(--text-muted)", margin: "0 auto 16px" }} />
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-header)", marginBottom: 8 }}>Nessuna analisi generata</h3>
+                    <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 520, margin: "0 auto 24px" }}>
+                        Genera l&apos;analisi strategica completa in 14 sezioni basata sulla metodologia Francesco Agostinis per Meta Ads.
                     </p>
-
-                    <div style={{ background: "rgba(149,191,71,0.05)", border: "1px solid rgba(149,191,71,0.2)", borderRadius: 12, padding: "20px", marginBottom: 24, textAlign: "left", maxWidth: 600, margin: "0 auto 24px" }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--lime)", marginBottom: 12 }}>✨ Cosa verrà generato:</p>
-                        <ul style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8, paddingLeft: 20, margin: 0 }}>
-                            <li>Brand Identity & Posizionamento completo (Mission, Tone, Visual Identity)</li>
-                            <li>Analisi SWOT aggiornata con dati reali</li>
-                            <li>10 Customer Personas dettagliate</li>
-                            <li>Competitor Battlecards e strategie</li>
-                            <li>Matrice contenuti e angoli comunicativi</li>
-                            <li>Voice of Customer da recensioni reali</li>
-                            <li>+ altre 8 sezioni strategiche</li>
+                    <div style={{ background: "rgba(149,191,71,0.05)", border: "1px solid rgba(149,191,71,0.2)", borderRadius: 12, padding: 20, marginBottom: 24, textAlign: "left", maxWidth: 560, margin: "0 auto 24px" }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: "var(--lime)", marginBottom: 10 }}>✨ Cosa verrà generato:</p>
+                        <ul style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.9, paddingLeft: 20, margin: 0 }}>
+                            {["Brand Identity & Posizionamento completo", "10 Customer Personas dettagliate (ICP)", "Competitor Battlecards", "Matrice contenuti Paid & Organic", "Voice of Customer da recensioni reali", "Roadmap stagionale 12 mesi", "+ altre 8 sezioni strategiche"].map(l => <li key={l}>{l}</li>)}
                         </ul>
                     </div>
-
-                    <div style={{ background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.2)", borderRadius: 8, padding: "12px 16px", marginBottom: 24, fontSize: 12, color: "var(--orange)" }}>
-                        ⏱️ Tempo stimato: <strong>8-12 minuti</strong> • Raccoglie dati da sito, social, recensioni e competitor
+                    <div style={{ background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.2)", borderRadius: 8, padding: "10px 16px", marginBottom: 24, fontSize: 12, color: "var(--orange)", maxWidth: 560, margin: "0 auto 24px" }}>
+                        ⏱️ Tempo stimato: <strong>4-8 minuti</strong> • AI parallele orchestrate per velocità massima
                     </div>
-
-                    <button className="btn btn-primary" style={{ fontSize: 15, padding: "14px 32px", fontWeight: 700 }} onClick={generateAnalysis} disabled={generating}>
-                        {generating ? (
-                            <>
-                                <div className="spinner" style={{ width: 14, height: 14 }} />
-                                Generazione in corso... (può richiedere 10+ minuti)
-                            </>
-                        ) : (
-                            <>
-                                <ArrowPathIcon style={{ width: 15, height: 15 }} />
-                                🚀 Genera Analisi Strategica Completa
-                            </>
-                        )}
+                    <button className="btn btn-primary" style={{ fontSize: 15, padding: "14px 36px", fontWeight: 700 }} onClick={generateAnalysis} disabled={generating}>
+                        {generating ? (<><div className="spinner" style={{ width: 14, height: 14 }} />{generationStatus || "Generazione in corso…"}</>) : (<><SparklesIcon style={{ width: 16, height: 16 }} />🚀 Genera Analisi Strategica Completa</>)}
                     </button>
                 </div>
             </div>
         );
     }
 
+    // ── Generated progress bar (during regeneration) ───────────────────────────
+    const generatingOverlay = generating && (
+        <div style={{ position: "fixed", bottom: 24, right: 24, background: "var(--navy)", color: "#fff", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)", zIndex: 1000, maxWidth: 360 }}>
+            <div className="spinner" style={{ width: 16, height: 16, borderColor: "rgba(255,255,255,0.3)", borderTopColor: "var(--lime)" }} />
+            <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--lime)" }}>Rigenerazione in corso</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{generationStatus}</div>
+            </div>
+        </div>
+    );
+
+    // ── Completion badge ───────────────────────────────────────────────────────
+    const allSections = MACRO_AREAS.flatMap(m => m.sections);
+    const filledCount = allSections.filter(s => analysis[s.key] && (typeof analysis[s.key] !== "object" || Object.keys(analysis[s.key]).length > 0 || Array.isArray(analysis[s.key]))).length;
+
     return (
         <div style={{ maxWidth: "100%" }}>
+            {generatingOverlay}
+
+            {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                 <div>
-                    <h1 className="page-title" style={{ marginBottom: 6 }}>Analisi Strategica</h1>
-                    <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                        14 sezioni complete — Brand, Prodotti, Personas, Competitive Intelligence
+                    <h1 className="page-title" style={{ marginBottom: 4 }}>Analisi Strategica</h1>
+                    <p style={{ color: "var(--text-muted)", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                        <CheckCircleIcon style={{ width: 14, height: 14, color: "#10b981" }} />
+                        <span>{filledCount}/{allSections.length} sezioni complete</span>
+                        <span style={{ color: "var(--border)" }}>•</span>
+                        <span>Metodologia Francesco Agostinis</span>
                     </p>
                 </div>
                 <button className="btn btn-ghost btn-sm" onClick={generateAnalysis} disabled={generating}>
-                    {generating ? (
-                        <>
-                            <div className="spinner" style={{ width: 12, height: 12 }} />
-                            Rigenerando...
-                        </>
-                    ) : (
-                        <>
-                            <ArrowPathIcon style={{ width: 13, height: 13 }} />
-                            Rigenera
-                        </>
-                    )}
+                    <ArrowPathIcon style={{ width: 13, height: 13 }} />{generating ? "Rigenerando…" : "Rigenera"}
                 </button>
             </div>
 
-            {/* 4 Macro-Aree Accordion */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {macroAreas.map((macro, macroIdx) => {
+            {/* Macro areas */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {MACRO_AREAS.map((macro, macroIdx) => {
                     const isExpanded = expandedMacros.has(macroIdx);
-
+                    const filledInMacro = macro.sections.filter(s => analysis[s.key]).length;
                     return (
                         <div key={macroIdx} className="card" style={{ padding: 0, overflow: "hidden" }}>
-                            {/* Header Macro Area */}
-                            <button
-                                onClick={() => toggleMacro(macroIdx)}
-                                style={{
-                                    width: "100%",
-                                    padding: "18px 20px",
-                                    border: "none",
-                                    background: `linear-gradient(135deg, ${macro.color}15, ${macro.color}05)`,
-                                    borderLeft: `4px solid ${macro.color}`,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 12,
-                                    transition: "all 0.2s",
-                                }}
-                            >
-                                {isExpanded ? (
-                                    <ChevronDownIcon style={{ width: 18, height: 18, color: macro.color }} />
-                                ) : (
-                                    <ChevronRightIcon style={{ width: 18, height: 18, color: macro.color }} />
-                                )}
-                                <span style={{ fontSize: 24 }}>{macro.icon}</span>
-                                <span style={{ fontSize: 16, fontWeight: 700, color: macro.color, flex: 1, textAlign: "left" }}>
-                                    {macro.title}
-                                </span>
-                                <span style={{ fontSize: 12, color: "var(--text-muted)", background: "rgba(0,0,0,0.05)", padding: "4px 10px", borderRadius: 12 }}>
-                                    {macro.sections.length} sezioni
+                            <button onClick={() => toggleMacro(macroIdx)} style={{ width: "100%", padding: "16px 20px", border: "none", background: `linear-gradient(135deg, ${macro.color}14, ${macro.color}06)`, borderLeft: `4px solid ${macro.color}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, transition: "all 0.2s" }}>
+                                {isExpanded ? <ChevronDownIcon style={{ width: 18, height: 18, color: macro.color }} /> : <ChevronRightIcon style={{ width: 18, height: 18, color: macro.color }} />}
+                                <span style={{ fontSize: 15, fontWeight: 700, color: macro.color, flex: 1, textAlign: "left" }}>{macro.title}</span>
+                                <span style={{ fontSize: 11, color: "var(--text-muted)", background: "rgba(0,0,0,0.06)", padding: "3px 10px", borderRadius: 12 }}>
+                                    {filledInMacro}/{macro.sections.length} sezioni
                                 </span>
                             </button>
 
-                            {/* Sezioni interne */}
                             {isExpanded && (
-                                <div style={{ padding: "0 20px 20px" }}>
-                                    {macro.sections.map((section) => {
-                                        const sectionData = analysis[section.key];
-                                        const isSectionExpanded = expandedSections.has(section.key);
-
+                                <div style={{ padding: "0 16px 16px" }}>
+                                    {macro.sections.map(({ key, label, Renderer }) => {
+                                        const sectionData = analysis[key];
+                                        const isOpen = expandedSections.has(key);
+                                        const hasData = sectionData && (typeof sectionData !== "object" || Object.keys(sectionData).length > 0 || (Array.isArray(sectionData) && sectionData.length > 0));
                                         return (
-                                            <div key={section.key} style={{ marginTop: 16, border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-                                                {/* Header Sezione */}
-                                                <button
-                                                    onClick={() => toggleSection(section.key)}
-                                                    style={{
-                                                        width: "100%",
-                                                        padding: "14px 16px",
-                                                        border: "none",
-                                                        background: isSectionExpanded ? "rgba(0,0,0,0.02)" : "#fff",
-                                                        cursor: "pointer",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 10,
-                                                    }}
-                                                >
-                                                    {isSectionExpanded ? (
-                                                        <ChevronDownIcon style={{ width: 16, height: 16, color: "var(--navy)" }} />
+                                            <div key={key} style={{ marginTop: 12, border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                                                <button onClick={() => toggleSection(key)} style={{ width: "100%", padding: "12px 16px", border: "none", background: isOpen ? "rgba(0,0,0,0.02)" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                                                    {isOpen ? <ChevronDownIcon style={{ width: 15, height: 15, color: "var(--navy)" }} /> : <ChevronRightIcon style={{ width: 15, height: 15, color: "var(--navy)" }} />}
+                                                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-header)", flex: 1, textAlign: "left" }}>{label}</span>
+                                                    {hasData ? (
+                                                        <CheckCircleIcon style={{ width: 15, height: 15, color: "#10b981" }} />
                                                     ) : (
-                                                        <ChevronRightIcon style={{ width: 16, height: 16, color: "var(--navy)" }} />
+                                                        <span style={{ fontSize: 10, color: "var(--text-muted)", background: "rgba(0,0,0,0.04)", padding: "2px 8px", borderRadius: 8 }}>Non generata</span>
                                                     )}
-                                                    <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-header)", flex: 1, textAlign: "left" }}>
-                                                        {section.label}
-                                                    </span>
                                                 </button>
-
-                                                {/* Contenuto Sezione */}
-                                                {isSectionExpanded && (
-                                                    <div style={{ padding: 16, background: "#fafafa", fontSize: 13, color: "var(--text-dark-primary)" }}>
-                                                        {renderValue(sectionData)}
+                                                {isOpen && (
+                                                    <div style={{ padding: 16, background: "#fafafa", fontSize: 13, color: "var(--text-dark-primary)", borderTop: "1px solid var(--border)" }}>
+                                                        {hasData
+                                                            ? <Renderer data={sectionData} />
+                                                            : (
+                                                                <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontStyle: "italic", fontSize: 12 }}>
+                                                                    Questa sezione non è ancora stata generata. Clicca &quot;Rigenera&quot; per generare l&apos;analisi completa.
+                                                                </div>
+                                                            )}
                                                     </div>
                                                 )}
                                             </div>

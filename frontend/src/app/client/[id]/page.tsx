@@ -32,7 +32,7 @@ import {
     ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "${API}";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
 
 type SectionType = "sorgenti" | "identita" | "analisi-strategica" | "personas" | "reports";
 
@@ -986,33 +986,20 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                          {/* Shopify Connection */}
                          <ShopifyCard clientId={id} client={client} setClient={setClient} />
 
-                         {/* Avvia Ricerca (Perplexity) */}
-                         <div className="card" style={{ marginTop: 24, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                             <div style={{ marginBottom: 16 }}>
-                                 <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, color: "#fff" }}>
-                                     <MagnifyingGlassIcon style={{ width: 18, height: 18, color: "var(--orange)" }} />
-                                     Avvia Ricerca di Mercato
+                         {/* Istruzioni per Analisi Strategica */}
+                         <div className="card" style={{ marginTop: 24, background: "rgba(149,191,71,0.05)", border: "1px solid rgba(149,191,71,0.2)" }}>
+                             <div style={{ marginBottom: 12 }}>
+                                 <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--lime)" }}>
+                                     <SparklesIcon style={{ width: 18, height: 18 }} />
+                                     Pronto per l'Analisi Strategica?
                                  </span>
                              </div>
-
-                             <div style={{ marginBottom: 0 }}>
-                                 <label className="label" style={{ fontSize: 11, marginBottom: 8, display: "block", color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Istruzioni Aggiuntive per Claude (opzionale)</label>
-                                 <textarea 
-                                     className="input" 
-                                     rows={3} 
-                                     placeholder='Es: "Focalizzati sugli angoli di vendita per l&apos;e-commerce", "Analizza gli script video caricati"...'
-                                     value={researchUserPrompt}
-                                     onChange={e => setResearchUserPrompt(e.target.value)}
-                                     style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.3)", fontSize: 13, width: "100%", borderRadius: 10, padding: "12px 14px", color: "#fff", outline: "none", fontFamily: "inherit", resize: "vertical" }}
-                                 />
-                                 
-                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20 }}>
-                                     <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>I risultati della ricerca verranno visualizzati nella sezione <strong>Analisi</strong>.</p>
-                                     <button className="btn btn-orange" style={{ padding: "14px 32px", fontSize: 15, minWidth: 220, fontWeight: 800 }} onClick={runResearch} disabled={loading.research}>
-                                         {loading.research ? <><div className="spinner" />Ricercando...</> : <><SparklesIcon style={{ width: 18, height: 18 }} />Avvia Ricerca approfondita</>}
-                                     </button>
-                                 </div>
-                             </div>
+                             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.6 }}>
+                                 Dopo aver aggiunto link, competitor e documenti, vai alla sezione <strong>Analisi Strategica</strong> per generare l'analisi completa in 14 sezioni.
+                             </p>
+                             <p style={{ fontSize: 12, color: "rgba(149,191,71,0.8)", background: "rgba(149,191,71,0.1)", padding: "8px 12px", borderRadius: 6, marginBottom: 0 }}>
+                                 💡 L'analisi raccoglierà automaticamente dati da sito web, social, recensioni Google e competitor.
+                             </p>
                          </div>
 
                     </div>
