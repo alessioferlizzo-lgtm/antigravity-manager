@@ -511,4 +511,29 @@ class StorageService:
         except Exception as e:
             print(f"[Supabase] Scripts sync failed: {e}")
 
+        # 9. Raw-data files (from Supabase Storage)
+        try:
+            result = sb.table("clients").select("id").execute()
+            for row in result.data:
+                cid = row["id"]
+                raw_dir = CLIENTS_DIR / cid / "raw_data"
+                raw_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    files = sb.storage.from_("raw-data").list(cid)
+                    if files:
+                        for file_meta in files:
+                            fname = file_meta.get("name", "")
+                            if fname and not (raw_dir / fname).exists():
+                                try:
+                                    data = sb.storage.from_("raw-data").download(f"{cid}/{fname}")
+                                    (raw_dir / fname).write_bytes(data)
+                                    print(f"[Supabase] Downloaded raw-data: {cid}/{fname}")
+                                except Exception as dl_err:
+                                    print(f"[Supabase] Could not download {cid}/{fname}: {dl_err}")
+                except Exception:
+                    pass
+            print(f"[Supabase] Raw-data sync complete")
+        except Exception as e:
+            print(f"[Supabase] Raw-data sync failed: {e}")
+
         print("[Supabase] Startup sync complete ✓")

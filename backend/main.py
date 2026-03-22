@@ -3419,13 +3419,13 @@ async def generate_complete_client_analysis(client_id: str):
     products_csv = "Non disponibili"
     services_txt = "Non disponibili"
 
-    raw_files = list((CLIENTS_DIR / client_id / "raw-data").glob("*")) if (CLIENTS_DIR / client_id / "raw-data").exists() else []
+    raw_files = list((CLIENTS_DIR / client_id / "raw_data").glob("*")) if (CLIENTS_DIR / client_id / "raw_data").exists() else []
     for file_path in raw_files:
         try:
             file_name_lower = file_path.name.lower()
 
-            # Cerca CSV prodotti Shopify
-            if file_name_lower.endswith('.csv') and ('product' in file_name_lower or 'shopify' in file_name_lower or 'prodott' in file_name_lower):
+            # Cerca CSV (prodotti Shopify, listini, etc.) — qualsiasi CSV viene trattato come dati prodotto
+            if file_name_lower.endswith('.csv'):
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     products_csv = f.read()[:10000]  # Limite 10K caratteri per CSV
                     print(f"✅ Trovato CSV prodotti: {file_path.name}")

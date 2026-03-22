@@ -50,9 +50,12 @@
       "recommended_model": "gemini",
       "required_inputs": [
         "brand_identity",
-        "product_portfolio"
+        "product_portfolio",
+        "google_reviews",
+        "social_data",
+        "services_txt"
       ],
-      "system_prompt": "Genera ALMENO 5 profili psicologici di clienti ideali estremamente complessi. Schema: {\"personas\": [{\"who\": \"Label\", \"profile\": \"Descrizione profonda...\", \"pain_point\": \"Il Dolore...\", \"fears\": \"...\", \"desires\": \"...\", \"what_seeks\": \"...\", \"critical_info\": \"...\"}]}"
+      "system_prompt": "Genera ALMENO 5 profili psicologici di clienti ideali estremamente complessi. Analizza le recensioni, i commenti social e i servizi per creare personas realistiche. Schema: {\"personas\": [{\"who\": \"Label\", \"profile\": \"Descrizione profonda...\", \"pain_point\": \"Il Dolore...\", \"fears\": \"...\", \"desires\": \"...\", \"what_seeks\": \"...\", \"critical_info\": \"...\"}]}"
     },
     {
       "step_id": "brand_voice",
