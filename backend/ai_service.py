@@ -585,7 +585,9 @@ Rispondi SOLO con JSON:
         ads_data: str = "",
         raw_docs: str = "",
         google_reviews: str = "",
-        instagram_comments: str = ""
+        instagram_comments: str = "",
+        products_csv: str = "",
+        services_txt: str = ""
     ) -> Dict[str, Any]:
         """
         🔥 NUOVO SISTEMA - Metodologia Francesco Agostinis
@@ -598,7 +600,7 @@ Rispondi SOLO con JSON:
         from .ai_service_strategic_analysis import generate_complete_strategic_analysis
         return await generate_complete_strategic_analysis(
             self, client_info, site_url, site_content, social_data, ads_data,
-            raw_docs, google_reviews, instagram_comments
+            raw_docs, google_reviews, instagram_comments, products_csv, services_txt
         )
 
 ai_service = AIService()
