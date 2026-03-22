@@ -61,7 +61,8 @@ async def generate_complete_strategic_analysis(
     google_reviews: str = "",
     instagram_comments: str = "",
     products_csv: str = "",
-    services_txt: str = ""
+    services_txt: str = "",
+    competitor_data: str = ""
 ) -> Dict[str, Any]:
     
     # 1. Load the Master Workflow JSON
@@ -82,7 +83,8 @@ async def generate_complete_strategic_analysis(
         "google_reviews": google_reviews,
         "instagram_comments": instagram_comments,
         "products_csv": products_csv, # Pass the entire CSV
-        "services_txt": services_txt
+        "services_txt": services_txt,
+        "competitor_data": competitor_data  # Real competitor names/links from Sorgenti
     }
     
     # 3. Sequential Execution loop (guarantees context inheritance)
@@ -124,6 +126,17 @@ async def generate_complete_strategic_analysis(
     seasonal_roadmap_data = results.get("seasonal_roadmap", {})
     visual_brief_data = results.get("visual_brief", {})
     
+    # Customer personas - handle both list and dict formats from AI
+    personas_raw = customer_personas_data
+    if isinstance(personas_raw, list):
+        personas_list = personas_raw
+    elif isinstance(personas_raw, dict):
+        personas_list = personas_raw.get("personas", [])
+        if not personas_list and personas_raw:
+            personas_list = [personas_raw]
+    else:
+        personas_list = []
+
     # Clean UI shapes
     final_output = {
         "brand_identity": {
@@ -162,7 +175,7 @@ async def generate_complete_strategic_analysis(
             "performance": objections_data.get("product_performance", []),
             "ethics": objections_data.get("ethics_sustainability", [])
         },
-        "customer_personas": customer_personas_data.get("personas", []),
+        "customer_personas": personas_list,
         "psychographic_analysis": {
             "level_1_primary": psychographic_data.get("level_1_primary", []),
             "level_2_secondary": psychographic_data.get("level_2_secondary", []),
@@ -170,11 +183,11 @@ async def generate_complete_strategic_analysis(
         },
         "content_matrix": content_matrix_data.get("matrix", []),
         "reviews_voc": {
-            "golden_hooks": reviews_voc_data.get("golden_hooks", []),
-            "sentiment_analysis": reviews_voc_data.get("sentiment_analysis", ""),
-            "key_vocabulary": reviews_voc_data.get("key_vocabulary", []),
-            "pain_points": reviews_voc_data.get("pain_points_leverage", []),
-            "conclusion": reviews_voc_data.get("practical_conclusion", "")
+            "golden_hooks": reviews_voc_data.get("golden_hooks", reviews_voc_data.get("hooks", [])),
+            "sentiment_analysis": reviews_voc_data.get("sentiment_analysis", reviews_voc_data.get("sentiment", "")),
+            "key_vocabulary": reviews_voc_data.get("key_vocabulary", reviews_voc_data.get("recurring_keywords", reviews_voc_data.get("vocabulary", []))),
+            "pain_points": reviews_voc_data.get("pain_points_leverage", reviews_voc_data.get("pain_points", [])),
+            "conclusion": reviews_voc_data.get("practical_conclusion", reviews_voc_data.get("conclusion", ""))
         },
         "battlecards": [
             battlecards_data.get("direct_competitor", {}),

@@ -3457,6 +3457,9 @@ async def generate_complete_client_analysis(client_id: str):
     print(f"🧠 GENERAZIONE ANALISI STRATEGICA")
     print(f"{'='*80}\n")
 
+    # Serialize competitor data for the AI workflow
+    competitor_text = json.dumps(competitor_data, ensure_ascii=False) if isinstance(competitor_data, (dict, list)) else str(competitor_data)
+
     complete_analysis = await ai_service.generate_complete_analysis(
         client_info=client_info,
         site_url=site_url,
@@ -3467,10 +3470,11 @@ async def generate_complete_client_analysis(client_id: str):
         google_reviews=google_reviews_text,
         instagram_comments=instagram_text,
         products_csv=products_csv,
-        services_txt=services_txt
+        services_txt=services_txt,
+        competitor_data=competitor_text
     )
 
-    # Aggiungi dati competitor all'analisi
+    # Aggiungi dati competitor all'analisi per salvataggio
     complete_analysis["competitor_data"] = competitor_data
 
     # 🔥 AGGIORNA METADATA CON I NUOVI DATI (SWOT, OBIETTIVI, STRATEGIA, PERSONAS, TONE)

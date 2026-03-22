@@ -92,9 +92,11 @@
       "recommended_model": "gemini",
       "required_inputs": [
         "google_reviews",
-        "instagram_comments"
+        "instagram_comments",
+        "raw_docs",
+        "site_content"
       ],
-      "system_prompt": "Analizza recensioni positive e negative. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [{\"hook\": \"...\", \"source\": \"...\"}], \"pain_points_leverage\": [...], \"recurring_keywords\": [...], \"sentiment_analysis\": \"...\", \"key_vocabulary\": [\"...\"], \"practical_conclusion\": \"...\"}"
+      "system_prompt": "Analizza PROFONDAMENTE tutte le recensioni Google, commenti Instagram, e documenti forniti. Estrai il linguaggio reale dei clienti. Se non ci sono recensioni testuali, analizza i commenti social e il contenuto del sito per dedurre il vocabolario del target. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [{\"hook\": \"frase esatta del cliente o dedotta dai dati\", \"source\": \"Google/Instagram/Dedotto\"}], \"pain_points_leverage\": [{\"pain\": \"...\", \"leverage\": \"...\"}], \"recurring_keywords\": [\"...\"], \"sentiment_analysis\": \"analisi dettagliata del sentiment...\", \"key_vocabulary\": [\"parola1\", \"parola2\", \"...\"], \"practical_conclusion\": \"conclusione pratica...\"}"
     },
     {
       "step_id": "battlecards",
@@ -102,9 +104,10 @@
       "recommended_model": "perplexity",
       "required_inputs": [
         "brand_identity",
-        "product_portfolio"
+        "product_portfolio",
+        "competitor_data"
       ],
-      "system_prompt": "Fai ricerca e compara il brand ai competitor diretti online, retail e sostituti. JSON: {\"direct_competitor\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"retail_giant\": {...}, \"secret_habit\": {...}, \"ultimate_solution\": {...}}"
+      "system_prompt": "USA I COMPETITOR REALI FORNITI NEI DATI (competitor_data). NON inventare competitor generici. Analizza i competitor forniti e compara il brand a ciascuno di essi. Se non ci sono competitor forniti, cerca i principali competitor online del settore. JSON: {\"direct_competitor\": {\"who\": \"Nome Reale del Competitor\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"retail_giant\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"secret_habit\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"ultimate_solution\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}}"
     },
     {
       "step_id": "seasonal_roadmap",
