@@ -159,8 +159,21 @@ function BrandValuesRenderer({ data }: { data: any }) {
 }
 
 function ProductPortfolioRenderer({ data }: { data: any }) {
-    const items = data?.items || data?.products || (Array.isArray(data) ? data : null);
-    if (!items) return <GenericValue value={data} />;
+    let items: any[] = [];
+    if (Array.isArray(data)) {
+        items = data;
+    } else if (data?.items || data?.products) {
+        items = Array.isArray(data.items) ? data.items : data.products;
+    } else if (data && typeof data === "object") {
+        // Collect from any array fields (e.g. core_products, pre_during_products)
+        Object.keys(data).forEach(key => {
+            if (Array.isArray(data[key])) {
+                items = items.concat(data[key].map((item: any) => ({ ...item, category: item.category || key.replace(/_/g, " ") })));
+            }
+        });
+    }
+    
+    if (!items || !items.length) return <GenericValue value={data} />;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {items.map((item: any, i: number) => (
@@ -410,8 +423,17 @@ function ReviewsVoCRenderer({ data }: { data: any }) {
 }
 
 function BattlecardsRenderer({ data }: { data: any }) {
-    const cards = Array.isArray(data) ? data : data?.battlecards || data?.competitors || [];
-    if (!cards.length) return <GenericValue value={data} />;
+    let cards: any[] = [];
+    if (Array.isArray(data)) {
+        cards = data;
+    } else if (data?.battlecards || data?.competitors) {
+        cards = Array.isArray(data.battlecards) ? data.battlecards : data.competitors;
+    } else if (data && typeof data === "object") {
+        // AI returns dict like {"direct_competitor": {...}, "retail_giant": {...}}
+        cards = Object.values(data).filter(v => v && typeof v === "object" && !Array.isArray(v));
+    }
+
+    if (!cards || !cards.length) return <GenericValue value={data} />;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {cards.map((card: any, i: number) => (
@@ -433,7 +455,20 @@ function BattlecardsRenderer({ data }: { data: any }) {
 }
 
 function SeasonalRoadmapRenderer({ data }: { data: any }) {
-    const months = Array.isArray(data) ? data : data?.months || data?.roadmap || [];
+    let months: any[] = [];
+    if (Array.isArray(data)) {
+        months = data;
+    } else if (data?.months || data?.roadmap) {
+        months = Array.isArray(data.months) ? data.months : data.roadmap;
+    } else if (data && typeof data === "object") {
+        // AI returns dict like {"q1_recovery": {...}, "q2_pre_summer": {...}}
+        Object.entries(data).forEach(([k, v]: [string, any]) => {
+            if (v && typeof v === "object" && !Array.isArray(v)) {
+                months.push({ month: k.replace(/_/g, " ").toUpperCase(), ...v });
+            }
+        });
+    }
+
     const mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
     if (!months.length) return <GenericValue value={data} />;
     return (
