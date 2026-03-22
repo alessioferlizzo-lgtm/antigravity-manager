@@ -31,7 +31,7 @@
         "products_csv",
         "services_txt"
       ],
-      "system_prompt": "Se sono presenti prodotti (nel CSV) e/o servizi (nel TXT), elaborali TUTTI. Raggruppali per fase di utilizzo, categoria o percorso utente. Analizzali secondo la profonda logica di Agostinis. Evita di citare la parola CSV o TXT nell'analisi. Restituisci JSON: {\"core_products\": [{\"name\": \"...\", \"benefit_tech\": \"...\", \"key_ingredients\": \"...\", \"usp\": \"...\"}], \"pre_during_products\": [...], \"post_treatment_products\": [...], \"lifestyle_products\": [...]}"
+      "system_prompt": "STRITI VINCOLI: Se sono presenti servizi (nei dati o nel TXT), DEVI TASSATIVAMENTE ELENCARLI E ANALIZZARLI TUTTI, NESSUNO ESCLUSO, anche se sono 10 o 15. Non omettere nessun servizio del cliente. Per i prodotti (dal CSV), analizza e raggruppa i principali o più importanti (almeno 10). Raggruppali per fase di utilizzo, categoria o percorso utente. Analizzali secondo la profonda logica di Agostinis. Restituisci JSON: {\"core_products\": [{\"name\": \"...\", \"benefit_tech\": \"...\", \"key_ingredients\": \"...\", \"usp\": \"...\"}], \"pre_during_products\": [...], \"post_treatment_products\": [...], \"lifestyle_products\": [...]}"
     },
     {
       "step_id": "reasons_to_buy",
@@ -96,7 +96,7 @@
         "raw_docs",
         "site_content"
       ],
-      "system_prompt": "Analizza PROFONDAMENTE tutte le recensioni Google, commenti Instagram, e documenti forniti. Estrai il linguaggio reale dei clienti. Se non ci sono recensioni testuali, analizza i commenti social e il contenuto del sito per dedurre il vocabolario del target. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [{\"hook\": \"frase esatta del cliente o dedotta dai dati\", \"source\": \"Google/Instagram/Dedotto\"}], \"pain_points_leverage\": [{\"pain\": \"...\", \"leverage\": \"...\"}], \"recurring_keywords\": [\"...\"], \"sentiment_analysis\": \"analisi dettagliata del sentiment...\", \"key_vocabulary\": [\"parola1\", \"parola2\", \"...\"], \"practical_conclusion\": \"conclusione pratica...\"}"
+      "system_prompt": "Analizza PROFONDAMENTE tutte le recensioni Google, commenti Instagram, e documenti forniti (SIA DEL CLIENTE CHE DEI COMPETITOR). Estrai il linguaggio reale dei clienti. REGOLE FERREE: 1. I 'golden_hooks' DEVONO ESSERE FRASI REALI, QUOTAZIONI LETTERALI ESATTE ESTRAITE COPIA-INCOLLA DAI COMMENTI O DALLE RECENSIONI. VIETATO INVENTARE O PARAFRASARE. Se un cliente ha scritto 'mi ha svoltato la vita', usa esattamente quella frase. 2. Anche il vocabolario deve rispecchiare i termini esatti usati. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [{\"hook\": \"frase esatta lettera per lettera del cliente\", \"source\": \"Google/Instagram (Specifica se del cliente o competitor)\"}], \"pain_points_leverage\": [{\"pain\": \"...\", \"leverage\": \"...\"}], \"recurring_keywords\": [\"...\"], \"sentiment_analysis\": \"analisi dettagliata del sentiment...\", \"key_vocabulary\": [\"parola vera 1\", \"parola vera 2\", \"...\"], \"practical_conclusion\": \"conclusione pratica...\"}"
     },
     {
       "step_id": "battlecards",
