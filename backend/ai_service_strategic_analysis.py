@@ -34,18 +34,52 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
     
     print(f"[Workflow Engine] Executing Task: {step_id} using {target_model}")
     
-    # 3. Execute
-    response_str = await service._call_ai(
-        model=target_model,
-        messages=messages,
-        max_tokens=8000
-    )
+    # 3. Execute with Retries
+    max_retries = 3
+    attempt = 0
+    response_json = {}
     
-    try:
-        response_json = json_repair.loads(response_str)
-    except Exception as e:
-        print(f"[Workflow Engine] JSON Parse Error in {step_id}: {e}")
-        response_json = {}
+    while attempt < max_retries:
+        attempt += 1
+        try:
+            print(f"[Workflow Engine] Executing Task: {step_id} using {target_model} (Attempt {attempt}/{max_retries})")
+            
+            response_str = await service._call_ai(
+                model=target_model,
+                messages=messages,
+                max_tokens=8000
+            )
+            
+            response_json = json_repair.loads(response_str)
+            
+            # Check for error objects returned instead of valid data
+            if isinstance(response_json, dict) and "error" in response_json:
+                raise Exception(f"AI returned error object: {response_json['error']}")
+            if isinstance(response_json, list) and len(response_json) > 0 and isinstance(response_json[0], dict) and "error" in response_json[0]:
+                raise Exception(f"AI returned error array: {response_json[0]['error']}")
+                
+            # Content validation: if reviews_voc is completely empty, force retry
+            if step_id == "reviews_voc" and isinstance(response_json, dict):
+                gh = response_json.get("golden_hooks", response_json.get("hooks", []))
+                kv = response_json.get("key_vocabulary", response_json.get("vocabulary", []))
+                if not gh and not kv:
+                    raise Exception("Voice of Customer returned empty data arrays. Retrying.")
+                    
+            # If we get here, success!
+            return response_json
+            
+        except Exception as e:
+            print(f"[Workflow Engine] Error in {step_id} (Attempt {attempt}): {e}")
+            if attempt < max_retries:
+                print(f"[Workflow Engine] Switching model and retrying {step_id}...")
+                # Switch model for retry
+                if target_model == "anthropic/claude-3.7-sonnet":
+                    target_model = "google/gemini-1.5-pro"
+                elif target_model == "google/gemini-1.5-pro":
+                    target_model = "anthropic/claude-3.7-sonnet"
+            else:
+                print(f"[Workflow Engine] Failed {step_id} after {max_retries} attempts.")
+                response_json = {"error": str(e)}
         
     return response_json
 
@@ -136,6 +170,9 @@ async def generate_complete_strategic_analysis(
             personas_list = [personas_raw]
     else:
         personas_list = []
+        
+    # Clean out any error objects that might have slipped through
+    personas_list = [p for p in personas_list if isinstance(p, dict) and "error" not in p]
 
     # Clean UI shapes
     final_output = {

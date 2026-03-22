@@ -74,7 +74,7 @@ class AIService:
                         print(f"WARNING: Response truncated (finish_reason=length). Length: {len(content)}")
                     return content
             except httpx.HTTPStatusError as e:
-                if e.response.status_code in [401, 402, 403]:
+                if e.response.status_code in [400, 401, 402, 403]:
                     print(f"⚠️  OpenRouter: {e.response.status_code} {e.response.reason_phrase} - Switching to Google Gemini fallback")
                 else:
                     raise
