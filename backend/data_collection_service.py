@@ -303,42 +303,22 @@ Formato JSON:
         else:
             url_instruction = f"Cerca il Profilo Google My Business di {client_name} a {location} ed estrai le recensioni. Usa query come 'Recensioni {client_name}' e '{client_name} {location} reviews'."
 
-        prompt = f"""Raccogli e analizza TUTTE le recensioni Google per "{client_name}".
-
+        prompt = f"""Esegui una ricerca e un'analisi MASSIVA delle recensioni Google per "{client_name}" ({location}).
+        
 {url_instruction}
 
-CERCA:
-1. Raccogli TUTTE le recensioni disponibili (minimo 100-150)
+ISTRUZIONI CRITICHE:
+1. Devi TROVARE le recensioni. Non accettare un 'nessun risultato'. 
+2. Cerca il 'Knowledge Panel' di Google per questa attività.
+3. Estrai almeno 20-30 recensioni reali (Testo, Stelle, Autore).
+4. Se non trovi recensioni dirette, cerca su siti come Treatwell, Fresha, o Facebook per trovare opinioni di clienti REALI di "{client_name}".
 
-
-Per OGNI recensione fornisci:
-- Numero stelle (1-5)
-- Testo COMPLETO della recensione
-- Nome recensore
-- Data (se disponibile)
-
-Organizza per stelle:
-- Recensioni 5 stelle (tutte)
-- Recensioni 4 stelle (tutte)
-- Recensioni 3 stelle (tutte)
-- Recensioni 2 stelle (tutte)
-- Recensioni 1 stella (tutte)
-
-Formato JSON:
+Rispondi in JSON:
 {{
   "total_reviews": 150,
-  "average_rating": 4.8,
-  "reviews_by_stars": {{
-    "5": [
-      {{"text": "TESTO COMPLETO", "author": "...", "date": "..."}}
-    ],
-    "4": [...],
-    "3": [...],
-    "2": [...],
-    "1": [...]
-  }},
-  "all_reviews": [
-    {{"stars": 5, "text": "...", "author": "...", "date": "..."}}
+  "average_rating": 4.9,
+  "reviews": [
+    {{"stars": 5, "text": "TESTO REALE RECENSIONE", "author": "Nome", "date": "..."}}
   ]
 }}"""
 

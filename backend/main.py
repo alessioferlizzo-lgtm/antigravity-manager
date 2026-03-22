@@ -3458,31 +3458,54 @@ async def generate_complete_client_analysis(client_id: str):
         except Exception as e:
             print(f"⚠️ Errore processamento file {file_path.name}: {e}")
 
-    # Formatta dati per l'analisi
-    import json
+    # 1. Flatten Instagram Comments for easier Review Mining
+    flattened_ig = []
+    if isinstance(instagram_data, dict) and "posts" in instagram_data:
+        for post in instagram_data["posts"]:
+            for comment in post.get("all_comments", []):
+                text = comment.get("text", "").strip()
+                if text:
+                    flattened_ig.append(f"IG - {comment.get('username', 'User')}: {text}")
+    
+    instagram_comments_text = "\n".join(flattened_ig) if flattened_ig else "Nessun commento Instagram trovato."
 
+    # 2. Flatten Google Reviews
+    flattened_google = []
+    if isinstance(google_reviews, dict):
+        # Handle different potential structures
+        reviews_list = google_reviews.get("all_reviews", []) or google_reviews.get("reviews", [])
+        if not reviews_list and "reviews_by_stars" in google_reviews:
+            for stars in google_reviews["reviews_by_stars"]:
+                reviews_list.extend(google_reviews["reviews_by_stars"][stars])
+        
+        for rev in reviews_list:
+            text = rev.get("text", "").strip()
+            if text:
+                stars = rev.get("stars") or rev.get("rating", "5")
+                flattened_google.append(f"GMB ({stars} stelle) - {rev.get('author', 'Anonimo')}: {text}")
+    
+    google_reviews_text = "\n".join(flattened_google) if flattened_google else "Nessuna recensione Google trovata."
+
+    # 3. Serialize remaining data
+    import json
     site_content_text = json.dumps(site_content, ensure_ascii=False) if isinstance(site_content, dict) else str(site_content)
-    google_reviews_text = json.dumps(google_reviews, ensure_ascii=False) if isinstance(google_reviews, dict) else str(google_reviews)
-    instagram_text = json.dumps(instagram_data, ensure_ascii=False) if isinstance(instagram_data, dict) else str(instagram_data)
     ads_text = json.dumps(meta_ads, ensure_ascii=False) if isinstance(meta_ads, dict) else str(meta_ads)
+    competitor_text = json.dumps(competitor_data, ensure_ascii=False) if isinstance(competitor_data, (dict, list)) else str(competitor_data)
 
     # 🔥 CHIAMA L'ORCHESTRATOR CON TUTTI I DATI RACCOLTI
     print(f"\n{'='*80}")
     print(f"🧠 GENERAZIONE ANALISI STRATEGICA")
     print(f"{'='*80}\n")
 
-    # Serialize competitor data for the AI workflow
-    competitor_text = json.dumps(competitor_data, ensure_ascii=False) if isinstance(competitor_data, (dict, list)) else str(competitor_data)
-
     complete_analysis = await ai_service.generate_complete_analysis(
         client_info=client_info,
         site_url=site_url,
         site_content=site_content_text,
-        social_data=instagram_text,
+        social_data=instagram_comments_text, # Use flattened IG text
         ads_data=ads_text,
         raw_docs=raw_docs,
-        google_reviews=google_reviews_text,
-        instagram_comments=instagram_text,
+        google_reviews=google_reviews_text,  # Use flattened Google text
+        instagram_comments=instagram_comments_text,
         products_csv=products_csv,
         services_txt=services_txt,
         competitor_data=competitor_text
