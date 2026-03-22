@@ -9,9 +9,10 @@
         "products_csv",
         "google_reviews",
         "instagram_comments",
-        "site_content"
+        "site_content",
+        "services_txt"
       ],
-      "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito e genera un documento estremamente lungo e accademico (1000+ parole). STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": \"...\", \"visual_identity\": \"...\", \"positioning\": \"...\", \"statement\": \"...\"}"
+      "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito (tenendo conto sia dei prodotti che degli eventuali servizi) e genera un documento estremamente lungo e accademico (1000+ parole). STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": \"...\", \"visual_identity\": \"...\", \"positioning\": \"...\", \"statement\": \"...\"}"
     },
     {
       "step_id": "brand_values",
@@ -27,9 +28,10 @@
       "title": "Analisi Portafoglio Prodotti",
       "recommended_model": "claude",
       "required_inputs": [
-        "products_csv"
+        "products_csv",
+        "services_txt"
       ],
-      "system_prompt": "Elabora TUTTI i prodotti forniti nel CSV. Raggruppali per fase di utilizzo o categoria. Restituisci JSON: {\"core_products\": [{\"name\": \"...\", \"benefit_tech\": \"...\", \"key_ingredients\": \"...\", \"usp\": \"...\"}], \"pre_during_products\": [...], \"post_treatment_products\": [...], \"lifestyle_products\": [...]}"
+      "system_prompt": "Se sono presenti prodotti (nel CSV) e/o servizi (nel TXT), elaborali TUTTI. Raggruppali per fase di utilizzo, categoria o percorso utente. Analizzali secondo la profonda logica di Agostinis. Evita di citare la parola CSV o TXT nell'analisi. Restituisci JSON: {\"core_products\": [{\"name\": \"...\", \"benefit_tech\": \"...\", \"key_ingredients\": \"...\", \"usp\": \"...\"}], \"pre_during_products\": [...], \"post_treatment_products\": [...], \"lifestyle_products\": [...]}"
     },
     {
       "step_id": "reasons_to_buy",
