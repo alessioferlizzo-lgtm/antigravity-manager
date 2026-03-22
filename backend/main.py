@@ -3473,13 +3473,26 @@ async def generate_complete_client_analysis(client_id: str):
     # Aggiungi dati competitor all'analisi
     complete_analysis["competitor_data"] = competitor_data
 
-    # 🔥 AGGIORNA METADATA CON I NUOVI DATI (SWOT, OBIETTIVI, STRATEGIA)
+    # 🔥 AGGIORNA METADATA CON I NUOVI DATI (SWOT, OBIETTIVI, STRATEGIA, PERSONAS, TONE)
+    if "brand_identity" not in metadata:
+        metadata["brand_identity"] = {}
+        
     if complete_analysis.get("swot"):
         metadata["swot"] = complete_analysis["swot"]
     if complete_analysis.get("objectives"):
         metadata["objectives"] = complete_analysis["objectives"]
     if complete_analysis.get("strategy"):
         metadata["strategy"] = complete_analysis["strategy"]
+    if complete_analysis.get("customer_personas"):
+        # Convert generated personas to exactly what the tab expects
+        metadata["brand_identity"]["buyer_personas"] = complete_analysis["customer_personas"]
+    
+    if complete_analysis.get("brand_identity") and isinstance(complete_analysis["brand_identity"].get("tone_of_voice"), dict):
+        t = complete_analysis["brand_identity"]["tone_of_voice"]
+        style_text = f"**Stile**: {t.get('style', '')}\n**Pubblico Target**: {t.get('target_audience', '')}\n**Approccio Linguistico**: {t.get('linguistic_approach', '')}"
+        if t.get("vocabulary"):
+            style_text += f"\n**Vocabolario**: {', '.join(t['vocabulary']) if isinstance(t['vocabulary'], list) else t['vocabulary']}"
+        metadata["brand_identity"]["tone"] = style_text
 
     # Salva metadata aggiornato
     storage_service.save_metadata(client_id, metadata)

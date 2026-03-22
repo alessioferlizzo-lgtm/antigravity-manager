@@ -12,7 +12,7 @@
         "site_content",
         "services_txt"
       ],
-      "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito (tenendo conto sia dei prodotti che degli eventuali servizi) e genera un documento estremamente lungo e accademico (1000+ parole). STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": \"...\", \"visual_identity\": \"...\", \"positioning\": \"...\", \"statement\": \"...\"}"
+      "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito (tenendo conto sia dei prodotti che degli eventuali servizi) e genera un documento estremamente lungo e accademico (1000+ parole). STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": {\"style\": \"...\", \"target_audience\": \"...\", \"linguistic_approach\": \"...\", \"vocabulary\": [\"...\"]}, \"visual_identity\": \"...\", \"positioning\": \"...\", \"statement\": \"...\"}"
     },
     {
       "step_id": "brand_values",
@@ -52,7 +52,7 @@
         "brand_identity",
         "product_portfolio"
       ],
-      "system_prompt": "Genera 5-10 profili psicologici di clienti ideali estremamente complessi. Schema: {\"personas\": [{\"who\": \"Label\", \"profile\": \"Descrizione profonda...\", \"pain_point\": \"Il Dolore...\", \"fears\": \"Le paure...\"}]}"
+      "system_prompt": "Genera ALMENO 5 profili psicologici di clienti ideali estremamente complessi. Schema: {\"personas\": [{\"who\": \"Label\", \"profile\": \"Descrizione profonda...\", \"pain_point\": \"Il Dolore...\", \"fears\": \"...\", \"desires\": \"...\", \"what_seeks\": \"...\", \"critical_info\": \"...\"}]}"
     },
     {
       "step_id": "brand_voice",
@@ -61,7 +61,7 @@
       "required_inputs": [
         "site_content"
       ],
-      "system_prompt": "Analizza il codice linguistico del brand e restituisci il dizionario. JSON: {\"brand_persona\": \"...\", \"communication_pillars\": \"...\", \"glossary\": [{\"instead_of\": \"...\", \"use_this\": \"...\"}], \"dos_and_donts\": [{\"scenario\": \"...\", \"dont\": \"...\", \"do\": \"...\"}]}"
+      "system_prompt": "Analizza il codice linguistico del brand e restituisci il dizionario. JSON: {\"brand_persona\": \"...\", \"communication_pillars\": \"...\", \"glossary\": [{\"instead_of\": \"...\", \"use\": \"...\"}], \"dos_donts\": {\"dos\": [\"...\"], \"donts\": [\"...\"]}}"
     },
     {
       "step_id": "content_matrix",
@@ -71,7 +71,7 @@
         "customer_personas",
         "product_portfolio"
       ],
-      "system_prompt": "Mappa le Personas su strategie di contenuto. MUST USE EXACT JSON KEYS: {\"matrix\": [{\"target_audience\": \"...\", \"main_hook\": \"...\", \"paid_ads\": \"...\", \"organic_social\": \"...\"}]}"
+      "system_prompt": "Mappa le Personas su strategie di contenuto. MUST USE EXACT JSON KEYS: {\"matrix\": [{\"target_audience\": \"...\", \"hook\": \"...\", \"paid\": \"...\", \"organic\": \"...\"}]}"
     },
     {
       "step_id": "objections_management",
@@ -91,7 +91,7 @@
         "google_reviews",
         "instagram_comments"
       ],
-      "system_prompt": "Analizza recensioni positive e negative. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [...], \"pain_points_leverage\": [...], \"recurring_keywords\": [...], \"practical_conclusion\": \"...\"}"
+      "system_prompt": "Analizza recensioni positive e negative. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [{\"hook\": \"...\", \"source\": \"...\"}], \"pain_points_leverage\": [...], \"recurring_keywords\": [...], \"sentiment_analysis\": \"...\", \"key_vocabulary\": [\"...\"], \"practical_conclusion\": \"...\"}"
     },
     {
       "step_id": "battlecards",
@@ -128,7 +128,7 @@
       "required_inputs": [
         "customer_personas"
       ],
-      "system_prompt": "Crea un'analisi psicografica a 3 livelli del pubblico. JSON schema rigoroso: {\"level_1_primary\": [{\"trait\": \"...\", \"description\": \"...\"}], \"level_2_secondary\": [{\"trait\": \"...\", \"description\": \"...\"}], \"level_3_tertiary\": [{\"trait\": \"...\", \"description\": \"...\"}]}"
+      "system_prompt": "Crea un'analisi psicografica a 3 livelli del pubblico. JSON schema rigoroso: {\"level_1_primary\": [{\"characteristic\": \"...\", \"description\": \"...\"}], \"level_2_secondary\": [{\"characteristic\": \"...\", \"description\": \"...\"}], \"level_3_tertiary\": [{\"characteristic\": \"...\", \"description\": \"...\"}]}"
     },
     {
       "step_id": "visual_brief",

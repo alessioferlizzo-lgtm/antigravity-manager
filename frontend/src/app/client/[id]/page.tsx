@@ -1151,6 +1151,454 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                 )}
 
 
+{section === "personas" && (
+                    <div style={{ maxWidth: "100%" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
+                            <div>
+                                <h1 className="page-title" style={{ marginBottom: 6 }}>Buyer Personas</h1>
+                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Profilo, desideri e paure di ogni persona</p>
+                                {!researchContent && <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>Avvia prima la ricerca in Sorgenti</p>}
+                            </div>
+
+                            {researchContent && (
+                                <button className="btn btn-secondary" onClick={runDeepAnalysis} disabled={loading.deep}>
+                                    {loading.deep ? <><div className="spinner" />Rigenerando...</> : <><ArrowPathIcon style={{ width: 15, height: 15 }} />Rigenera Personas</>}
+                                </button>
+                            )}
+                            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginTop: 16 }}>
+                                <div style={{ flex: 1 }}>
+                                    <label className="label" style={{ display: "block", marginBottom: 6 }}>Genera Persona Specifica (Es. "Servizi antimacchia", "Rimozione Tatuaggi")</label>
+                                    <input 
+                                        className="input" 
+                                        placeholder="Inserisci il target o servizio specifico..." 
+                                        value={newPersonaTheme} 
+                                        onChange={e => setNewPersonaTheme(e.target.value)} 
+                                        onKeyDown={e => e.key === "Enter" && createSpecificPersona()} 
+                                    />
+                                </div>
+                                <button className="btn btn-primary" onClick={createSpecificPersona} disabled={personaLoading || !newPersonaTheme.trim()}>
+                                    {personaLoading ? <><div className="spinner" />Generando...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Specifica</>}
+                                </button>
+                            </div>
+                        </div>
+
+                        {Array.isArray(client.brand_identity?.buyer_personas) && client.brand_identity.buyer_personas.length > 0 ? (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
+                                {client.brand_identity.buyer_personas.map((p: any, idx: number) => (
+                                    <div key={idx} className="persona-card">
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--orange)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 12 }}>
+                                            {p.servizio_specifico ? `Target: ${p.servizio_specifico}` : "Persona Generica"}
+                                        </div>
+                                        <input
+                                            className="persona-name"
+                                            value={p.name || ""}
+                                            placeholder="Nome Persona"
+                                            onFocus={(e) => setInitialValue(e.target.value)}
+                                            onChange={e => updatePersonaLocal(idx, "name", e.target.value)}
+                                            onBlur={(e) => {
+                                                if (e.target.value !== initialValue) {
+                                                    patchBrand({ buyer_personas: clientRef.current.brand_identity.buyer_personas });
+                                                }
+                                            }}
+                                            style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}
+                                        />
+                                        <input
+                                            className="persona-type"
+                                            value={p.type || ""}
+                                            placeholder="Tipo (es: Il manager stressato)"
+                                            onFocus={(e) => setInitialValue(e.target.value)}
+                                            onChange={e => updatePersonaLocal(idx, "type", e.target.value)}
+                                            onBlur={(e) => {
+                                                if (e.target.value !== initialValue) {
+                                                    patchBrand({ buyer_personas: clientRef.current.brand_identity.buyer_personas });
+                                                }
+                                            }}
+                                            style={{ 
+                                                width: "100%", background: "none", border: "none", color: "var(--text-muted)", 
+                                                fontSize: 12, fontWeight: 600, fontStyle: "italic", outline: "none", marginBottom: 10 
+                                            }}
+                                        />
+                                        <hr className="divider" style={{ margin: "10px 0" }} />
+                                        {[
+                                            { field: "profile", label: "Profilo e Psicografia", cls: "pf-profile" },
+                                            { field: "buying_habits", label: "Abitudini d'Acquisto", cls: "pf-habits" },
+                                            { field: "desires", label: "Desideri Profondi", cls: "pf-desires" },
+                                            { field: "fears", label: "Paure e Obiezioni", cls: "pf-fears" },
+                                            { field: "critical_info", label: "Info Indispensabili", cls: "pf-info" },
+                                        ].map(f => (
+                                            <div key={f.field} style={{ marginBottom: 12 }}>
+                                                <p className={`persona-field-label ${f.cls}`}>{f.label}</p>
+                                                <textarea
+                                                    className="persona-textarea"
+                                                    value={p[f.field] || ""}
+                                                    placeholder={`${f.label} della persona...`}
+                                                    onFocus={(e) => setInitialValue(e.target.value)}
+                                                    onChange={e => { updatePersonaLocal(idx, f.field, e.target.value); }}
+                                                    onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
+                                                    onBlur={(e) => {
+                                                        if (e.target.value !== initialValue) {
+                                                            patchBrand({ buyer_personas: clientRef.current.brand_identity.buyer_personas });
+                                                        }
+                                                    }}
+                                                    style={{ height: "auto", minHeight: 48 }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="card" style={{ textAlign: "center", padding: "60px 20px" }}>
+                                <UserGroupIcon style={{ width: 40, height: 40, color: "var(--text-muted)", margin: "0 auto 12px" }} />
+                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Nessuna buyer persona. Avvia la ricerca e clicca &quot;Genera analisi&quot;.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ══ REPORTS ══ */}
+                {section === "reports" && (
+                    <div style={{ maxWidth: "100%" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+                            <div>
+                                <h1 className="page-title" style={{ marginBottom: 6 }}>Reports di Performance</h1>
+                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Inserisci i KPI e genera analisi AI dei risultati</p>
+                            </div>
+                            <button className="btn btn-primary" onClick={() => setShowReportForm(!showReportForm)}>
+                                <PlusIcon style={{ width: 15, height: 15 }} />
+                                {showReportForm ? "Annulla" : "Nuovo Report"}
+                            </button>
+                        </div>
+
+                        {/* Live Meta Ads Dashboard */}
+                        {client.ad_account_id && (
+                            <div className="card" style={{ marginBottom: 20, border: "1px solid rgba(24,144,255,0.25)", background: "rgba(24,144,255,0.03)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <span style={{ fontSize: 14 }}>📡</span>
+                                        <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-dark-primary)" }}>Live Meta Ads</span>
+                                        {liveLoading && <div className="spinner" />}
+                                        {!liveLoading && liveMetrics && (
+                                            <span style={{ fontSize: 10, color: "#10b981", fontWeight: 600, background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: 99 }}>● LIVE</span>
+                                        )}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <select
+                                            className="input"
+                                            style={{ fontSize: 12, padding: "4px 8px", maxWidth: 160 }}
+                                            value={livePeriod}
+                                            onChange={e => setLivePeriod(e.target.value)}
+                                        >
+                                            {DATE_PRESET_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            style={{ padding: "4px 10px", fontSize: 12 }}
+                                            disabled={liveLoading}
+                                            onClick={() => fetchLiveMetrics(livePeriod)}
+                                        >
+                                            <ArrowPathIcon style={{ width: 13, height: 13 }} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {liveError && (
+                                    <p style={{ fontSize: 12, color: "#ef4444", margin: 0 }}>⚠️ {liveError}</p>
+                                )}
+
+                                {liveMetrics && !liveError && (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                                        {[
+                                            { k: "budget_speso", l: "Budget Speso", suffix: "€", color: "#6366f1" },
+                                            { k: "cpm", l: "CPM", suffix: "€", color: "#f59e0b" },
+                                            { k: "ctr", l: "CTR", suffix: "%", color: "#10b981" },
+                                            { k: "cpc", l: "CPC", suffix: "€", color: "#3b82f6" },
+                                            { k: "cpa", l: "CPA", suffix: "€", color: "#ec4899" },
+                                            { k: "impressions", l: "Impressioni", suffix: "", color: "#8b5cf6" },
+                                            { k: "reach", l: "Reach", suffix: "", color: "#14b8a6" },
+                                            { k: "conversioni", l: "Conversioni", suffix: "", color: "#f97316" },
+                                        ].filter(f => liveMetrics[f.k] !== "" && liveMetrics[f.k] != null).map(f => (
+                                            <div key={f.k} style={{ background: "#fff", borderRadius: 10, padding: "10px 16px", border: `1px solid ${f.color}22`, minWidth: 100, flex: "0 0 auto" }}>
+                                                <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#9ca3af", marginBottom: 4 }}>{f.l}</div>
+                                                <div style={{ fontSize: 18, fontWeight: 800, color: f.color }}>
+                                                    {typeof liveMetrics[f.k] === "number"
+                                                        ? Number(liveMetrics[f.k]).toLocaleString("it-IT")
+                                                        : liveMetrics[f.k]}{f.suffix}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {!liveMetrics && !liveLoading && !liveError && (
+                                    <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>Caricamento metriche in corso...</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Form nuovo report */}
+                        {showReportForm && (
+                            <div className="card" style={{ marginBottom: 20 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                    <p style={{ fontWeight: 700, fontSize: 14, color: "var(--text-dark-primary)", margin: 0 }}>📊 Inserisci Dati Periodo</p>
+                                    {client.ad_account_id && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            <select
+                                                className="input"
+                                                style={{ fontSize: 12, padding: "4px 8px", maxWidth: 160 }}
+                                                value={metaDatePreset}
+                                                onChange={e => setMetaDatePreset(e.target.value)}
+                                            >
+                                                {DATE_PRESET_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                            </select>
+                                            <button
+                                                className="btn btn-secondary"
+                                                style={{ fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap" }}
+                                                disabled={loading.meta_import}
+                                                onClick={async () => {
+                                                    setLoad("meta_import", true);
+                                                    try {
+                                                        const r = await fetch(`${API}/clients/${id}/meta-ads-insights?date_preset=${metaDatePreset}`);
+                                                        if (!r.ok) {
+                                                            const err = await r.json();
+                                                            alert(`Errore Meta Ads: ${err.detail}`);
+                                                        } else {
+                                                            const d = await r.json();
+                                                            setReportForm(p => ({
+                                                                ...p,
+                                                                budget_speso: d.budget_speso !== "" ? String(d.budget_speso) : p.budget_speso,
+                                                                cpm: d.cpm !== "" ? String(d.cpm) : p.cpm,
+                                                                ctr: d.ctr !== "" ? String(d.ctr) : p.ctr,
+                                                                cpc: d.cpc !== "" ? String(d.cpc) : p.cpc,
+                                                                impressions: d.impressions !== "" ? String(d.impressions) : p.impressions,
+                                                                reach: d.reach !== "" ? String(d.reach) : p.reach,
+                                                                conversioni: d.conversioni !== "" ? String(d.conversioni) : p.conversioni,
+                                                            }));
+                                                        }
+                                                    } catch {
+                                                        alert("Errore di rete durante l'importazione da Meta Ads.");
+                                                    }
+                                                    setLoad("meta_import", false);
+                                                }}
+                                            >
+                                                {loading.meta_import ? <><div className="spinner" />Importando...</> : <>📥 Importa da Meta</>}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Periodo */}
+                                <div style={{ marginBottom: 16 }}>
+                                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#6b7280", marginBottom: 6 }}>Periodo</label>
+                                    <input className="input" style={{ maxWidth: 280 }} placeholder="Es: Febbraio 2026"
+                                        value={reportForm.period_label} onChange={e => setReportForm(p => ({ ...p, period_label: e.target.value }))} />
+                                </div>
+
+                                {/* KPI grid */}
+                                <div className="kpi-grid" style={{ marginBottom: 16 }}>
+                                    {[
+                                        { key: "budget_speso", label: "Budget Speso (€)", placeholder: "Es: 1500" },
+                                        { key: "roas", label: "ROAS", placeholder: "Es: 3.2" },
+                                        { key: "ctr", label: "CTR (%)", placeholder: "Es: 2.4" },
+                                        { key: "cpc", label: "CPC (€)", placeholder: "Es: 0.45" },
+                                        { key: "cpm", label: "CPM (€)", placeholder: "Es: 12" },
+                                        { key: "conversioni", label: "Conversioni", placeholder: "Es: 48" },
+                                        { key: "revenue", label: "Revenue (€)", placeholder: "Es: 4800" },
+                                        { key: "reach", label: "Reach", placeholder: "Es: 25000" },
+                                        { key: "impressions", label: "Impressioni", placeholder: "Es: 80000" },
+                                    ].map(f => (
+                                        <div key={f.key} className="kpi-field">
+                                            <label>{f.label}</label>
+                                            <input className="input" placeholder={f.placeholder}
+                                                value={(reportForm as any)[f.key]}
+                                                onChange={e => setReportForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Best performers */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+                                    {[
+                                        { key: "best_angles", label: "🎯 Angoli migliori", placeholder: "Es: Problema-Soluzione, Story..." },
+                                        { key: "best_creatives", label: "🎨 Creatività migliori", placeholder: "Es: Video UGC, Statica prodotto..." },
+                                        { key: "best_copy", label: "✍️ Copy migliori", placeholder: "Es: Hook domanda, lista benefici..." },
+                                    ].map(f => (
+                                        <div key={f.key}>
+                                            <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#6b7280", marginBottom: 6 }}>{f.label}</label>
+                                            <textarea className="input" rows={2} placeholder={f.placeholder}
+                                                value={(reportForm as any)[f.key]}
+                                                onChange={e => setReportForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Note libere */}
+                                <div style={{ marginBottom: 20 }}>
+                                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#6b7280", marginBottom: 6 }}>Note libere</label>
+                                    <textarea className="input" rows={3} placeholder="Qualsiasi osservazione aggiuntiva..."
+                                        value={reportForm.note} onChange={e => setReportForm(p => ({ ...p, note: e.target.value }))} />
+                                </div>
+
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <button className="btn btn-ghost" onClick={() => setShowReportForm(false)}>Annulla</button>
+                                    <button className="btn btn-primary" onClick={async () => {
+                                        setLoad("save_report", true);
+                                        const r = await fetch(`${API}/clients/${id}/reports`, {
+                                            method: "POST", headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify(reportForm)
+                                        });
+                                        if (r.ok) {
+                                            const rep = await r.json();
+                                            setReports(p => [rep, ...p]);
+                                            setShowReportForm(false);
+                                            setReportForm({ period_label: "", budget_speso: "", roas: "", ctr: "", cpc: "", cpm: "", conversioni: "", revenue: "", reach: "", impressions: "", note: "", best_angles: "", best_creatives: "", best_copy: "" });
+                                        }
+                                        setLoad("save_report", false);
+                                    }} disabled={loading.save_report}>
+                                        {loading.save_report ? <><div className="spinner" />Salvando...</> : <><CheckIcon style={{ width: 15, height: 15 }} />Salva Report</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Lista report */}
+                        {reports.length === 0 && !showReportForm ? (
+                            <div className="card" style={{ textAlign: "center", padding: "60px 20px" }}>
+                                <ChartBarIcon style={{ width: 40, height: 40, color: "var(--text-muted)", margin: "0 auto 12px" }} />
+                                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Nessun report. Clicca &quot;Nuovo Report&quot; per iniziare.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                {reports.map(rep => (
+                                    <div key={rep.id} className="report-card">
+                                        {/* Header report */}
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                            <div>
+                                                <p style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
+                                                    {rep.period_label || new Date(rep.created_at).toLocaleDateString("it-IT", { month: "long", year: "numeric" })}
+                                                </p>
+                                                <p style={{ fontSize: 11, color: "#9ca3af" }}>{new Date(rep.created_at).toLocaleDateString("it-IT")} {new Date(rep.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</p>
+                                            </div>
+                                            <div style={{ display: "flex", gap: 8 }}>
+                                                {!rep.ai_report && (
+                                                    <button className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: 12 }}
+                                                        disabled={loading[`gen_${rep.id}`]}
+                                                        onClick={async () => {
+                                                            setLoad(`gen_${rep.id}`, true);
+                                                            const r = await fetch(`${API}/clients/${id}/reports/${rep.id}/generate`, { method: "POST" });
+                                                            if (r.ok) {
+                                                                const updated = await r.json();
+                                                                setReports(p => p.map(r => r.id === rep.id ? updated : r));
+                                                                setExpandedReport(rep.id);
+                                                            }
+                                                            setLoad(`gen_${rep.id}`, false);
+                                                        }}>
+                                                        {loading[`gen_${rep.id}`] ? <><div className="spinner" />Analizzando...</> : <><SparklesIcon style={{ width: 13, height: 13 }} />Genera AI</>}
+                                                    </button>
+                                                )}
+                                                <button className="btn btn-ghost" style={{ padding: "6px 14px", fontSize: 12 }}
+                                                    onClick={() => setExpandedReport(expandedReport === rep.id ? null : rep.id)}>
+                                                    {expandedReport === rep.id ? "Chiudi" : "Espandi"}
+                                                </button>
+                                                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#d1d5db", padding: 6 }}
+                                                    onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "#dc2626"}
+                                                    onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "#d1d5db"}
+                                                    onClick={async () => {
+                                                        if (!confirm("Eliminare questo report?")) return;
+                                                        await fetch(`${API}/clients/${id}/reports/${rep.id}`, { method: "DELETE" });
+                                                        setReports(p => p.filter(r => r.id !== rep.id));
+                                                    }}>
+                                                    <TrashIcon style={{ width: 14, height: 14 }} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* KPI pills */}
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: expandedReport === rep.id ? 16 : 0 }}>
+                                            {[
+                                                { k: "budget_speso", l: "Budget", suffix: "€" },
+                                                { k: "roas", l: "ROAS", suffix: "x" },
+                                                { k: "ctr", l: "CTR", suffix: "%" },
+                                                { k: "cpc", l: "CPC", suffix: "€" },
+                                                { k: "cpm", l: "CPM", suffix: "€" },
+                                                { k: "conversioni", l: "Conv.", suffix: "" },
+                                                { k: "revenue", l: "Revenue", suffix: "€" },
+                                                { k: "reach", l: "Reach", suffix: "" },
+                                            ].filter(f => (rep as any)[f.k]).map(f => (
+                                                <div key={f.k} style={{ background: "#f3f4f6", borderRadius: 8, padding: "5px 10px", display: "flex", flexDirection: "column", gap: 1 }}>
+                                                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#9ca3af" }}>{f.l}</span>
+                                                    <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>{(rep as any)[f.k]}{f.suffix}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Expanded view */}
+                                        {expandedReport === rep.id && (
+                                            <div>
+                                                {/* Best performers */}
+                                                {(rep.best_angles || rep.best_creatives || rep.best_copy) && (
+                                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+                                                        {rep.best_angles && (
+                                                            <div style={{ background: "#f3f4f6", borderRadius: 8, padding: 12 }}>
+                                                                <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 4 }}>🎯 Angoli top</p>
+                                                                <p style={{ fontSize: 12, color: "#111827" }}>{rep.best_angles}</p>
+                                                            </div>
+                                                        )}
+                                                        {rep.best_creatives && (
+                                                            <div style={{ background: "#f3f4f6", borderRadius: 8, padding: 12 }}>
+                                                                <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 4 }}>🎨 Creatività top</p>
+                                                                <p style={{ fontSize: 12, color: "#111827" }}>{rep.best_creatives}</p>
+                                                            </div>
+                                                        )}
+                                                        {rep.best_copy && (
+                                                            <div style={{ background: "#f3f4f6", borderRadius: 8, padding: 12 }}>
+                                                                <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 4 }}>✍️ Copy top</p>
+                                                                <p style={{ fontSize: 12, color: "#111827" }}>{rep.best_copy}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {rep.note && (
+                                                    <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                                                        <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#b45309", marginBottom: 4 }}>📝 Note</p>
+                                                        <p style={{ fontSize: 13, color: "#374151" }}>{rep.note}</p>
+                                                    </div>
+                                                )}
+
+                                                {/* AI report */}
+                                                {rep.ai_report && (
+                                                    <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
+                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                                            <p style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>🤖 Analisi AI</p>
+                                                            <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }}
+                                                                disabled={loading[`gen_${rep.id}`]}
+                                                                onClick={async () => {
+                                                                    setLoad(`gen_${rep.id}`, true);
+                                                                    const r = await fetch(`${API}/clients/${id}/reports/${rep.id}/generate`, { method: "POST" });
+                                                                    if (r.ok) {
+                                                                        const updated = await r.json();
+                                                                        setReports(p => p.map(r => r.id === rep.id ? updated : r));
+                                                                    }
+                                                                    setLoad(`gen_${rep.id}`, false);
+                                                                }}>
+                                                                {loading[`gen_${rep.id}`] ? <><div className="spinner" />Rigenerando</> : <><ArrowPathIcon style={{ width: 12, height: 12 }} />Rigenera</>}
+                                                            </button>
+                                                        </div>
+                                                        <div style={{ fontSize: 13, lineHeight: 1.75, color: "#374151" }}>
+                                                            <FormatText text={rep.ai_report} />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ══ ANALISI COMPLETA ══ */}
                 {/* ══ ANALISI COMPLETA ══ */}
                 {section === "analisi-strategica" && (
                     <AnalisiStrategicaSection clientId={id} apiUrl={API} />

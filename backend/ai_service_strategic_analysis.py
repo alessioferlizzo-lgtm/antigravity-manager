@@ -141,10 +141,10 @@ async def generate_complete_strategic_analysis(
             ]
         },
         "brand_voice": {
-            "persona": brand_voice_data.get("brand_persona", ""),
-            "rules": brand_voice_data.get("communication_pillars", ""),
+            "brand_persona": brand_voice_data.get("brand_persona", ""),
+            "communication_pillars": brand_voice_data.get("communication_pillars", ""),
             "glossary": brand_voice_data.get("glossary", []),
-            "examples": brand_voice_data.get("dos_and_donts", [])
+            "dos_donts": brand_voice_data.get("dos_donts", [])
         },
         "product_portfolio": {
             "products": product_portfolio_data.get("core_products", []) + product_portfolio_data.get("pre_during_products", []) + product_portfolio_data.get("post_treatment_products", []) + product_portfolio_data.get("lifestyle_products", [])
@@ -171,8 +171,9 @@ async def generate_complete_strategic_analysis(
         "content_matrix": content_matrix_data.get("matrix", []),
         "reviews_voc": {
             "golden_hooks": reviews_voc_data.get("golden_hooks", []),
+            "sentiment_analysis": reviews_voc_data.get("sentiment_analysis", ""),
+            "key_vocabulary": reviews_voc_data.get("key_vocabulary", []),
             "pain_points": reviews_voc_data.get("pain_points_leverage", []),
-            "keywords": reviews_voc_data.get("recurring_keywords", []),
             "conclusion": reviews_voc_data.get("practical_conclusion", "")
         },
         "battlecards": [
