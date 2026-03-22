@@ -412,15 +412,34 @@ function ReviewsVoCRenderer({ data }: { data: any }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {hooks.length > 0 && (
-                <SCard>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 10 }}>🏆 Golden Hooks (dalle recensioni)</div>
-                    {hooks.map((h: any, i: number) => (
-                        <div key={i} style={{ padding: "8px 14px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, marginBottom: 8, fontStyle: "italic", fontSize: 13 }}>
-                            "{typeof h === "string" ? h : h.hook || h.text}"
-                            {h.source && <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", fontStyle: "normal", marginTop: 2 }}>— {h.source}</span>}
-                        </div>
-                    ))}
-                </SCard>
+                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 12, padding: "16px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 14 }}>🏆 Golden Hooks (Estrazione Agostinis)</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {hooks.map((h: any, i: number) => {
+                            if (typeof h === "string") {
+                                return <div key={i} style={{ padding: "10px", background: "rgba(245,158,11,0.06)", borderRadius: 8, fontSize: 13 }}>"{h}"</div>;
+                            }
+                            return (
+                                <div key={i} style={{ border: "1px solid rgba(245,158,11,0.3)", borderRadius: 8, overflow: "hidden" }}>
+                                    <div style={{ background: "rgba(245,158,11,0.1)", padding: "8px 12px", borderBottom: "1px solid rgba(245,158,11,0.2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <div style={{ fontWeight: 700, color: "#d97706", fontSize: 13 }}>Gancio: {h.hook || `Hook #${i + 1}`}</div>
+                                        {h.source && <div style={{ fontSize: 11, background: "#fff", padding: "2px 8px", borderRadius: 12, border: "1px solid rgba(245,158,11,0.3)", color: "#b45309" }}>{h.source}</div>}
+                                    </div>
+                                    <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: 10 }}>
+                                        <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--navy)", borderLeft: "3px solid #f59e0b", paddingLeft: 10 }}>
+                                            "{h.verbatim || h.text || h.quote || "Nessuna citazione letterale trovata"}"
+                                        </div>
+                                        {h.marketing_use && (
+                                            <div style={{ fontSize: 12, color: "#475569", display: "flex", gap: 6 }}>
+                                                <span>💡</span> <span><strong>Pubblicità:</strong> {h.marketing_use}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             )}
             {data.sentiment_analysis && (
                 <SCard>
