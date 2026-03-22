@@ -55,15 +55,22 @@ class DataCollectionService:
                 google_maps_url = url
                 break
 
-        # Raccogli dati in parallelo
-        results = await asyncio.gather(
-            self._scrape_website_complete(site_url, client_name),
-            self._collect_google_reviews(client_name, metadata.get("location", ""), google_maps_url),
-            self._collect_instagram_data_complete(instagram_handle, metadata),
-            self._collect_meta_ads_data(metadata),
-            self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata.get("competitors", [])),
-            return_exceptions=True
-        )
+        # Raccogli dati in parallelo - TIMEOUT GLOBALE 9 MINUTI per evitare freeze infiniti
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(
+                    self._scrape_website_complete(site_url, client_name),
+                    self._collect_google_reviews(client_name, metadata.get("location", ""), google_maps_url),
+                    self._collect_instagram_data_complete(instagram_handle, metadata),
+                    self._collect_meta_ads_data(metadata),
+                    self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata.get("competitors", [])),
+                    return_exceptions=True
+                ),
+                timeout=540.0 # 9 minuti
+            )
+        except asyncio.TimeoutError:
+            print("⚠️ TIMEOUT GLOBALE RACCOLTA DATI (9 min) - Procedo con i dati parziali")
+            results = [{}, {}, {}, {}, {}] 
 
         site_data, reviews_data, instagram_data, ads_data, competitor_data = results
 
@@ -549,18 +556,12 @@ Formato JSON:
 
         print(f"   Analizzando {len(all_competitors)} competitor")
 
-        # STEP 2: Per ogni competitor, raccogli recensioni
-        print(f"   Raccolta recensioni competitor...")
-
-        competitor_data = []
-
-        for comp in all_competitors[:10]:  # Max 10 competitor
+        # STEP 2: Per ogni competitor, raccogli recensioni (IN PARALLELO)
+        print(f"   Analisi parallela di {len(all_competitors[:10])} competitor...")
+        
+        async def fetch_comp_reviews(comp):
             comp_name = comp.get("name", "")
-            print(f"      - {comp_name}")
-
-            # Recensioni Google
             reviews_prompt = f"""Raccogli TUTTE le recensioni Google disponibili per "{comp_name}".
-
 Fornisci:
 - Numero totale recensioni
 - Media stelle
@@ -574,7 +575,6 @@ JSON:
   "reviews_5star": [{{"text": "..."}}],
   "reviews_low": [{{"text": "...", "stars": 2}}]
 }}"""
-
             try:
                 comp_reviews = await self.ai_service._call_ai(
                     model="perplexity/sonar-pro",
@@ -582,21 +582,28 @@ JSON:
                     temperature=0.1,
                     max_tokens=8000
                 )
-
                 import re
                 import json
                 json_match = re.search(r'\{.*\}', comp_reviews, re.DOTALL)
                 reviews_data = json.loads(json_match.group()) if json_match else {}
-            except:
-                reviews_data = {}
+                return {
+                    "name": comp_name,
+                    "info": comp,
+                    "reviews": reviews_data
+                }
+            except Exception as e:
+                print(f"      ⚠️ Errore recensioni competitor {comp_name}: {e}")
+                return {
+                    "name": comp_name,
+                    "info": comp,
+                    "reviews": {"error": str(e), "total": 0}
+                }
 
-            competitor_data.append({
-                "name": comp_name,
-                "info": comp,
-                "reviews": reviews_data
-            })
+        # Esegui i comp tasks in parallelo
+        comp_tasks = [fetch_comp_reviews(c) for c in all_competitors[:10]]
+        competitor_data = await asyncio.gather(*comp_tasks)
 
-        total_comp_reviews = sum(c.get("reviews", {}).get("total", 0) for c in competitor_data)
+        total_comp_reviews = sum(c.get("reviews", {}).get("total", 0) for c in competitor_data if c.get("reviews"))
         print(f"✅ Competitor: {len(competitor_data)} analizzati, {total_comp_reviews} recensioni")
 
         return {

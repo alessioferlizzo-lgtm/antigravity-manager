@@ -38,8 +38,13 @@ class AIService:
             "X-Title": "Antigravity App"
         }
 
-    async def _call_ai(self, model: str, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000) -> str:
+    async def _call_ai(self, model: str, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000, timeout: float = 600.0) -> str:
         """Call AI with automatic fallback to Google Gemini if OpenRouter fails (402 Payment Required)"""
+        
+        # Sostituzione timeout per modelli di ricerca/scraping (Sonar) per evitare blocchi infiniti
+        if "sonar" in model.lower() and timeout == 600.0:
+            timeout = 180.0 # 3 minuti per la ricerca web sono più che sufficienti
+            print(f"🕒 Timeout impostato a {timeout}s per modello di ricerca: {model}")
 
         # Try OpenRouter first
         if OPENROUTER_API_KEY:
@@ -50,7 +55,7 @@ class AIService:
                     "temperature": temperature,
                     "max_tokens": max_tokens
                 }
-                async with httpx.AsyncClient(timeout=600.0) as client:
+                async with httpx.AsyncClient(timeout=timeout) as client:
                     response = await client.post(OPENROUTER_URL, headers=self.headers, json=payload)
                     response.raise_for_status()
                     result = response.json()
@@ -88,7 +93,7 @@ class AIService:
 
         raise Exception("No AI provider available. Please configure OPENROUTER_API_KEY or GOOGLE_AI_API_KEY")
 
-    async def _call_google_gemini(self, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000) -> str:
+    async def _call_google_gemini(self, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000, timeout: float = 600.0) -> str:
         """Call Google Gemini API directly"""
         # Convert OpenAI-style messages to Gemini format
         gemini_contents = []
@@ -117,9 +122,10 @@ class AIService:
             payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
         # Use Gemini 1.5 Flash for speed and cost efficiency
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_AI_API_KEY}"
+        # Proviamo v1 che è più stabile per la produzione
+        gemini_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GOOGLE_AI_API_KEY}"
 
-        async with httpx.AsyncClient(timeout=600.0) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(gemini_url, json=payload)
             response.raise_for_status()
             result = response.json()
