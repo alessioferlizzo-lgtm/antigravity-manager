@@ -245,8 +245,9 @@ Rispondi SOLO con il JSON strutturato seguendo questo schema:
 NOTA IMPORTANTE: NON generare la sezione "visual_identity" (colori, design, packaging) perché verrà inserita MANUALMENTE dall'utente nella sezione Identità dell'app."""
 
         try:
+            print(f"🤖 [Orchestrator] Assegnazione WAVE 1 (Brand & Prodotti) a Claude 3.7 Sonnet...")
             response = await self.ai_service._call_ai(
-                model="anthropic/claude-3.5-sonnet",
+                model="anthropic/claude-3.7-sonnet",
                 messages=[{"role": "user", "content": system_prompt}],
                 temperature=0.3,
                 max_tokens=4000
@@ -349,8 +350,9 @@ Rispondi SOLO con JSON:
 }}"""
 
         try:
+            print(f"🤖 [Orchestrator] Assegnazione WAVE 2 (Personas & Psicologia) a Google Gemini 1.5 Pro...")
             response = await self.ai_service._call_ai(
-                model="anthropic/claude-3.5-sonnet",
+                model="google/gemini-1.5-pro",
                 messages=[{"role": "user", "content": system_prompt}],
                 temperature=0.3,
                 max_tokens=3000
@@ -492,8 +494,9 @@ REGOLE:
 ✅ Sii specifico e concreto"""
 
         try:
+            print(f"🤖 [Orchestrator] Assegnazione WAVE 3 (Mercato, Competitor, VoC) a Perplexity Sonar...")
             response = await self.ai_service._call_ai(
-                model="anthropic/claude-3.5-sonnet",
+                model="perplexity/sonar",
                 messages=[{"role": "user", "content": system_prompt}],
                 temperature=0.3,
                 max_tokens=6000
@@ -693,8 +696,9 @@ REGOLE:
 ✅ Ogni punto deve essere actionable e rilevante per Meta Ads"""
 
     try:
+        print(f"🤖 [Orchestrator] Assegnazione SWOT Analysis a Claude 3.7 Sonnet...")
         response = await ai_service._call_ai(
-            model="anthropic/claude-3.5-sonnet",
+            model="anthropic/claude-3.7-sonnet",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=2000
@@ -759,8 +763,9 @@ REGOLE:
 ✅ Allineati con i punti di forza e opportunità SWOT"""
 
     try:
+        print(f"🤖 [Orchestrator] Assegnazione Obiettivi Strategici a Claude 3.7 Sonnet...")
         response = await ai_service._call_ai(
-            model="anthropic/claude-3.5-sonnet",
+            model="anthropic/claude-3.7-sonnet",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=3000
@@ -836,8 +841,9 @@ REGOLE:
 ✅ Neutralizza i competitor (usa battlecards)"""
 
     try:
+        print(f"🤖 [Orchestrator] Assegnazione Piano d'Azione a Claude 3.7 Sonnet...")
         response = await ai_service._call_ai(
-            model="anthropic/claude-3.5-sonnet",
+            model="anthropic/claude-3.7-sonnet",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
             max_tokens=4000

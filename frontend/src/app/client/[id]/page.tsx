@@ -797,7 +797,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                             </div>
                             <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>
                                 <PlusIcon style={{ width: 14, height: 14 }} />Carica documento
-                                <input type="file" className="hidden" style={{ display: "none" }} multiple accept=".pdf,.txt,.docx" onChange={uploadFile} />
+                                <input type="file" className="hidden" style={{ display: "none" }} multiple accept=".pdf,.txt,.docx,.csv" onChange={uploadFile} />
                             </label>
                         </div>
 
