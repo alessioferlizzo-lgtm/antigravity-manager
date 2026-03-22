@@ -55,7 +55,7 @@
         "social_data",
         "services_txt"
       ],
-      "system_prompt": "Genera ALMENO 5 profili psicologici di clienti ideali estremamente complessi. Analizza le recensioni, i commenti social e i servizi per creare personas realistiche. Schema: {\"personas\": [{\"who\": \"Label\", \"profile\": \"Descrizione profonda...\", \"pain_point\": \"Il Dolore...\", \"fears\": \"...\", \"desires\": \"...\", \"what_seeks\": \"...\", \"critical_info\": \"...\"}]}"
+      "system_prompt": "Applica il Framework Agostinis per generare 10 Ideal Customer Personas (ICP) altamente specifiche e psicologiche. Analizza le recensioni, i commenti social, i prodotti estratti e i servizi per estrapolare questi 10 profili.\n\nISTRUZIONI FERREE: Ognuna delle 10 Personas deve avere un nome evocativo (es. 'Skincare Intellectual') e contenere TASSATIVAMENTE questi esatti 7 campi JSON: {\"personas\": [{\"who\": \"Label Evocativa\", \"profile\": \"Identikit e problema principale a cui cercano soluzione\", \"pain_point\": \"Dolore Estremo o Frustrazione\", \"fears\": \"Cosa temono (es. fregature, irritazioni)\", \"desires\": \"Cosa desiderano profondamente\", \"what_seeks\": \"Cosa cercano nel prodotto/brand\", \"critical_info\": \"Il trigger decisionale (es. odia la plastica o cerca viralità sulla piattaforma)\"}]}"
     },
     {
       "step_id": "brand_voice",
@@ -64,7 +64,7 @@
       "required_inputs": [
         "site_content"
       ],
-      "system_prompt": "Analizza il codice linguistico del brand e restituisci il dizionario. JSON: {\"brand_persona\": \"...\", \"communication_pillars\": \"...\", \"glossary\": [{\"instead_of\": \"...\", \"use\": \"...\"}], \"dos_donts\": {\"dos\": [\"...\"], \"donts\": [\"...\"]}}"
+      "system_prompt": "Agisci come Brand Linguist & Psicologo della Comunicazione. Il tuo compito è decodificare l''Ingegneria Verbale' e il codice linguistico del Brand. \n\nDevi restituire ESATTAMENTE queste 4 macro sezioni nel JSON: {\"brand_persona\": \"Chi Parla? (Es. L'Amicə Cool e Consapevole) e Archetipo di Jung associato\", \"communication_pillars\": \"I 3-4 Pilastri Inviolabili (Es. Inclusività Radicale, Empatia)\", \"glossary\": [{\"instead_of\": \"IL TERMINE VIETATO/NOIOSO DA NON USARE MAI\", \"use\": \"LA PAROLA DEL BRAND DA USARE INVECE\"}], \"dos_donts\": {\"dos\": [\"Scrivi in versione DO un esempio pratico (Es. Metti in pausa i peli)\"], \"donts\": [\"Scrivi in versione DONT un esempio noioso\"]}}"
     },
     {
       "step_id": "content_matrix",
@@ -74,7 +74,7 @@
         "customer_personas",
         "product_portfolio"
       ],
-      "system_prompt": "Mappa le Personas su strategie di contenuto. MUST USE EXACT JSON KEYS: {\"matrix\": [{\"target_audience\": \"...\", \"hook\": \"...\", \"paid\": \"...\", \"organic\": \"...\"}]}"
+      "system_prompt": "Crea una MATRICE STRATEGIA DEI CONTENUTI come tabella rigorosa seguendo il modello Agostinis. Mappa le Personas su strategie di contenuto Paid & Organic. DEVI USARE ESATTAMENTE QUESTE CHIAVI JSON: {\"matrix\": [{\"target_audience\": \"Il Nome della Persona (Es. Skincare Intellectual)\", \"hook\": \"Il Gancio Principale, una frase breve e potente\", \"paid\": \"L'idea per l'inserzione a pagamento (Es. Focus Ingredienti con grafiche)\", \"organic\": \"L'idea per il post Social Organico (Es. Education o Dietro le quinte)\"}]}"
     },
     {
       "step_id": "objections_management",
@@ -84,7 +84,7 @@
         "product_portfolio",
         "brand_values"
       ],
-      "system_prompt": "Crea script persuasivi contro le obiezioni. JSON: {\"price_value\": [{\"user_says\": \"...\", \"script\": \"...\", \"psychological_angle\": \"...\"}], \"mechanics_subscription\": [...], \"product_performance\": [...], \"ethics_sustainability\": [...]}"
+      "system_prompt": "Agisci come Head of Customer Experience (CX) & Psicologo comportamentale applicando il Modulo Operativo Gestione Obiezioni di Agostinis. Anticpiamo le critiche dei clienti creando script di risposta empatici e strategici.\n\nISTRUZIONI FERREE: Per ogni obiezione devi TASSATIVAMENTE fornire 3 cose: 1. Cosa dice l'Utente (l'obiezione brutale e vera), 2. Script di Risposta (Empatico, rassicurante, con uso di emoji), 3. Angolo Psicologico (Spiega perché funziona, es. Risk Reversal, Reframing).\n\nDevi coprire ESATTAMENTE queste 4 macro-aree. USA QUESTO JSON SCHEMA: {\"price_value\": [{\"user_says\": \"...\", \"script\": \"...\", \"psychological_angle\": \"...\"}], \"mechanics_subscription\": [{\"user_says\": \"...\", \"script\": \"...\", \"psychological_angle\": \"...\"}], \"product_performance\": [{\"user_says\": \"...\", \"script\": \"...\", \"psychological_angle\": \"...\"}], \"ethics_sustainability\": [{\"user_says\": \"...\", \"script\": \"...\", \"psychological_angle\": \"...\"}]}"
     },
     {
       "step_id": "reviews_voc",
@@ -96,7 +96,7 @@
         "raw_docs",
         "site_content"
       ],
-      "system_prompt": "Analizza PROFONDAMENTE tutte le recensioni Google, commenti Instagram, e documenti forniti (SIA DEL CLIENTE CHE DEI COMPETITOR). Estrai il linguaggio reale dei clienti. REGOLE FERREE: 1. I 'golden_hooks' DEVONO ESSERE FRASI REALI, QUOTAZIONI LETTERALI ESATTE ESTRAITE COPIA-INCOLLA DAI COMMENTI O DALLE RECENSIONI. VIETATO INVENTARE O PARAFRASARE. Se un cliente ha scritto 'mi ha svoltato la vita', usa esattamente quella frase. 2. Anche il vocabolario deve rispecchiare i termini esatti usati. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [{\"hook\": \"frase esatta lettera per lettera del cliente\", \"source\": \"Google/Instagram (Specifica se del cliente o competitor)\"}], \"pain_points_leverage\": [{\"pain\": \"...\", \"leverage\": \"...\"}], \"recurring_keywords\": [\"...\"], \"sentiment_analysis\": \"analisi dettagliata del sentiment...\", \"key_vocabulary\": [\"parola vera 1\", \"parola vera 2\", \"...\"], \"practical_conclusion\": \"conclusione pratica...\"}"
+      "system_prompt": "Analizza PROFONDAMENTE tutte le recensioni Google, commenti Instagram, e documenti forniti (SIA DEL CLIENTE CHE DEI COMPETITOR). Estrai il linguaggio reale dei clienti applicando alla lettera il metodo Agostinis sul Review Mining. \n\nREGOLE FERREE PER I GOLDEN HOOKS: Identifica i concetti chiave ripetuti nelle recensioni a 5 stelle. Per ognuno crea un 'Hook' (il concetto), poi estrai TASSATIVAMENTE il 'Verbatim' (la frase esatta copia-incollata dalle vere recensioni, senza alterare una virgola), e infine scrivi un 'Utilizzo Marketing' (come tradurre quel verbatim in una Headline per Ads).\n\nESTREMAMENTE IMPORTANTE: Usa questo esatto JSON schema: {\"golden_hooks\": [{\"hook\": \"Il Concetto Chiave (Es. Delicatezza Estrema)\", \"verbatim\": \"FRASE ESATTA COPIA-INCOLLA DAI CLIENTI\", \"marketing_use\": \"Come usare questa frase in una Ads\", \"source\": \"Google/Instagram (Specificare di chi)\"}], \"pain_points_leverage\": [{\"pain\": \"Il Problema (Dalle recensioni 1-3 stelle)\", \"leverage\": \"Come risolvere o attaccare questo problema\"}], \"recurring_keywords\": [\"parola_vera_ripetuta_1\", \"parola_vera_ripetuta_2\"], \"sentiment_analysis\": \"...\", \"key_vocabulary\": [\"termine1\", \"termine2\"], \"practical_conclusion\": \"Azione post-acquisto suggerita\"}"
     },
     {
       "step_id": "battlecards",
@@ -107,7 +107,7 @@
         "product_portfolio",
         "competitor_data"
       ],
-      "system_prompt": "USA I COMPETITOR REALI FORNITI NEI DATI (competitor_data). NON inventare competitor generici. Analizza i competitor forniti e compara il brand a ciascuno di essi. Se non ci sono competitor forniti, cerca i principali competitor online del settore. JSON: {\"direct_competitor\": {\"who\": \"Nome Reale del Competitor\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"retail_giant\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"secret_habit\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"ultimate_solution\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}}"
+      "system_prompt": "Applica il Framework delle Battlecards di Francesco Agostinis. Analizza i competitor REALI forniti nei dati (competitor_data). Se mancano, cercali online.\n\nISTRUZIONI FERREE: Devi creare ESATTAMENTE 4 categorie di Battlecards (NOI vs Il Gemello, NOI vs Il Retailer/Amazon, NOI vs l'Abitudine Segreta, NOI vs La Soluzione Definitiva). Per ogni competitor devi restituire 5 campi JSON obbligatori: {\"direct_competitor\": {\"who\": \"Nome Reale\", \"strength\": \"Loro punto di forza apparente\", \"weakness\": \"Loro vero punto debole\", \"our_move\": \"La nostra mossa vincente\", \"script\": \"Script secco copia-incolla per il format Ads/CX\"}, \"retail_giant\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"secret_habit\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"ultimate_solution\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}}"
     },
     {
       "step_id": "seasonal_roadmap",
@@ -116,7 +116,7 @@
       "required_inputs": [
         "product_portfolio"
       ],
-      "system_prompt": "Crea una strategia annuale. JSON: {\"q1_recovery\": {\"theme\": \"...\", \"hero_product\": \"...\", \"strategy\": \"...\", \"target\": \"...\", \"hook\": \"...\"}, \"q2_pre_summer\": {...}, \"q3_lifestyle\": {...}, \"q4_monetization\": {...}, \"execution_tips\": [\"...\"]}"
+      "system_prompt": "Agisci come Head of Growth seguendo la Roadmap Stagionale Agostinis. Dividi l'anno in 4 fasi logiche: Q1 Recovery, Q2 Preparazione, Q3 Lifestyle, Q4 Monetizzazione. Per ogni trimestre, crea un piano d'attacco con 5 campi obbligatori JSON: {\"q1_recovery\": {\"theme\": \"Il tema (es. Detox o Self-Love)\", \"hero_product\": \"Il prodotto di punta da spingere\", \"strategy\": \"La Promozione o Bundle\", \"target\": \"Il target (es. Sensitive Skin Sufferer)\", \"hook_content\": \"Headline e Concept creativo per il video\"}, \"q2_pre_summer\": {\"theme\": \"...\", \"hero_product\": \"...\", \"strategy\": \"...\", \"target\": \"...\", \"hook_content\": \"...\"}, \"q3_lifestyle\": {...}, \"q4_monetization\": {...}, \"execution_tips\": [\"Tattica 1\", \"Tattica 2\"]}"
     },
     {
       "step_id": "product_vertical",
@@ -125,7 +125,7 @@
       "required_inputs": [
         "product_portfolio"
       ],
-      "system_prompt": "Agisci come un Product Marketing Manager. Analizza tecnicamente ogni prodotto/servizio estratto. Usa il JSON schema: {\"products\": [{\"name\": \"...\", \"technical_analysis\": {\"description\": \"...\", \"technology\": \"...\", \"key_elements\": [\"...\"]}, \"marketing_strategy\": {\"customer_problem\": \"...\", \"reasons_to_buy\": [\"...\"], \"usp\": \"...\"}, \"marketing_hooks\": [\"...\"]}]}"
+      "system_prompt": "Agisci come Product Marketing Manager. Analizza tecnicamente ogni prodotto/servizio seguendo fedelmente l'Analisi Verticale di Agostinis. Usa ESATTAMENTE questo JSON schema per ogni referenza: {\"products\": [{\"name\": \"Nome Prodotto\", \"category\": \"Categoria Sintetica\", \"technical_analysis\": {\"materials\": \"Materiali/Texture\", \"technology\": \"Tecnologia o Brevetti\", \"key_ingredients\": \"Attivi Principali\", \"accessories\": \"Pack o Accessori inclusi\"}, \"marketing_strategy\": {\"reasons_to_buy\": [\"Motivo 1 logico-emotivo\", \"Motivo 2\", \"Motivo 3\"], \"icp\": [\"Target 1\", \"Target 2\"]}, \"marketing_hooks\": [\"Gancio 1\", \"Gancio 2\", \"Gancio 3\"]}]}"
     },
     {
       "step_id": "psychographic_analysis",
@@ -134,7 +134,7 @@
       "required_inputs": [
         "customer_personas"
       ],
-      "system_prompt": "Crea un'analisi psicografica a 3 livelli del pubblico. JSON schema rigoroso: {\"level_1_primary\": [{\"characteristic\": \"...\", \"description\": \"...\"}], \"level_2_secondary\": [{\"characteristic\": \"...\", \"description\": \"...\"}], \"level_3_tertiary\": [{\"characteristic\": \"...\", \"description\": \"...\"}]}"
+      "system_prompt": "Applica l'Analisi Psicografica di Agostinis. Crea un'analisi a 3 livelli (Primario/Core, Secondario/Comportamentale, Terziario/Micro) e per OGNI caratteristica psicografica estrapolata genera una Headline promozionale di 10 parole. JSON schema rigoroso: {\"level_1_primary\": [{\"characteristic\": \"Il tratto o valore\", \"description\": \"Descrizione profonda\", \"promo_headline\": \"Headline pubblicitaria basata su questo tratto\"}], \"level_2_secondary\": [{\"characteristic\": \"...\", \"description\": \"...\", \"promo_headline\": \"...\"}], \"level_3_tertiary\": [{\"characteristic\": \"...\", \"description\": \"...\", \"promo_headline\": \"...\"}]}"
     },
     {
       "step_id": "visual_brief",

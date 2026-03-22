@@ -470,7 +470,7 @@ function BattlecardsRenderer({ data }: { data: any }) {
     } else if (data?.battlecards || data?.competitors) {
         cards = Array.isArray(data.battlecards) ? data.battlecards : data.competitors;
     } else if (data && typeof data === "object") {
-        // AI returns dict like {"direct_competitor": {...}, "retail_giant": {...}}
+        // AI returns dict like {"direct_competitor": {...}, "retail_giant": {...}, etc.}
         cards = Object.values(data).filter(v => v && typeof v === "object" && !Array.isArray(v));
     }
 
@@ -479,16 +479,20 @@ function BattlecardsRenderer({ data }: { data: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {cards.map((card: any, i: number) => (
                 <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                    <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "10px 16px" }}>
-                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>⚔️ {card.competitor || card.name || `Competitor ${i + 1}`}</div>
-                        {card.positioning && <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>{card.positioning}</div>}
+                    <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>⚔️ {card.who || card.competitor || card.name || `Competitor ${i + 1}`}</div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "12px 16px", gap: 12 }}>
-                        {card.their_strengths && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>💪 I loro punti forza</div><GenericValue value={card.their_strengths} /></div>}
-                        {card.their_weaknesses && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", marginBottom: 4 }}>🎯 Le loro debolezze</div><GenericValue value={card.their_weaknesses} /></div>}
-                        {card.our_differentiators && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", marginBottom: 4 }}>⭐ I nostri differenziatori</div><GenericValue value={card.our_differentiators} /></div>}
-                        {card.strategy && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", marginBottom: 4 }}>📋 Strategia vs questo competitor</div><GenericValue value={card.strategy} /></div>}
+                        {(card.strength || card.their_strengths) && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 4, textTransform: "uppercase" }}>💪 Punto di Forza Apparente</div><div style={{ fontSize: 13 }}>{card.strength || card.their_strengths}</div></div>}
+                        {(card.weakness || card.their_weaknesses) && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", marginBottom: 4, textTransform: "uppercase" }}>🎯 Vero Punto Debole</div><div style={{ fontSize: 13 }}>{card.weakness || card.their_weaknesses}</div></div>}
+                        {(card.our_move || card.our_differentiators) && <div><div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", marginBottom: 4, textTransform: "uppercase" }}>⭐ La Nostra Mossa Vincente</div><div style={{ fontSize: 13 }}>{card.our_move || card.our_differentiators}</div></div>}
                     </div>
+                    {(card.script || card.strategy) && (
+                        <div style={{ padding: "12px 16px", background: "rgba(245,158,11,0.06)", borderTop: "1px solid rgba(245,158,11,0.15)" }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#d97706", marginBottom: 4, textTransform: "uppercase" }}>💬 Script (Copy & Incolla)</div>
+                            <div style={{ fontSize: 13, fontStyle: "italic", color: "#92400e" }}>"{card.script || card.strategy}"</div>
+                        </div>
+                    )}
                 </div>
             ))}
         </div>
@@ -496,44 +500,64 @@ function BattlecardsRenderer({ data }: { data: any }) {
 }
 
 function SeasonalRoadmapRenderer({ data }: { data: any }) {
-    let months: any[] = [];
-    if (Array.isArray(data)) {
-        months = data;
-    } else if (data?.months || data?.roadmap) {
-        months = Array.isArray(data.months) ? data.months : data.roadmap;
-    } else if (data && typeof data === "object") {
-        // AI returns dict like {"q1_recovery": {...}, "q2_pre_summer": {...}}
-        Object.entries(data).forEach(([k, v]: [string, any]) => {
-            if (v && typeof v === "object" && !Array.isArray(v)) {
-                months.push({ month: k.replace(/_/g, " ").toUpperCase(), ...v });
-            }
-        });
-    }
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    
+    // Extract the 4 quarters
+    const quartersArray: any[] = [];
+    Object.entries(data).forEach(([k, v]: [string, any]) => {
+        if (k.startsWith("q") && v && typeof v === "object" && !Array.isArray(v)) {
+            quartersArray.push({ id: k.replace(/_/g, " ").toUpperCase(), ...v });
+        }
+    });
 
-    const mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
-    if (!months.length) return <GenericValue value={data} />;
+    if (quartersArray.length === 0) return <GenericValue value={data} />;
+
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
-            {months.map((m: any, i: number) => {
-                const month = m.month || m.mese || mesi[i] || `Mese ${i + 1}`;
-                const focus = m.focus || m.obiettivo || m.theme || "";
-                const actions = m.actions || m.azioni || m.initiatives || [];
-                return (
-                    <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                        <div style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)", padding: "8px 12px" }}>
-                            <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{month}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
+                {quartersArray.map((q: any, i: number) => (
+                    <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                        <div style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "12px 16px" }}>
+                            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>📅 {q.id}</div>
+                            {q.theme && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 12, marginTop: 4 }}>Tema: {q.theme}</div>}
                         </div>
-                        <div style={{ padding: "10px 12px" }}>
-                            {focus && <div style={{ fontSize: 12, fontWeight: 600, color: "#6366f1", marginBottom: 6 }}>🎯 {focus}</div>}
-                            {Array.isArray(actions) && actions.length > 0 && (
-                                <ul style={{ paddingLeft: 14, margin: 0, fontSize: 12 }}>
-                                    {actions.slice(0, 3).map((a: any, j: number) => <li key={j} style={{ marginBottom: 4 }}>{typeof a === "string" ? a : a.action || a.title}</li>)}
-                                </ul>
+                        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 12, fontSize: 13 }}>
+                            {q.hero_product && (
+                                <div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 2 }}>🏆 Hero Product</div>
+                                    <div style={{ fontWeight: 600, color: "var(--navy)" }}>{q.hero_product}</div>
+                                </div>
+                            )}
+                            {q.strategy && (
+                                <div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 2 }}>⚡ Strategia / Promo</div>
+                                    <div>{q.strategy}</div>
+                                </div>
+                            )}
+                            {q.target && (
+                                <div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 2 }}>🎯 Target (ICP)</div>
+                                    <div>{q.target}</div>
+                                </div>
+                            )}
+                            {q.hook_content && (
+                                <div style={{ background: "rgba(16,185,129,0.06)", padding: "10px", borderRadius: 8, border: "1px solid rgba(16,185,129,0.2)" }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#059669", textTransform: "uppercase", marginBottom: 4 }}>💡 Hook & Content Idea</div>
+                                    <div style={{ fontStyle: "italic", color: "#065f46" }}>"{q.hook_content}"</div>
+                                </div>
                             )}
                         </div>
                     </div>
-                );
-            })}
+                ))}
+            </div>
+            {data.execution_tips && Array.isArray(data.execution_tips) && data.execution_tips.length > 0 && (
+                <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, padding: "16px" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#d97706", textTransform: "uppercase", marginBottom: 8 }}>📌 Tattiche di Esecuzione</div>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "var(--navy)", display: "flex", flexDirection: "column", gap: 6 }}>
+                        {data.execution_tips.map((tip: any, idx: number) => <li key={idx}>{tip}</li>)}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
@@ -554,32 +578,36 @@ function PsychographicRenderer({ data }: { data: any }) {
                 const label = key.replace(/_/g, " ").toUpperCase();
                 return (
                     <div key={key}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 10 }}>{label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color, marginBottom: 10 }}>{label}</div>
                         <div style={{ overflowX: "auto" }}>
                             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                                 <thead><tr style={{ background: `${color}10` }}>
-                                    {["Caratteristica", "Descrizione"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", color, borderBottom: `2px solid ${color}30` }}>{h}</th>)}
+                                    {["Caratteristica", "Descrizione", "💡 Headline Promozionale"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", color, borderBottom: `2px solid ${color}30` }}>{h}</th>)}
                                 </tr></thead>
                                 <tbody>
                                     {arr.map((item: any, i: number) => {
                                         if (typeof item !== "object") {
                                             return (
                                                 <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
-                                                    <td colSpan={2} style={{ padding: "8px 12px" }}>{String(item)}</td>
+                                                    <td colSpan={3} style={{ padding: "8px 12px" }}>{String(item)}</td>
                                                 </tr>
                                             );
                                         }
                                         // The AI might use "characteristic" or "trait" or "name", etc.
                                         const attrKey = Object.keys(item).find(k => k.match(/characteristic|trait|name|caratteristica|titolo/i)) || Object.keys(item)[0];
                                         const descKey = Object.keys(item).find(k => k.match(/description|descrizione|detail/i)) || Object.keys(item)[1];
+                                        const promoKey = Object.keys(item).find(k => k.match(/promo|headline/i));
                                         
                                         return (
                                             <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
-                                                <td style={{ padding: "8px 12px", fontWeight: 600, color: "var(--navy)", verticalAlign: "top", width: "35%" }}>
+                                                <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--navy)", verticalAlign: "top", width: "25%" }}>
                                                     {attrKey ? String(item[attrKey]) : `${i + 1}`}
                                                 </td>
-                                                <td style={{ padding: "8px 12px", verticalAlign: "top" }}>
+                                                <td style={{ padding: "10px 12px", verticalAlign: "top", width: "45%" }}>
                                                     {descKey ? String(item[descKey]) : ""}
+                                                </td>
+                                                <td style={{ padding: "10px 12px", verticalAlign: "top", width: "30%", fontStyle: "italic", color: "#64748b" }}>
+                                                    {promoKey ? `"${String(item[promoKey])}"` : "—"}
                                                 </td>
                                             </tr>
                                         );
