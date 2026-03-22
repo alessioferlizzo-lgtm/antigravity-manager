@@ -249,28 +249,32 @@ function ReasonsToByRenderer({ data }: { data: any }) {
 }
 
 function PersonasRenderer({ data }: { data: any }) {
-    const personas = Array.isArray(data) ? data : data?.personas || data?.customer_personas || [];
-    if (!personas.length) return <GenericValue value={data} />;
+    let personas = [];
+    if (Array.isArray(data)) personas = data;
+    else if (data?.personas || data?.customer_personas) personas = Array.isArray(data.personas) ? data.personas : data.customer_personas;
+    else if (data && typeof data === "object") personas = Object.values(data).filter(v => v !== null);
+
+    if (!personas || !personas.length) return <GenericValue value={data} />;
     const colors = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#0ea5e9", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#84cc16"];
     return (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
             {personas.map((p: any, i: number) => {
                 const col = colors[i % colors.length];
-                const name = p.persona_name || p.name || p.type || `Persona ${i + 1}`;
+                if (typeof p !== "object") {
+                    return <div key={i} style={{ padding: "12px", border: `1px solid ${col}40`, borderRadius: 8, fontSize: 13 }}>{String(p)}</div>;
+                }
+                const name = p.who || p.persona_name || p.name || p.type || `Persona ${i + 1}`;
                 return (
                     <div key={i} style={{ border: `1px solid ${col}30`, borderRadius: 12, overflow: "hidden" }}>
                         <div style={{ background: `${col}12`, borderBottom: `1px solid ${col}20`, padding: "10px 14px" }}>
                             <div style={{ fontWeight: 700, color: col, fontSize: 14 }}>{name}</div>
-                            {p.type && p.type !== name && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{p.type}</div>}
                         </div>
                         <div style={{ padding: "10px 14px", fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
-                            {p.who && <div><strong>Chi è:</strong> {p.who}</div>}
-                            {p.profile && <div><strong>Profilo:</strong> {p.profile}</div>}
-                            {p.pain_point && <div style={{ color: "#ef4444" }}>❗ {p.pain_point}</div>}
-                            {p.fears && <div style={{ color: "#ef4444" }}>😟 <strong>Paure:</strong> {p.fears}</div>}
-                            {p.desires && <div style={{ color: "#10b981" }}>✨ <strong>Desideri:</strong> {p.desires}</div>}
-                            {p.what_seeks && <div style={{ color: "#10b981" }}>🎯 {p.what_seeks}</div>}
-                            {p.critical_info && <div style={{ color: col, padding: "4px 8px", background: `${col}10`, borderRadius: 6, marginTop: 4 }}>💡 {p.critical_info}</div>}
+                            {Object.entries(p).filter(([k]) => !['who', 'persona_name', 'name', 'type'].includes(k)).map(([k, v]: [string, any], j) => (
+                                <div key={j}>
+                                    <strong style={{ textTransform: "capitalize" }}>{k.replace(/_/g, " ")}:</strong> {typeof v === "string" ? v : JSON.stringify(v)}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 );
@@ -364,20 +368,36 @@ function BrandVoiceRenderer({ data }: { data: any }) {
 }
 
 function ObjectionsRenderer({ data }: { data: any }) {
-    const items = Array.isArray(data) ? data : data?.objections || data?.gestione || [];
-    if (!items.length) return <GenericValue value={data} />;
+    let items: any[] = [];
+    if (Array.isArray(data)) {
+        items = data;
+    } else if (data?.objections || data?.gestione) {
+        items = Array.isArray(data.objections) ? data.objections : data.gestione;
+    } else if (data && typeof data === "object") {
+        // Collect from keys like price_value, mechanics_subscription
+        Object.keys(data).forEach(key => {
+            if (Array.isArray(data[key])) {
+                items = items.concat(data[key].map((obj: any) => ({ ...obj, category: key.replace(/_/g, " ") })));
+            }
+        });
+    }
+
+    if (!items || !items.length) return <GenericValue value={data} />;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {items.map((obj: any, i: number) => (
                 <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                    <div style={{ background: "rgba(239,68,68,0.06)", borderBottom: "1px solid rgba(239,68,68,0.15)", padding: "10px 14px" }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "#ef4444" }}>❗ Obiezione #{i + 1}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{obj.objection || obj.obiezione || obj.title || obj.question}</div>
+                    <div style={{ background: "rgba(239,68,68,0.06)", borderBottom: "1px solid rgba(239,68,68,0.15)", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#ef4444" }}>❗ Obiezione #{i + 1}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{obj.user_says || obj.objection || obj.obiezione || obj.title || obj.question}</div>
+                        </div>
+                        {obj.category && <Chip label={obj.category} color="#ef4444" />}
                     </div>
                     <div style={{ padding: "10px 14px", background: "rgba(16,185,129,0.04)" }}>
-                        <div style={{ fontSize: 11, color: "#10b981", fontWeight: 700, marginBottom: 4 }}>✅ Risposta</div>
-                        <MD text={obj.response || obj.risposta || obj.answer || ""} />
-                        {obj.psychology && <div style={{ marginTop: 8, padding: "6px 10px", background: "rgba(99,102,241,0.08)", borderRadius: 6, fontSize: 12, color: "#6366f1" }}>🧠 Psicologia: {obj.psychology}</div>}
+                        <div style={{ fontSize: 11, color: "#10b981", fontWeight: 700, marginBottom: 4 }}>✅ Risposta (Script)</div>
+                        <MD text={obj.script || obj.response || obj.risposta || obj.answer || ""} />
+                        {(obj.psychological_angle || obj.psychology) && <div style={{ marginTop: 8, padding: "6px 10px", background: "rgba(99,102,241,0.08)", borderRadius: 6, fontSize: 12, color: "#6366f1" }}>🧠 Psicologia: {obj.psychological_angle || obj.psychology}</div>}
                     </div>
                 </div>
             ))}
@@ -387,12 +407,14 @@ function ObjectionsRenderer({ data }: { data: any }) {
 
 function ReviewsVoCRenderer({ data }: { data: any }) {
     if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    const hooks = Array.isArray(data.golden_hooks) ? data.golden_hooks : (Array.isArray(data.hooks) ? data.hooks : []);
+    const vocab = Array.isArray(data.key_vocabulary) ? data.key_vocabulary : (typeof data.key_vocabulary === 'string' ? [data.key_vocabulary] : []);
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {(data.golden_hooks || data.hooks) && (
+            {hooks.length > 0 && (
                 <SCard>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 10 }}>🏆 Golden Hooks (dalle recensioni)</div>
-                    {(Array.isArray(data.golden_hooks || data.hooks) ? (data.golden_hooks || data.hooks) : [data.golden_hooks || data.hooks]).map((h: any, i: number) => (
+                    {hooks.map((h: any, i: number) => (
                         <div key={i} style={{ padding: "8px 14px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, marginBottom: 8, fontStyle: "italic", fontSize: 13 }}>
                             "{typeof h === "string" ? h : h.hook || h.text}"
                             {h.source && <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", fontStyle: "normal", marginTop: 2 }}>— {h.source}</span>}
@@ -406,10 +428,10 @@ function ReviewsVoCRenderer({ data }: { data: any }) {
                     <GenericValue value={data.sentiment_analysis} />
                 </SCard>
             )}
-            {data.key_vocabulary && (
+            {vocab.length > 0 && (
                 <SCard>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", marginBottom: 8 }}>💬 Vocabolario Reale</div>
-                    <div>{(Array.isArray(data.key_vocabulary) ? data.key_vocabulary : [data.key_vocabulary]).map((v: string, i: number) => <Chip key={i} label={v} color="#8b5cf6" />)}</div>
+                    <div>{vocab.map((v: string, i: number) => <Chip key={i} label={v} color="#8b5cf6" />)}</div>
                 </SCard>
             )}
             {data.recurring_patterns && (
@@ -499,17 +521,18 @@ function SeasonalRoadmapRenderer({ data }: { data: any }) {
 
 function PsychographicRenderer({ data }: { data: any }) {
     if (!data || typeof data !== "object") return <GenericValue value={data} />;
-    const levels = [
-        { key: "level_1_primary", label: "Livello 1 — Primario", color: "#6366f1" },
-        { key: "level_2_secondary", label: "Livello 2 — Secondario", color: "#0ea5e9" },
-        { key: "level_3_tertiary", label: "Livello 3 — Terziario", color: "#10b981" },
-    ];
+    
+    // The AI might output keys like level_1_primary, level_2_secondary or any random dict.
+    const sections = Object.entries(data).filter(([_, v]) => v !== null && (Array.isArray(v) || typeof v === "object"));
+    if (sections.length === 0) return <GenericValue value={data} />;
+
+    const colors = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b"];
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {levels.map(({ key, label, color }) => {
-                const items = data[key];
-                if (!items) return null;
+            {sections.map(([key, items], idx) => {
                 const arr = Array.isArray(items) ? items : [items];
+                const color = colors[idx % colors.length];
+                const label = key.replace(/_/g, " ").toUpperCase();
                 return (
                     <div key={key}>
                         <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 10 }}>{label}</div>
@@ -519,12 +542,29 @@ function PsychographicRenderer({ data }: { data: any }) {
                                     {["Caratteristica", "Descrizione"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", color, borderBottom: `2px solid ${color}30` }}>{h}</th>)}
                                 </tr></thead>
                                 <tbody>
-                                    {arr.map((item: any, i: number) => (
-                                        <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
-                                            <td style={{ padding: "8px 12px", fontWeight: 600, color: "var(--navy)", verticalAlign: "top", width: "35%" }}>{item.characteristic || item.name || item.trait || `${i + 1}`}</td>
-                                            <td style={{ padding: "8px 12px", verticalAlign: "top" }}>{item.description || item.who || item.detail || ""}</td>
-                                        </tr>
-                                    ))}
+                                    {arr.map((item: any, i: number) => {
+                                        if (typeof item !== "object") {
+                                            return (
+                                                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                                                    <td colSpan={2} style={{ padding: "8px 12px" }}>{String(item)}</td>
+                                                </tr>
+                                            );
+                                        }
+                                        // The AI might use "characteristic" or "trait" or "name", etc.
+                                        const attrKey = Object.keys(item).find(k => k.match(/characteristic|trait|name|caratteristica|titolo/i)) || Object.keys(item)[0];
+                                        const descKey = Object.keys(item).find(k => k.match(/description|descrizione|detail/i)) || Object.keys(item)[1];
+                                        
+                                        return (
+                                            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                                                <td style={{ padding: "8px 12px", fontWeight: 600, color: "var(--navy)", verticalAlign: "top", width: "35%" }}>
+                                                    {attrKey ? String(item[attrKey]) : `${i + 1}`}
+                                                </td>
+                                                <td style={{ padding: "8px 12px", verticalAlign: "top" }}>
+                                                    {descKey ? String(item[descKey]) : ""}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -610,7 +650,6 @@ const MACRO_AREAS = [
         sections: [
             { key: "battlecards", label: "11. Competitor Battlecards", Renderer: BattlecardsRenderer },
             { key: "seasonal_roadmap", label: "12. Roadmap Stagionale (12 mesi)", Renderer: SeasonalRoadmapRenderer },
-            { key: "visual_brief", label: "14. Visual Brief", Renderer: VisualBriefRenderer },
         ],
     },
 ];
