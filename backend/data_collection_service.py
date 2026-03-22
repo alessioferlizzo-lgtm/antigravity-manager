@@ -297,11 +297,11 @@ Formato JSON:
         url_instruction = ""
         if gmb_url:
             if "google.com/search" in gmb_url:
-                url_instruction = f"Analizza questo link di ricerca Google che porta alle recensioni: {gmb_url}. TROVA IL BOX DELLE RECENSIONI E ESTRAILE."
+                url_instruction = f"1. Analizza questo link fornito: {gmb_url}\n2. Esegui anche una ricerca per 'Recensioni Google {client_name} {location}'\n3. Cerca i feedback dei clienti su Facebook o altri aggregatori se Google Maps è bloccato."
             else:
-                url_instruction = f"Utilizza questo link esatto di Google Maps / My Business per analizzare le recensioni: {gmb_url}"
+                url_instruction = f"1. Utilizza questo link esatto: {gmb_url}\n2. Cerca anche 'Recensioni {client_name} {location}' in generale."
         else:
-            url_instruction = f"Cerca il Profilo Google My Business di {client_name} a {location} ed estrai le recensioni."
+            url_instruction = f"Cerca il Profilo Google My Business di {client_name} a {location} ed estrai le recensioni. Usa query come 'Recensioni {client_name}' e '{client_name} {location} reviews'."
 
         prompt = f"""Raccogli e analizza TUTTE le recensioni Google per "{client_name}".
 
