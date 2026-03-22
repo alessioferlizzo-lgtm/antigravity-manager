@@ -117,7 +117,8 @@ async def generate_customer_personas(
     brand_identity: Dict[str, Any],
     product_portfolio: Dict[str, Any],
     social_data: str = "",
-    ads_data: str = ""
+    ads_data: str = "",
+    google_reviews: str = ""
 ) -> List[Dict[str, Any]]:
     """
     SEZIONE 5: LE 10 IDEAL CUSTOMER PERSONAS (ICP)
@@ -138,13 +139,23 @@ Crea 10 IDEAL CUSTOMER PERSONAS (ICP) MOLTO SPECIFICHE per {client_name}.
 BRAND IDENTITY:
 {json.dumps(brand_identity, ensure_ascii=False)[:1500]}
 
-PRODOTTI:
+PRODOTTI/SERVIZI:
 {json.dumps(product_portfolio, ensure_ascii=False)[:2000]}
 
 {instagram_formatted}
 
 DATI ADS:
 {ads_data[:1500] if ads_data else "Non disponibili"}
+
+📝 RECENSIONI GOOGLE (Voice of Customer):
+{google_reviews[:2000] if google_reviews else "Non disponibili"}
+
+IMPORTANTE: Usa le recensioni Google per identificare:
+- Problemi reali espressi dai clienti
+- Linguaggio esatto che usano (Voice of Customer)
+- Desideri e aspirazioni
+- Pain points specifici
+- Quote verbatim autentiche
 
 ISTRUZIONI:
 Per ogni Persona crea un NOME EVOCATIVO (es. "Skincare Intellectual", "Aesthetic Curator", "Busy Professional").

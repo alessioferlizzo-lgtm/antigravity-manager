@@ -65,19 +65,87 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: AnalisiSt
         setExpandedSections(newSet);
     };
 
-    // Render valore intelligente
-    const renderValue = (value: any): React.ReactNode => {
+    // Render valore intelligente con supporto tabelle e formattazione avanzata
+    const renderValue = (value: any, key?: string): React.ReactNode => {
         if (!value) return <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>Non disponibile</span>;
 
+        // Gestione stringhe (con supporto markdown base)
         if (typeof value === "string") {
-            return <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{value}</p>;
+            // Se è un testo lungo, aggiungi più spaziatura
+            const lines = value.split('\n');
+            return (
+                <div style={{ lineHeight: 1.8, marginBottom: 16 }}>
+                    {lines.map((line, idx) => {
+                        // Supporto base per grassetto **text**
+                        const parts = line.split(/(\*\*.*?\*\*)/g);
+                        return (
+                            <p key={idx} style={{ marginBottom: 12, whiteSpace: "pre-wrap" }}>
+                                {parts.map((part, i) => {
+                                    if (part.startsWith('**') && part.endsWith('**')) {
+                                        return <strong key={i} style={{ color: "var(--navy)" }}>{part.slice(2, -2)}</strong>;
+                                    }
+                                    return <span key={i}>{part}</span>;
+                                })}
+                            </p>
+                        );
+                    })}
+                </div>
+            );
         }
 
+        // Gestione array - TABELLE per analisi psicografica
         if (Array.isArray(value)) {
+            // Se è analisi psicografica (level_1_primary, level_2_secondary, level_3_tertiary)
+            if (key && (key.includes('level_') || key === 'customer_personas')) {
+                return (
+                    <div style={{ overflowX: "auto", marginTop: 16 }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                            <thead>
+                                <tr style={{ background: "var(--navy)", color: "white" }}>
+                                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>
+                                        {key.includes('level_') ? 'Caratteristica' : 'Persona'}
+                                    </th>
+                                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Descrizione</th>
+                                    {value[0]?.headline && (
+                                        <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Headline</th>
+                                    )}
+                                    {value[0]?.subtitle && (
+                                        <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Sottotitolo</th>
+                                    )}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {value.map((item: any, idx: number) => (
+                                    <tr key={idx} style={{ borderBottom: "1px solid var(--border)" }}>
+                                        <td style={{ padding: "12px", fontWeight: 600, color: "var(--navy)", verticalAlign: "top" }}>
+                                            {item.characteristic || item.persona_name || item.name || `Item ${idx + 1}`}
+                                        </td>
+                                        <td style={{ padding: "12px", lineHeight: 1.6, verticalAlign: "top" }}>
+                                            {item.description || item.who || renderValue(item)}
+                                        </td>
+                                        {item.headline && (
+                                            <td style={{ padding: "12px", fontStyle: "italic", color: "var(--text-muted)", verticalAlign: "top" }}>
+                                                "{item.headline}"
+                                            </td>
+                                        )}
+                                        {item.subtitle && (
+                                            <td style={{ padding: "12px", fontSize: 12, color: "var(--text-muted)", verticalAlign: "top" }}>
+                                                {item.subtitle}
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            }
+
+            // Array normale (non tabella)
             return (
-                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                <ul style={{ margin: "12px 0", paddingLeft: 24, lineHeight: 1.8 }}>
                     {value.map((item, idx) => (
-                        <li key={idx} style={{ marginBottom: 8 }}>
+                        <li key={idx} style={{ marginBottom: 12 }}>
                             {typeof item === "object" ? renderValue(item) : item}
                         </li>
                     ))}
@@ -85,15 +153,16 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: AnalisiSt
             );
         }
 
+        // Gestione oggetti
         if (typeof value === "object") {
             return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
                     {Object.entries(value).map(([k, v]) => (
-                        <div key={k}>
-                            <strong style={{ color: "var(--navy)", textTransform: "capitalize" }}>
-                                {k.replace(/_/g, " ")}:
+                        <div key={k} style={{ paddingLeft: 12, borderLeft: "3px solid var(--lime)", paddingBottom: 12 }}>
+                            <strong style={{ color: "var(--navy)", textTransform: "capitalize", fontSize: 14, display: "block", marginBottom: 8 }}>
+                                {k.replace(/_/g, " ")}
                             </strong>
-                            <div style={{ marginTop: 4 }}>{renderValue(v)}</div>
+                            <div style={{ marginTop: 4, paddingLeft: 8 }}>{renderValue(v, k)}</div>
                         </div>
                     ))}
                 </div>
@@ -164,19 +233,40 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: AnalisiSt
 
                 <div className="card" style={{ textAlign: "center", padding: "60px 20px" }}>
                     <DocumentTextIcon style={{ width: 48, height: 48, color: "var(--text-muted)", margin: "0 auto 16px" }} />
-                    <p style={{ fontSize: 15, color: "var(--text-muted)", marginBottom: 20 }}>
-                        Nessuna analisi strategica generata
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-header)", marginBottom: 8 }}>
+                        Analisi Strategica Completa
+                    </h3>
+                    <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20, maxWidth: 500, margin: "0 auto 24px" }}>
+                        Genera l&apos;analisi strategica completa in 14 sezioni basata su metodologia Francesco Agostinis per Meta Ads.
                     </p>
-                    <button className="btn btn-primary" onClick={generateAnalysis} disabled={generating}>
+
+                    <div style={{ background: "rgba(149,191,71,0.05)", border: "1px solid rgba(149,191,71,0.2)", borderRadius: 12, padding: "20px", marginBottom: 24, textAlign: "left", maxWidth: 600, margin: "0 auto 24px" }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--lime)", marginBottom: 12 }}>✨ Cosa verrà generato:</p>
+                        <ul style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8, paddingLeft: 20, margin: 0 }}>
+                            <li>Brand Identity & Posizionamento completo (Mission, Tone, Visual Identity)</li>
+                            <li>Analisi SWOT aggiornata con dati reali</li>
+                            <li>10 Customer Personas dettagliate</li>
+                            <li>Competitor Battlecards e strategie</li>
+                            <li>Matrice contenuti e angoli comunicativi</li>
+                            <li>Voice of Customer da recensioni reali</li>
+                            <li>+ altre 8 sezioni strategiche</li>
+                        </ul>
+                    </div>
+
+                    <div style={{ background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.2)", borderRadius: 8, padding: "12px 16px", marginBottom: 24, fontSize: 12, color: "var(--orange)" }}>
+                        ⏱️ Tempo stimato: <strong>8-12 minuti</strong> • Raccoglie dati da sito, social, recensioni e competitor
+                    </div>
+
+                    <button className="btn btn-primary" style={{ fontSize: 15, padding: "14px 32px", fontWeight: 700 }} onClick={generateAnalysis} disabled={generating}>
                         {generating ? (
                             <>
                                 <div className="spinner" style={{ width: 14, height: 14 }} />
-                                Generazione in corso... (8-12 minuti)
+                                Generazione in corso... (può richiedere 10+ minuti)
                             </>
                         ) : (
                             <>
                                 <ArrowPathIcon style={{ width: 15, height: 15 }} />
-                                Genera Analisi Strategica
+                                🚀 Genera Analisi Strategica Completa
                             </>
                         )}
                     </button>

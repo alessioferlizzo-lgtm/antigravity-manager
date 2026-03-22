@@ -192,12 +192,6 @@ Genera un report dettagliato in italiano strutturato ESATTAMENTE nei seguenti pu
 - Vocabolario strategico: quali parole chiave usa il brand?
 - Stile comunicativo: usa "tu", "lei", emoji, schwa (ə)?
 
-**VISUAL IDENTITY & ESTETICA**
-- Descrivi i colori dominanti del brand
-- Stile del design: minimalista, lusso, giovanile, professionale?
-- Packaging e presentazione (se applicabile)
-- Mood generale: clinico, accogliente, premium, casual?
-
 **POSIZIONAMENTO (Unique Selling Proposition)**
 - Definisci la fascia di mercato: Lusso, Premium, Masstige, Economico?
 - Quali sono i 2-3 differenziatori chiave rispetto ai competitor?
@@ -231,12 +225,6 @@ Rispondi SOLO con il JSON strutturato seguendo questo schema:
     "vocabulary": ["parola1", "parola2", "parola3"],
     "linguistic_approach": "Come comunica (tu/lei, formale/informale, emoji si/no)"
   }},
-  "visual_identity": {{
-    "colors": ["colore1", "colore2"],
-    "design_style": "Minimalista/Lusso/Professionale/etc",
-    "mood": "Descrizione del mood generale",
-    "packaging": "Descrizione packaging se applicabile"
-  }},
   "positioning": {{
     "market_tier": "Lusso/Premium/Masstige/Economico",
     "segment": "Descrizione segmento specifico",
@@ -252,7 +240,9 @@ Rispondi SOLO con il JSON strutturato seguendo questo schema:
     "Asset unico 2",
     "Punto di forza 1"
   ]
-}}"""
+}}
+
+NOTA IMPORTANTE: NON generare la sezione "visual_identity" (colori, design, packaging) perché verrà inserita MANUALMENTE dall'utente nella sezione Identità dell'app."""
 
         try:
             response = await self.ai_service._call_ai(
@@ -276,7 +266,6 @@ Rispondi SOLO con il JSON strutturato seguendo questo schema:
                 "error": str(e),
                 "mission": "Errore durante la generazione",
                 "tone_of_voice": {},
-                "visual_identity": {},
                 "positioning": {},
                 "brand_statement": "",
                 "strategic_notes": []
@@ -383,15 +372,17 @@ Rispondi SOLO con JSON:
         client_info: Dict[str, Any],
         site_url: str,
         site_content: str,
-        raw_docs: str = ""
+        raw_docs: str = "",
+        products_csv: str = "",
+        services_txt: str = ""
     ) -> Dict[str, Any]:
         """
-        SEZIONE 3: ANALISI PORTAFOGLIO PRODOTTI
+        SEZIONE 3: ANALISI PORTAFOGLIO PRODOTTI E SERVIZI
 
-        Analisi verticale di ogni prodotto con:
+        Analisi verticale di PRODOTTI (da CSV Shopify) e SERVIZI (da TXT o sito):
         - Nome & Categoria
         - Benefit/Tecnologia
-        - Ingredienti Chiave
+        - Ingredienti Chiave (prodotti) o Descrizione (servizi)
         - USP (Unique Selling Proposition)
         - Problema Cliente che risolve
         - Marketing Hooks (3 headline pronte)
@@ -399,48 +390,77 @@ Rispondi SOLO con JSON:
 
         client_name = client_info.get("name", "")
 
+        # Determina se abbiamo prodotti, servizi o entrambi
+        has_products = bool(products_csv and products_csv != "Non disponibili")
+        has_services = bool(services_txt and services_txt != "Non disponibili") or "serviz" in site_content.lower()
+
+        analysis_type = ""
+        if has_products and has_services:
+            analysis_type = "PRODOTTI E SERVIZI"
+        elif has_products:
+            analysis_type = "PRODOTTI"
+        elif has_services:
+            analysis_type = "SERVIZI"
+        else:
+            analysis_type = "PRODOTTI/SERVIZI (da sito web)"
+
         system_prompt = f"""Agisci come un Product Marketing Manager esperto.
 
-Il tuo compito è analizzare tecnicamente ogni singolo prodotto di {client_name} e tradurre le caratteristiche tecniche in leve di marketing persuasive.
+Il tuo compito è analizzare tecnicamente {analysis_type} di {client_name} e tradurre le caratteristiche tecniche in leve di marketing persuasive.
 
 CONTESTO:
 Sito: {site_url}
 
-CONTENUTO SITO (pagine prodotto):
+CONTENUTO SITO (pagine prodotto/servizi):
 {site_content[:10000]}
+
+{'📦 PRODOTTI DA CSV SHOPIFY:' if has_products else ''}
+{products_csv[:5000] if has_products else ''}
+
+{'🛠️ SERVIZI DA FILE TXT:' if has_services and services_txt else ''}
+{services_txt[:5000] if has_services and services_txt else ''}
 
 DOCUMENTI AGGIUNTIVI:
 {raw_docs[:3000] if raw_docs else "Non disponibili"}
 
 ISTRUZIONI:
-Per OGNI prodotto principale identificato:
+Per OGNI prodotto/servizio identificato, crea un'analisi completa.
 
-### ANALISI TECNICA & PUNTI DI FORZA
-- **Materiali/Texture**: Di cosa è fatto?
-- **Tecnologia/Innovazione**: Ci sono brevetti o meccanismi particolari?
-- **Ingredienti Chiave**: Quali sono gli attivi principali e cosa fanno?
-- **Accessori/Formato**: Cosa è incluso o qual è il pack?
+### SE È UN PRODOTTO (da CSV Shopify o sito e-commerce):
+**ANALISI TECNICA:**
+- Materiali/Texture: Di cosa è fatto?
+- Tecnologia/Innovazione: Ci sono brevetti o meccanismi particolari?
+- Ingredienti Chiave: Quali sono gli attivi principali e cosa fanno?
+- Accessori/Formato: Cosa è incluso o qual è il pack?
 
-### STRATEGIA DI MARKETING
-- **Problema Cliente**: Quale problema specifico risolve? (es. "pelle che si affloscia", "macchie dell'età")
-- **Reason to Buy (RTB)**: 3 motivi convincenti per acquistare (mix logica ed emozione)
-- **ICP Target**: Chi è il cliente ideale per questo prodotto?
+### SE È UN SERVIZIO (da TXT o sito centro estetico/agenzia):
+**ANALISI TECNICA:**
+- Descrizione completa del servizio
+- Metodologia/Processo utilizzato
+- Tecnologie/Tool impiegate
+- Durata e modalità di erogazione
+
+### STRATEGIA DI MARKETING (per prodotti E servizi):
+- **Problema Cliente**: Quale problema specifico risolve? (es. "pelle che si affloscia", "macchie dell'età", "pochi lead qualificati")
+- **Reason to Buy (RTB)**: 3 motivi convincenti per acquistare/prenotare (mix logica ed emozione)
+- **ICP Target**: Chi è il cliente ideale per questo prodotto/servizio?
 - **USP**: Perché è UNICO sul mercato? Cosa lo differenzia?
 
-### MARKETING HOOKS
+### MARKETING HOOKS:
 - 3 headline pubblicitarie pronte all'uso (brevi, incisive, persuasive)
 
 OUTPUT JSON:
 {{
-  "products": [
+  "items": [
     {{
-      "name": "Nome Prodotto",
-      "category": "Categoria (es. Viso/Corpo/Tool)",
+      "name": "Nome Prodotto/Servizio",
+      "type": "product" oppure "service",
+      "category": "Categoria (es. Viso/Corpo/Tool/Marketing/Design)",
       "technical_analysis": {{
-        "materials": "Materiali e texture",
-        "technology": "Tecnologie o innovazioni",
-        "key_ingredients": ["Ingrediente 1", "Ingrediente 2"],
-        "format": "Formato e accessori inclusi"
+        "description": "Descrizione completa",
+        "technology": "Tecnologie o metodologia",
+        "key_elements": ["Elemento chiave 1", "Elemento chiave 2"],
+        "format": "Formato/durata/modalità erogazione"
       }},
       "marketing_strategy": {{
         "customer_problem": "Problema specifico che risolve",
@@ -462,6 +482,10 @@ OUTPUT JSON:
 }}
 
 REGOLE:
+✅ Distingui chiaramente tra "product" e "service" nel campo type
+✅ Se hai CSV prodotti Shopify, analizza QUELLI prioritariamente
+✅ Se hai file TXT servizi, analizza QUELLI prioritariamente
+✅ Se non hai né CSV né TXT, analizza dal sito web
 ✅ NON fare un semplice elenco - analizza in profondità
 ✅ Focus su BENEFICI non caratteristiche
 ✅ Usa linguaggio persuasivo nei hooks
@@ -478,13 +502,20 @@ REGOLE:
             import re
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group())
+                data = json.loads(json_match.group())
+                # Supporta sia il vecchio formato "products" che il nuovo "items"
+                if "items" in data:
+                    return data
+                elif "products" in data:
+                    # Converte vecchio formato in nuovo
+                    return {"items": data["products"]}
+                return data
             else:
-                return {"products": [], "raw_text": response}
+                return {"items": [], "raw_text": response}
 
         except Exception as e:
             print(f"Errore generazione Product Portfolio: {e}")
-            return {"products": [], "error": str(e)}
+            return {"items": [], "error": str(e)}
 
 
 async def generate_complete_strategic_analysis(
@@ -496,7 +527,9 @@ async def generate_complete_strategic_analysis(
     ads_data: str = "",
     raw_docs: str = "",
     google_reviews: str = "",
-    instagram_comments: str = ""
+    instagram_comments: str = "",
+    products_csv: str = "",
+    services_txt: str = ""
 ) -> Dict[str, Any]:
     """
     ORCHESTRATOR PRINCIPALE
@@ -528,12 +561,12 @@ async def generate_complete_strategic_analysis(
     )
     print("✅ Brand Values completati")
 
-    # FASE 3: Product Portfolio
-    print("\n🔄 Step 3/14 - PRODUCT PORTFOLIO (Analisi Verticale)...")
+    # FASE 3: Product Portfolio (Prodotti + Servizi)
+    print("\n🔄 Step 3/14 - PRODUCT/SERVICE PORTFOLIO (Analisi Verticale)...")
     product_portfolio = await service.generate_product_portfolio(
-        client_info, site_url, site_content, raw_docs
+        client_info, site_url, site_content, raw_docs, products_csv, services_txt
     )
-    print("✅ Product Portfolio completato")
+    print("✅ Product/Service Portfolio completato")
 
     # Import delle funzioni dalle parti 2 e 3
     from .ai_service_strategic_analysis_part2 import (
@@ -561,7 +594,7 @@ async def generate_complete_strategic_analysis(
     # FASE 5: Customer Personas (10 ICP)
     print("\n🔄 Step 5/14 - CUSTOMER PERSONAS (10 ICP)...")
     customer_personas = await generate_customer_personas(
-        ai_service, client_info, site_content, brand_identity, product_portfolio, social_data, ads_data
+        ai_service, client_info, site_content, brand_identity, product_portfolio, social_data, ads_data, google_reviews
     )
     print(f"✅ {len(customer_personas)} Customer Personas create")
 

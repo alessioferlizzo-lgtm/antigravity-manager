@@ -80,22 +80,42 @@ REGOLE:
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
-            temperature=0.3,
+            temperature=0.2,  # Temperatura più bassa per JSON più pulito
             max_tokens=4000
         )
 
         import re
+        # Estrai solo il JSON, rimuovi eventuali testi prima/dopo
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:
-            return json.loads(json_match.group())
+            json_str = json_match.group()
+            # Prova a parsare, se fallisce prova con fallback
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError as je:
+                print(f"⚠️ JSON parsing fallito per Objections: {je}")
+                print(f"Tentativo con pulizia caratteri...")
+                # Rimuovi eventuali caratteri problematici
+                json_str_clean = json_str.replace('\n', ' ').replace('\r', '')
+                try:
+                    return json.loads(json_str_clean)
+                except:
+                    # Fallback: ritorna struttura minima
+                    return {
+                        "price_objections": [],
+                        "mechanism_objections": [],
+                        "product_objections": [],
+                        "ethics_objections": [],
+                        "error": f"JSON parsing fallito: {str(je)}"
+                    }
         else:
-            return {"raw_text": response}
+            return {"raw_text": response, "price_objections": [], "mechanism_objections": [], "product_objections": [], "ethics_objections": []}
 
     except Exception as e:
         print(f"Errore generazione Objections Management: {e}")
-        return {"error": str(e)}
+        return {"price_objections": [], "mechanism_objections": [], "product_objections": [], "ethics_objections": [], "error": str(e)}
 
 
 async def generate_reviews_voc(
@@ -181,7 +201,7 @@ REGOLE:
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.2,
             max_tokens=3000
@@ -218,6 +238,27 @@ async def generate_battlecards(
 
     client_name = client_info.get("name", "")
     industry = client_info.get("industry", "")
+    metadata = client_info.get("metadata", {})
+
+    # Estrai competitor dai metadata
+    competitors = metadata.get("competitors", [])
+    competitors_text = ""
+
+    if competitors:
+        competitors_text += "\n\n🎯 COMPETITOR REALI (da metadata cliente):\n\n"
+        for comp in competitors[:3]:  # Top 3 competitor
+            comp_name = comp.get("name", "Sconosciuto")
+            comp_links = comp.get("links", [])
+            competitors_text += f"\n**{comp_name}:**\n"
+            for link in comp_links[:5]:
+                url = link.get("url", "")
+                label = link.get("label", "Link")
+                description = link.get("description", "")
+                competitors_text += f"  - {label}: {url}\n"
+                if description:
+                    competitors_text += f"    Descrizione: {description}\n"
+    else:
+        competitors_text = "\nNessun competitor specifico fornito nel metadata - genera analisi generica del settore."
 
     system_prompt = f"""Agisci come Consulente Strategico di Posizionamento.
 
@@ -226,10 +267,13 @@ Analizza {client_name} ({industry}) e crea BATTLECARDS COMPETITIVE.
 BRAND:
 {json.dumps(brand_identity, ensure_ascii=False)[:1500]}
 
-PRODOTTI:
+PRODOTTI/SERVIZI:
 {json.dumps(product_portfolio, ensure_ascii=False)[:1500]}
 
-Identifica 4 categorie di competitor e crea battlecard per ognuno:
+{competitors_text}
+
+Identifica 4 categorie di competitor e crea battlecard per ognuno.
+**IMPORTANTE**: Se sono forniti competitor specifici sopra, analizzali PRIORITARIAMENTE e usa i loro link per ricerche approfondite.
 
 ### 1. NOI vs IL COMPETITOR DIRETTO ("Il Gemello")
 Chi è il brand online più simile a noi?
@@ -392,7 +436,7 @@ Rispondi SOLO con JSON:
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.4,
             max_tokens=5000
@@ -419,27 +463,33 @@ async def generate_psychographic_analysis(
     """
     SEZIONE 13: PSYCHOGRAPHIC ANALYSIS (3 Livelli)
 
-    Analisi psicografica profonda a 3 livelli:
-    - Livello 1 Primario: Caratteristiche fondamentali
-    - Livello 2 Secondario: Comportamenti specifici
-    - Livello 3 Terziario: Micro-caratteristiche, bias, trigger
+    Analisi psicografica profonda a 3 livelli ESATTAMENTE secondo la guida Francesco Agostinis:
+    - Livello PRIMARIO: 8-10 caratteristiche fondamentali
+    - Livello SECONDARIO: 10 caratteristiche comportamentali
+    - Livello TERZIARIO: 10 micro-caratteristiche
+
+    Ogni caratteristica ha: Livello, Nome, Descrizione, Headline, Sottotitolo
     """
 
     client_name = client_info.get("name", "")
 
-    system_prompt = f"""Agisci come Psicologo del Consumatore e Stratega di Marketing.
+    system_prompt = f"""Agisci come Psicologo del Consumatore esperto in Analisi Psicografica Avanzata.
 
-Crea ANALISI PSICOGRAFICA PROFONDA A 3 LIVELLI per il target di {client_name}.
+Crea una ANALISI PSICOGRAFICA PROFONDA A 3 LIVELLI per il target di {client_name}, seguendo ESATTAMENTE questa struttura.
 
-PERSONAS:
-{json.dumps(customer_personas, ensure_ascii=False)[:2000]}
+PERSONAS IDENTIFICATE:
+{json.dumps(customer_personas, ensure_ascii=False)[:3000]}
 
-SITO:
+SITO WEB:
 {site_content[:2000]}
 
-LIVELLO 1 - PRIMARIO (8-10 caratteristiche fondamentali):
-- Sistema valoriale
-- Motivazioni principali
+═══════════════════════════════════════════════════════════════════
+LIVELLO PRIMARIO – CARATTERISTICHE FONDAMENTALI (8-10 caratteristiche)
+═══════════════════════════════════════════════════════════════════
+
+Elenca 8-10 caratteristiche psicografiche CORE che definiscono il target, analizzando:
+- Sistema valoriale (cosa è importante per loro)
+- Motivazioni principali (cosa li spinge ad agire)
 - Aspirazioni e obiettivi di vita
 - Contesto socio-economico
 - Tratti caratteriali dominanti
@@ -447,7 +497,11 @@ LIVELLO 1 - PRIMARIO (8-10 caratteristiche fondamentali):
 - Sfide principali percepite
 - Desideri primari
 
-LIVELLO 2 - SECONDARIO (10 caratteristiche comportamentali):
+═══════════════════════════════════════════════════════════════════
+LIVELLO SECONDARIO – CARATTERISTICHE COMPORTAMENTALI (10 caratteristiche)
+═══════════════════════════════════════════════════════════════════
+
+Fornisci ulteriori 10 caratteristiche PIÙ SPECIFICHE, considerando:
 - Stile di vita e abitudini quotidiane
 - Comportamenti di consumo
 - Interessi e hobby
@@ -459,7 +513,11 @@ LIVELLO 2 - SECONDARIO (10 caratteristiche comportamentali):
 - Approccio alla tecnologia
 - Relazione con il denaro
 
-LIVELLO 3 - TERZIARIO (10 micro-caratteristiche):
+═══════════════════════════════════════════════════════════════════
+LIVELLO TERZIARIO – MICRO-CARATTERISTICHE (10 caratteristiche)
+═══════════════════════════════════════════════════════════════════
+
+Aggiungi 10 caratteristiche di terzo livello, PIÙ SOTTILI e specifiche:
 - Micro-comportamenti distintivi
 - Bias cognitivi ricorrenti
 - Trigger emotivi
@@ -471,42 +529,90 @@ LIVELLO 3 - TERZIARIO (10 micro-caratteristiche):
 - Aspettative implicite
 - Predisposizioni latenti
 
-Per ogni caratteristica fornisci anche:
-- Headline promozionale (max 10 parole)
-- Sottotitolo di supporto
+═══════════════════════════════════════════════════════════════════
+APPLICAZIONE MARKETING
+═══════════════════════════════════════════════════════════════════
 
-Rispondi SOLO con JSON:
+Per OGNI caratteristica identificata, sviluppa:
+1. **Headline Promozionale**: massimo 10 parole che fanno leva su quella caratteristica psicografica
+2. **Sottotitolo**: frase di supporto che amplifica il messaggio
+
+═══════════════════════════════════════════════════════════════════
+OUTPUT RICHIESTO (JSON)
+═══════════════════════════════════════════════════════════════════
+
+Rispondi SOLO con questo formato JSON:
 {{
   "level_1_primary": [
     {{
-      "characteristic": "Nome caratteristica",
-      "description": "Descrizione dettagliata",
-      "headline": "Headline promozionale",
-      "subtitle": "Sottotitolo supporto"
-    }}
+      "characteristic": "Nome breve della caratteristica",
+      "description": "Descrizione dettagliata (2-3 frasi concrete, specifiche per questo target)",
+      "headline": "Headline promozionale massimo 10 parole",
+      "subtitle": "Sottotitolo di supporto"
+    }},
+    ...  (ripeti per 8-10 caratteristiche)
   ],
-  "level_2_secondary": [...],
-  "level_3_tertiary": [...]
-}}"""
+  "level_2_secondary": [
+    {{
+      "characteristic": "Nome breve della caratteristica",
+      "description": "Descrizione dettagliata (2-3 frasi concrete, specifiche per questo target)",
+      "headline": "Headline promozionale massimo 10 parole",
+      "subtitle": "Sottotitolo di supporto"
+    }},
+    ...  (ripeti per 10 caratteristiche)
+  ],
+  "level_3_tertiary": [
+    {{
+      "characteristic": "Nome breve della caratteristica",
+      "description": "Descrizione dettagliata (2-3 frasi concrete, specifiche per questo target)",
+      "headline": "Headline promozionale massimo 10 parole",
+      "subtitle": "Sottotitolo di supporto"
+    }},
+    ...  (ripeti per 10 caratteristiche)
+  ]
+}}
+
+REGOLE FONDAMENTALI:
+✅ Mantieni approccio OGGETTIVO e professionale
+✅ Evita stereotipi e generalizzazioni inappropriate
+✅ Ogni caratteristica deve essere MISURABILE o OSSERVABILE
+✅ Rilevante per il target specifico
+✅ Utile per strategie di marketing concrete
+✅ Culturalmente appropriata
+✅ Bilancia aspetti razionali ed emotivi
+✅ Considera evoluzione temporale del target
+✅ Le headline devono essere INCISIVE e RISONANTI con la caratteristica
+✅ Ogni livello deve aggiungere PROFONDITÀ all'analisi, non reiterare concetti"""
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.3,
-            max_tokens=6000
+            max_tokens=8000  # Aumentato per 3 livelli completi
         )
 
         import re
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:
-            return json.loads(json_match.group())
+            data = json.loads(json_match.group())
+            # Verifica che abbia tutti e 3 i livelli
+            if "level_1_primary" in data and "level_2_secondary" in data and "level_3_tertiary" in data:
+                return data
+            else:
+                print(f"⚠️ Analisi psicografica incompleta - mancano livelli")
+                return {
+                    "level_1_primary": data.get("level_1_primary", []),
+                    "level_2_secondary": data.get("level_2_secondary", []),
+                    "level_3_tertiary": data.get("level_3_tertiary", []),
+                    "error": "Alcuni livelli mancanti"
+                }
         else:
-            return {"raw_text": response}
+            return {"level_1_primary": [], "level_2_secondary": [], "level_3_tertiary": [], "raw_text": response}
 
     except Exception as e:
         print(f"Errore generazione Psychographic Analysis: {e}")
-        return {"error": str(e)}
+        return {"level_1_primary": [], "level_2_secondary": [], "level_3_tertiary": [], "error": str(e)}
 
 
 async def generate_visual_brief(
@@ -617,18 +723,41 @@ Rispondi SOLO con JSON:
 
     try:
         response = await ai_service._call_ai(
-            model="anthropic/claude-sonnet-4-5",
+            model="anthropic/claude-3.5-sonnet",
             messages=[{"role": "user", "content": system_prompt}],
-            temperature=0.3,
+            temperature=0.2,  # Temperatura più bassa per JSON più pulito
             max_tokens=3000
         )
 
         import re
+        # Estrai solo il JSON, rimuovi eventuali testi prima/dopo
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:
-            return json.loads(json_match.group())
+            json_str = json_match.group()
+            # Prova a parsare, se fallisce prova con fallback
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError as je:
+                print(f"⚠️ JSON parsing fallito per Visual Brief: {je}")
+                print(f"Tentativo con pulizia caratteri...")
+                # Rimuovi eventuali caratteri problematici
+                json_str_clean = json_str.replace('\n', ' ').replace('\r', '')
+                try:
+                    return json.loads(json_str_clean)
+                except:
+                    # Fallback: ritorna struttura minima
+                    return {
+                        "color_palette": {"primary": [], "secondary": [], "usage": ""},
+                        "typography": {"primary_font": "", "style": "", "hierarchy": ""},
+                        "mood_style": {"overall_mood": "", "references": [], "avoid": []},
+                        "photography": {"style": "", "composition": "", "lighting": ""},
+                        "video": {"duration": "", "style": [], "audio": ""},
+                        "format_specs": {"stories": "", "feed": "", "banner": ""},
+                        "do_dont": [],
+                        "error": f"JSON parsing fallito: {str(je)}"
+                    }
         else:
-            return {"raw_text": response}
+            return {"raw_text": response, "error": "Nessun JSON trovato nella risposta"}
 
     except Exception as e:
         print(f"Errore generazione Visual Brief: {e}")

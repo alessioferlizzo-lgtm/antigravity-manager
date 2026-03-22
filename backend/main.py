@@ -3416,12 +3416,31 @@ async def generate_complete_client_analysis(client_id: str):
 
     # Raccogli documenti caricati (raw-data folder)
     raw_docs = ""
+    products_csv = "Non disponibili"
+    services_txt = "Non disponibili"
+
     raw_files = list((CLIENTS_DIR / client_id / "raw-data").glob("*")) if (CLIENTS_DIR / client_id / "raw-data").exists() else []
-    for file_path in raw_files[:5]:
+    for file_path in raw_files:
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()[:3000]
-                raw_docs += f"\n\n--- {file_path.name} ---\n{content}"
+            file_name_lower = file_path.name.lower()
+
+            # Cerca CSV prodotti Shopify
+            if file_name_lower.endswith('.csv') and ('product' in file_name_lower or 'shopify' in file_name_lower or 'prodott' in file_name_lower):
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    products_csv = f.read()[:10000]  # Limite 10K caratteri per CSV
+                    print(f"✅ Trovato CSV prodotti: {file_path.name}")
+
+            # Cerca TXT servizi
+            elif file_name_lower.endswith('.txt') and ('serviz' in file_name_lower or 'service' in file_name_lower):
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    services_txt = f.read()[:8000]  # Limite 8K caratteri per TXT
+                    print(f"✅ Trovato TXT servizi: {file_path.name}")
+
+            # Altri documenti generici
+            elif len(raw_files) <= 5:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()[:3000]
+                    raw_docs += f"\n\n--- {file_path.name} ---\n{content}"
         except:
             pass
 
@@ -3446,7 +3465,9 @@ async def generate_complete_client_analysis(client_id: str):
         ads_data=ads_text,
         raw_docs=raw_docs,
         google_reviews=google_reviews_text,
-        instagram_comments=instagram_text
+        instagram_comments=instagram_text,
+        products_csv=products_csv,
+        services_txt=services_txt
     )
 
     # Aggiungi dati competitor all'analisi
