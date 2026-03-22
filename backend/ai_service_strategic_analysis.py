@@ -1,6 +1,7 @@
 import json
 import os
 import asyncio
+import json_repair
 from typing import Dict, Any
 
 async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, Any]) -> Any:
@@ -21,6 +22,7 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
             input_text += f"\n--- {req.upper()} ---\n{val_str}\n"
 
     final_prompt = f"{system_prompt_template}\n\n{input_text}"
+    messages = [{"role": "user", "content": final_prompt}]
     
     # 2. Select AI Model Map
     model_map = {
@@ -33,12 +35,18 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
     print(f"[Workflow Engine] Executing Task: {step_id} using {target_model}")
     
     # 3. Execute
-    response_json = await service._call_ai(
-        prompt=final_prompt,
+    response_str = await service._call_ai(
         model=target_model,
+        messages=messages,
         max_tokens=8000
     )
     
+    try:
+        response_json = json_repair.loads(response_str)
+    except Exception as e:
+        print(f"[Workflow Engine] JSON Parse Error in {step_id}: {e}")
+        response_json = {}
+        
     return response_json
 
 
@@ -100,70 +108,91 @@ async def generate_complete_strategic_analysis(
     print(f"[Workflow Engine] All {len(workflow['tasks'])} tasks executed successfully.")
 
     # 4. Final Adapter - Map to exactly what React expects
-    brand_identity = results.get("brand_identity", {})
-    brand_values = results.get("brand_values", {})
-    product_portfolio = results.get("product_portfolio", {})
-    reasons_to_buy = results.get("reasons_to_buy", {})
-    customer_personas = results.get("customer_personas", {})
-    brand_voice = results.get("brand_voice", {})
-    content_matrix = results.get("content_matrix", {})
-    objections = results.get("objections_management", {})
-    reviews_voc = results.get("reviews_voc", {})
-    battlecards = results.get("battlecards", {})
-    seasonal_roadmap = results.get("seasonal_roadmap", {})
+    # Extract keys safely
+    brand_identity_data = results.get("brand_identity", {})
+    brand_values_data = results.get("brand_values", {})
+    product_portfolio_data = results.get("product_portfolio", {})
+    product_vertical_data = results.get("product_vertical", {})
+    reasons_to_buy_data = results.get("reasons_to_buy", {})
+    customer_personas_data = results.get("customer_personas", {})
+    psychographic_data = results.get("psychographic_analysis", {})
+    brand_voice_data = results.get("brand_voice", {})
+    content_matrix_data = results.get("content_matrix", {})
+    objections_data = results.get("objections_management", {})
+    reviews_voc_data = results.get("reviews_voc", {})
+    battlecards_data = results.get("battlecards", {})
+    seasonal_roadmap_data = results.get("seasonal_roadmap", {})
+    visual_brief_data = results.get("visual_brief", {})
     
     # Clean UI shapes
     final_output = {
-        "identita_brand": {
-            "mission": brand_identity.get("mission", ""),
-            "posizionamento": brand_identity.get("positioning", ""),
-            "statement": brand_identity.get("statement", ""),
-            "inclusivity": brand_values.get("inclusivity", ""),
-            "sustainability": brand_values.get("sustainability", ""),
-            "premium_materials": brand_values.get("formulas_materials", "")
+        "brand_identity": {
+            "mission": brand_identity_data.get("mission", ""),
+            "posizionamento": brand_identity_data.get("positioning", ""),
+            "statement": brand_identity_data.get("statement", ""),
+            "tone_of_voice": brand_identity_data.get("tone_of_voice", ""),
+            "visual_identity": brand_identity_data.get("visual_identity", "")
         },
-        "prodotti_e_usp": {
-            "core_products": product_portfolio.get("core_products", []),
-            "pre_products": product_portfolio.get("pre_during_products", []),
-            "post_products": product_portfolio.get("post_treatment_products", []),
-            "marketing_hooks": [] 
+        "brand_values": {
+            "brand_pillars": [
+                {"name": "Inclusività", "content": brand_values_data.get("inclusivity", "")},
+                {"name": "Sostenibilità", "content": brand_values_data.get("sustainability", "")},
+                {"name": "Materiali/Premium", "content": brand_values_data.get("formulas_materials", "")}
+            ]
+        },
+        "brand_voice": {
+            "persona": brand_voice_data.get("brand_persona", ""),
+            "rules": brand_voice_data.get("communication_pillars", ""),
+            "glossary": brand_voice_data.get("glossary", []),
+            "examples": brand_voice_data.get("dos_and_donts", [])
+        },
+        "product_portfolio": {
+            "products": product_portfolio_data.get("core_products", []) + product_portfolio_data.get("pre_during_products", []) + product_portfolio_data.get("post_treatment_products", []) + product_portfolio_data.get("lifestyle_products", [])
+        },
+        "product_vertical": {
+            "products": product_vertical_data.get("products", [])
         },
         "reasons_to_buy": {
-            "rational": reasons_to_buy.get("rational_motives", []),
-            "emotional": reasons_to_buy.get("emotional_motives", [])
+            "rational": reasons_to_buy_data.get("rational_motives", []),
+            "emotional": reasons_to_buy_data.get("emotional_motives", [])
         },
-        "personas": customer_personas.get("personas", []),
-        "brand_voice": {
-            "persona": brand_voice.get("brand_persona", ""),
-            "rules": brand_voice.get("communication_pillars", ""),
-            "glossary": brand_voice.get("glossary", []),
-            "examples": brand_voice.get("dos_and_donts", [])
-        },
-        "content_matrix": content_matrix.get("matrix", []),
         "objections": {
-            "price": objections.get("price_value", []),
-            "subscription": objections.get("mechanics_subscription", []),
-            "performance": objections.get("product_performance", []),
-            "ethics": objections.get("ethics_sustainability", [])
+            "price": objections_data.get("price_value", []),
+            "subscription": objections_data.get("mechanics_subscription", []),
+            "performance": objections_data.get("product_performance", []),
+            "ethics": objections_data.get("ethics_sustainability", [])
         },
-        "voice_of_customer": {
-            "golden_hooks": reviews_voc.get("golden_hooks", []),
-            "pain_points": reviews_voc.get("pain_points_leverage", []),
-            "keywords": reviews_voc.get("recurring_keywords", []),
-            "conclusion": reviews_voc.get("practical_conclusion", "")
+        "customer_personas": customer_personas_data.get("personas", []),
+        "psychographic_analysis": {
+            "level_1_primary": psychographic_data.get("level_1_primary", []),
+            "level_2_secondary": psychographic_data.get("level_2_secondary", []),
+            "level_3_tertiary": psychographic_data.get("level_3_tertiary", [])
+        },
+        "content_matrix": content_matrix_data.get("matrix", []),
+        "reviews_voc": {
+            "golden_hooks": reviews_voc_data.get("golden_hooks", []),
+            "pain_points": reviews_voc_data.get("pain_points_leverage", []),
+            "keywords": reviews_voc_data.get("recurring_keywords", []),
+            "conclusion": reviews_voc_data.get("practical_conclusion", "")
         },
         "battlecards": [
-            battlecards.get("direct_competitor", {}),
-            battlecards.get("retail_giant", {}),
-            battlecards.get("secret_habit", {}),
-            battlecards.get("ultimate_solution", {})
+            battlecards_data.get("direct_competitor", {}),
+            battlecards_data.get("retail_giant", {}),
+            battlecards_data.get("secret_habit", {}),
+            battlecards_data.get("ultimate_solution", {})
         ],
         "seasonal_roadmap": [
-            seasonal_roadmap.get("q1_recovery", {}),
-            seasonal_roadmap.get("q2_pre_summer", {}),
-            seasonal_roadmap.get("q3_lifestyle", {}),
-            seasonal_roadmap.get("q4_monetization", {})
-        ]
+            seasonal_roadmap_data.get("q1_recovery", {}),
+            seasonal_roadmap_data.get("q2_pre_summer", {}),
+            seasonal_roadmap_data.get("q3_lifestyle", {}),
+            seasonal_roadmap_data.get("q4_monetization", {})
+        ],
+        "visual_brief": {
+            "color_palette": visual_brief_data.get("color_palette", []),
+            "visual_style": visual_brief_data.get("visual_style", ""),
+            "mood_board": visual_brief_data.get("mood_board", ""),
+            "ad_formats": visual_brief_data.get("ad_formats", "")
+        }
     }
     
     return final_output
