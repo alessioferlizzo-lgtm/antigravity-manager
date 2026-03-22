@@ -1,0 +1,114 @@
+{
+  "workflow_name": "Strategie Di Marketing Avanzate Con Gemini Per Meta Ads",
+  "tasks": [
+    {
+      "step_id": "brand_identity",
+      "title": "Analisi Brand Identity & Posizionamento",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "products_csv",
+        "google_reviews",
+        "instagram_comments",
+        "site_content"
+      ],
+      "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito e genera un documento estremamente lungo e accademico (1000+ parole). STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": \"...\", \"visual_identity\": \"...\", \"positioning\": \"...\", \"statement\": \"...\"}"
+    },
+    {
+      "step_id": "brand_values",
+      "title": "Valori del Brand (Brand Pillars)",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "brand_identity"
+      ],
+      "system_prompt": "Basandoti sull'identità del brand e sul sito, identifica i pilastri etici e morali. Sii profondo ed esaustivo, punta a una profondità da report di 60 pagine. STRUTTURA JSON RICHIESTA: {\"inclusivity\": \"...\", \"sustainability\": \"...\", \"formulas_materials\": \"...\", \"premium_quality\": \"...\"}"
+    },
+    {
+      "step_id": "product_portfolio",
+      "title": "Analisi Portafoglio Prodotti",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "products_csv"
+      ],
+      "system_prompt": "Elabora TUTTI i prodotti forniti nel CSV. Raggruppali per fase di utilizzo o categoria. Restituisci JSON: {\"core_products\": [{\"name\": \"...\", \"benefit_tech\": \"...\", \"key_ingredients\": \"...\", \"usp\": \"...\"}], \"pre_during_products\": [...], \"post_treatment_products\": [...], \"lifestyle_products\": [...]}"
+    },
+    {
+      "step_id": "reasons_to_buy",
+      "title": "Reasons to Buy",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "brand_identity",
+        "brand_values",
+        "product_portfolio"
+      ],
+      "system_prompt": "Estrai motivazioni di acquisto logiche ed emotive, analizzando profondamente i prodotti. JSON schema: {\"rational_motives\": [\"...\"], \"emotional_motives\": [\"...\"]}"
+    },
+    {
+      "step_id": "customer_personas",
+      "title": "Ideal Customer Personas (ICP)",
+      "recommended_model": "gemini",
+      "required_inputs": [
+        "brand_identity",
+        "product_portfolio"
+      ],
+      "system_prompt": "Genera 5-10 profili psicologici di clienti ideali estremamente complessi. Schema: {\"personas\": [{\"who\": \"Label\", \"profile\": \"Descrizione profonda...\", \"pain_point\": \"Il Dolore...\", \"fears\": \"Le paure...\"}]}"
+    },
+    {
+      "step_id": "brand_voice",
+      "title": "Brand Voice & Decodifica Verbale",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "site_content"
+      ],
+      "system_prompt": "Analizza il codice linguistico del brand e restituisci il dizionario. JSON: {\"brand_persona\": \"...\", \"communication_pillars\": \"...\", \"glossary\": [{\"instead_of\": \"...\", \"use_this\": \"...\"}], \"dos_and_donts\": [{\"scenario\": \"...\", \"dont\": \"...\", \"do\": \"...\"}]}"
+    },
+    {
+      "step_id": "content_matrix",
+      "title": "Matrice Contenuti (Paid & Organic)",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "customer_personas",
+        "product_portfolio"
+      ],
+      "system_prompt": "Mappa le Personas su strategie di contenuto. MUST USE EXACT JSON KEYS: {\"matrix\": [{\"target_audience\": \"...\", \"main_hook\": \"...\", \"paid_ads\": \"...\", \"organic_social\": \"...\"}]}"
+    },
+    {
+      "step_id": "objections_management",
+      "title": "Gestione Obiezioni",
+      "recommended_model": "gemini",
+      "required_inputs": [
+        "product_portfolio",
+        "brand_values"
+      ],
+      "system_prompt": "Crea script persuasivi contro le obiezioni. JSON: {\"price_value\": [{\"user_says\": \"...\", \"script\": \"...\", \"psychological_angle\": \"...\"}], \"mechanics_subscription\": [...], \"product_performance\": [...], \"ethics_sustainability\": [...]}"
+    },
+    {
+      "step_id": "reviews_voc",
+      "title": "Voice of Customer",
+      "recommended_model": "gemini",
+      "required_inputs": [
+        "google_reviews",
+        "instagram_comments"
+      ],
+      "system_prompt": "Analizza recensioni positive e negative. ESTREMAMENTE IMPORTANTE: Usa JSON {\"golden_hooks\": [...], \"pain_points_leverage\": [...], \"recurring_keywords\": [...], \"practical_conclusion\": \"...\"}"
+    },
+    {
+      "step_id": "battlecards",
+      "title": "Battlecards Competitive",
+      "recommended_model": "perplexity",
+      "required_inputs": [
+        "brand_identity",
+        "product_portfolio"
+      ],
+      "system_prompt": "Fai ricerca e compara il brand ai competitor diretti online, retail e sostituti. JSON: {\"direct_competitor\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"retail_giant\": {...}, \"secret_habit\": {...}, \"ultimate_solution\": {...}}"
+    },
+    {
+      "step_id": "seasonal_roadmap",
+      "title": "Roadmap Stagionale",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "product_portfolio"
+      ],
+      "system_prompt": "Crea una strategia annuale. JSON: {\"q1_recovery\": {\"theme\": \"...\", \"hero_product\": \"...\", \"strategy\": \"...\", \"target\": \"...\", \"hook\": \"...\"}, \"q2_pre_summer\": {...}, \"q3_lifestyle\": {...}, \"q4_monetization\": {...}, \"execution_tips\": [\"...\"]}"
+    }
+  ]
+}
