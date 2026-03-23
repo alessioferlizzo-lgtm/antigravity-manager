@@ -792,7 +792,11 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
     const handleRegenerateSection = async (e: React.MouseEvent, stepId: string) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log(`[Regenerate] Starting regeneration for section: ${stepId}`);
+        
+        // 🚨 TACTILE DIAGNOSTIC: Se vedi questo alert, il tasto FUNZIONA dal punto di vista UI.
+        alert(`AVVIO RIGENERAZIONE: ${stepId}\nURL: ${apiUrl}/clients/${clientId}/...`);
+        
+        console.log(`[Regenerate] Starting for ${stepId}`);
         setSectionLoading(prev => ({ ...prev, [stepId]: true }));
         try {
             const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/regenerate/${stepId}`, { 
@@ -801,23 +805,23 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
             });
             if (res.ok) {
                 const result = await res.json();
-                console.log(`[Regenerate] Success for ${stepId}:`, result);
+                console.log(`[Regenerate] Success:`, result);
                 if (result.new_data) {
-                    setAnalysis((prev: any) => ({
-                        ...prev,
-                        [stepId]: result.new_data
-                    }));
+                    setAnalysis((prev: any) => ({ ...prev, [stepId]: result.new_data }));
                 } else if (result.analysis_step) {
                     setAnalysis((prev: any) => ({ ...prev, [stepId]: result.analysis_step }));
                 } else if (result.analysis) {
                     setAnalysis(result.analysis);
                 }
+                alert(`SUCCESSO: Sezione ${stepId} aggiornata!`);
             } else {
                 const errorData = await res.json().catch(() => ({}));
-                console.error(`[Regenerate] API Error for ${stepId}:`, res.status, errorData);
+                console.error(`[Regenerate] Error:`, res.status, errorData);
+                alert(`ERRORE API (${res.status}): Controlla la console.`);
             }
         } catch (e) { 
-            console.error(`[Regenerate] Network Error for ${stepId}:`, e);
+            console.error(`[Regenerate] Network Error:`, e);
+            alert(`ERRORE DI RETE: ${e}`);
         }
         setSectionLoading(prev => ({ ...prev, [stepId]: false }));
     };
