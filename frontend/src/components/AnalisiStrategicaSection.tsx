@@ -790,20 +790,35 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
     };
 
     const handleRegenerateSection = async (e: React.MouseEvent, stepId: string) => {
+        e.preventDefault();
         e.stopPropagation();
+        console.log(`[Regenerate] Starting regeneration for section: ${stepId}`);
         setSectionLoading(prev => ({ ...prev, [stepId]: true }));
         try {
-            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/regenerate/${stepId}`, { method: "POST" });
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/regenerate/${stepId}`, { 
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
             if (res.ok) {
                 const result = await res.json();
+                console.log(`[Regenerate] Success for ${stepId}:`, result);
                 if (result.new_data) {
                     setAnalysis((prev: any) => ({
                         ...prev,
                         [stepId]: result.new_data
                     }));
+                } else if (result.analysis_step) {
+                    setAnalysis((prev: any) => ({ ...prev, [stepId]: result.analysis_step }));
+                } else if (result.analysis) {
+                    setAnalysis(result.analysis);
                 }
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                console.error(`[Regenerate] API Error for ${stepId}:`, res.status, errorData);
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { 
+            console.error(`[Regenerate] Network Error for ${stepId}:`, e);
+        }
         setSectionLoading(prev => ({ ...prev, [stepId]: false }));
     };
 
@@ -902,13 +917,13 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                     const filledInMacro = macro.sections.filter(s => analysis[s.key]).length;
                     return (
                         <div key={macroIdx} className="card" style={{ padding: 0, overflow: "hidden" }}>
-                            <button onClick={() => toggleMacro(macroIdx)} style={{ width: "100%", padding: "16px 20px", border: "none", background: `linear-gradient(135deg, ${macro.color}14, ${macro.color}06)`, borderLeft: `4px solid ${macro.color}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, transition: "all 0.2s" }}>
+                            <div onClick={() => toggleMacro(macroIdx)} style={{ width: "100%", padding: "16px 20px", border: "none", background: `linear-gradient(135deg, ${macro.color}14, ${macro.color}06)`, borderLeft: `4px solid ${macro.color}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, transition: "all 0.2s" }}>
                                 {isExpanded ? <ChevronDownIcon style={{ width: 18, height: 18, color: macro.color }} /> : <ChevronRightIcon style={{ width: 18, height: 18, color: macro.color }} />}
                                 <span style={{ fontSize: 15, fontWeight: 700, color: macro.color, flex: 1, textAlign: "left" }}>{macro.title}</span>
                                 <span style={{ fontSize: 11, color: "var(--text-muted)", background: "rgba(0,0,0,0.06)", padding: "3px 10px", borderRadius: 12 }}>
                                     {filledInMacro}/{macro.sections.length} sezioni
                                 </span>
-                            </button>
+                            </div>
 
                             {isExpanded && (
                                 <div style={{ padding: "0 16px 16px" }}>
@@ -918,7 +933,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                                         const hasData = sectionData && (typeof sectionData !== "object" || Object.keys(sectionData).length > 0 || (Array.isArray(sectionData) && sectionData.length > 0));
                                         return (
                                             <div key={key} style={{ marginTop: 12, border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                                                <button onClick={() => toggleSection(key)} style={{ width: "100%", padding: "12px 16px", border: "none", background: isOpen ? "rgba(0,0,0,0.02)" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                                                <div onClick={() => toggleSection(key)} style={{ width: "100%", padding: "12px 16px", border: "none", background: isOpen ? "rgba(0,0,0,0.02)" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
                                                     {isOpen ? <ChevronDownIcon style={{ width: 15, height: 15, color: "var(--navy)" }} /> : <ChevronRightIcon style={{ width: 15, height: 15, color: "var(--navy)" }} />}
                                                     <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-header)", flex: 1, textAlign: "left" }}>{label}</span>
                                                     
@@ -940,7 +955,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                                                     ) : (
                                                         <span style={{ fontSize: 10, color: "var(--text-muted)", background: "rgba(0,0,0,0.04)", padding: "2px 8px", borderRadius: 8 }}>Non generata</span>
                                                     )}
-                                                </button>
+                                                </div>
                                                 {isOpen && (
                                                     <div style={{ padding: 16, background: "#fafafa", fontSize: 13, color: "var(--text-dark-primary)", borderTop: "1px solid var(--border)" }}>
                                                         {hasData
