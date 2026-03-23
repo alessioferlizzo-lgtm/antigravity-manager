@@ -178,10 +178,9 @@ async def generate_complete_strategic_analysis(
     final_output = {
         "brand_identity": {
             "mission": brand_identity_data.get("mission", ""),
-            "posizionamento": brand_identity_data.get("positioning", ""),
+            "positioning": brand_identity_data.get("positioning", ""),
             "statement": brand_identity_data.get("statement", ""),
-            "tone_of_voice": brand_identity_data.get("tone_of_voice", ""),
-            "visual_identity": brand_identity_data.get("visual_identity", "")
+            "tone_of_voice": brand_identity_data.get("tone_of_voice", "")
         },
         "brand_values": {
             "brand_pillars": [

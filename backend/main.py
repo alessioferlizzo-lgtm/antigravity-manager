@@ -3676,9 +3676,21 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
     if "analysis_completa_raw" not in metadata:
         metadata["analysis_completa_raw"] = {}
     metadata["analysis_completa_raw"][step_id] = new_result
-    
-    # Salva il nuovo pezzo nell'analisi mappata finale (se necessario)
-    # Ma per semplicità, restituiamo il dato al FE e salviamo il backup
+
+    # Salva anche nell'analisi completa in Supabase
     storage_service.save_metadata(client_id, metadata)
-    
-    return {"step_id": step_id, "new_data": new_result}
+
+    # Aggiorna l'analisi completa in Supabase
+    try:
+        existing_analysis = storage_service.get_complete_analysis(client_id) or {}
+        existing_analysis[step_id] = new_result
+        storage_service.save_complete_analysis(client_id, existing_analysis)
+    except Exception as e:
+        print(f"Warning: Could not update Supabase analysis: {e}")
+
+    # Restituisci in formato compatibile con il frontend
+    return {
+        "step_id": step_id,
+        "new_data": new_result,
+        "analysis_step": new_result  # Compatibilità frontend
+    }
