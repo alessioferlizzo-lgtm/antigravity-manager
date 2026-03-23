@@ -758,6 +758,7 @@ Rispondi in JSON:
                 gmaps = ""
                 instagram = ""
                 facebook = ""
+                ads_library_url = ""
 
                 for l in links:
                     u = l.get("url", "") if isinstance(l, dict) else str(l)
@@ -796,9 +797,10 @@ Rispondi in JSON:
                         if "facebook.com" in u_lc and "ads/library" not in u_lc:
                             facebook = u
 
-                    # ADS Library / Libreria inserzioni — ignora (non utile per reviews)
-                    elif any(x in lbl for x in ["libreria", "ads library", "inserzioni", "ads_library"]):
-                        pass  # non aggiungere a nessuna lista
+                    # ADS Library / Libreria inserzioni — salva per analisi ads competitor
+                    elif any(x in lbl for x in ["libreria", "ads library", "inserzioni", "ads_library"]) or "ads/library" in u_lc:
+                        if not ads_library_url:
+                            ads_library_url = u
 
                     # Fallback generico: se non è social/ads prendi come sito
                     elif not website and not any(x in u_lc for x in [
@@ -813,7 +815,8 @@ Rispondi in JSON:
                     "google_maps": gmaps,
                     "instagram": instagram,
                     "facebook": facebook,
-                    "all_links": links,  # Passa tutti i link originali a fetch_comp_reviews
+                    "ads_library_url": ads_library_url,  # Per analisi inserzioni competitor
+                    "all_links": links,
                 })
         else:
             print("⚠️ Nessun competitor fornito nelle Sorgenti. Ricerca online...")
@@ -889,6 +892,7 @@ Formato JSON:
             comp_maps = comp.get("google_maps", "")
             comp_instagram = comp.get("instagram", "")
             comp_facebook = comp.get("facebook", "")
+            ads_library_url = comp.get("ads_library_url", "")
             all_links = comp.get("all_links", [])
 
             # Costruisci contesto URL il più ricco possibile
@@ -901,20 +905,17 @@ Formato JSON:
                 url_lines.append(f"- Instagram: {comp_instagram}")
             if comp_facebook:
                 url_lines.append(f"- Facebook: {comp_facebook}")
-            # Aggiungi eventuali link extra non già inclusi
+            if ads_library_url:
+                url_lines.append(f"- Libreria ADS Meta: {ads_library_url}")
+            # Link extra non già inclusi
             for lnk in all_links:
                 lnk_url = lnk.get("url", "") if isinstance(lnk, dict) else str(lnk)
                 lnk_lbl = lnk.get("label", "") if isinstance(lnk, dict) else ""
-                if lnk_url and lnk_url not in (comp_maps, comp_url, comp_instagram, comp_facebook):
+                if lnk_url and lnk_url not in (comp_maps, comp_url, comp_instagram, comp_facebook, ads_library_url):
                     url_lines.append(f"- {lnk_lbl or 'Link'}: {lnk_url}")
 
-            if url_lines:
-                url_context = f"Link disponibili per {comp_name}:\n" + "\n".join(url_lines)
-            elif comp_url:
-                url_context = f"Il sito web del competitor è: {comp_url}"
-            else:
-                url_context = f"Cerca informazioni su '{comp_name}' online."
-            
+            url_context = (f"Link disponibili per {comp_name}:\n" + "\n".join(url_lines)) if url_lines else f"Cerca informazioni su '{comp_name}' online."
+
             reviews_prompt = f"""Raccogli TUTTE le recensioni Google disponibili per "{comp_name}".
 {url_context}
 
@@ -931,6 +932,47 @@ JSON:
   "reviews_5star": [{{"text": "..."}}],
   "reviews_low": [{{"text": "...", "stars": 2}}]
 }}"""
+
+            # ── ANALISI ADS (se disponibile libreria ADS) ──────────────────
+            ads_analysis = {}
+            if ads_library_url:
+                ads_prompt = f"""Analizza le inserzioni pubblicitarie ATTIVE di "{comp_name}" usando questa Libreria ADS Meta:
+{ads_library_url}
+
+Studia le inserzioni e fornisci:
+1. Temi principali delle inserzioni (cosa comunicano)
+2. Offerte/promozioni in corso
+3. Formato prevalente (video, immagine, carosello)
+4. Tono e stile comunicativo
+5. Pain point/bisogno che cercano di risolvere
+6. Eventuale landing page o CTA principale
+
+JSON:
+{{
+  "active_ads_count": 0,
+  "main_themes": ["..."],
+  "current_offers": ["..."],
+  "ad_formats": ["..."],
+  "tone_style": "...",
+  "target_pain_point": "...",
+  "main_cta": "...",
+  "insights": "Analisi critica delle strategie pubblicitarie del competitor"
+}}"""
+                try:
+                    ads_result = await self.ai_service._call_ai(
+                        model="perplexity/sonar-pro",
+                        messages=[{"role": "user", "content": ads_prompt}],
+                        temperature=0.1,
+                        max_tokens=4000
+                    )
+                    import re as _re, json as _json
+                    ads_match = _re.search(r'\{.*\}', ads_result, _re.DOTALL)
+                    ads_analysis = _json.loads(ads_match.group()) if ads_match else {"raw": ads_result[:500]}
+                    print(f"      ✅ ADS analisi completata per {comp_name}")
+                except Exception as e:
+                    print(f"      ⚠️ Errore analisi ADS {comp_name}: {e}")
+                    ads_analysis = {"error": str(e)}
+
             try:
                 comp_reviews = await self.ai_service._call_ai(
                     model="perplexity/sonar-pro",
@@ -945,14 +987,16 @@ JSON:
                 return {
                     "name": comp_name,
                     "info": comp,
-                    "reviews": reviews_data
+                    "reviews": reviews_data,
+                    "ads_analysis": ads_analysis
                 }
             except Exception as e:
                 print(f"      ⚠️ Errore recensioni competitor {comp_name}: {e}")
                 return {
                     "name": comp_name,
                     "info": comp,
-                    "reviews": {"error": str(e), "total": 0}
+                    "reviews": {"error": str(e), "total": 0},
+                    "ads_analysis": ads_analysis
                 }
 
         # Esegui i comp tasks in parallelo
