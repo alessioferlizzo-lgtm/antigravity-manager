@@ -665,7 +665,10 @@ export default function Dashboard() {
       {/* ═══ SIDEBAR (Clienti soltanto) ═══ */}
       <aside className="home-sidebar">
         <div className="home-sidebar-header">
-          <div className="home-sidebar-logo">Anti<span>gravity</span></div>
+          <div className="home-sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="/logo.png" alt="Alessio Ferlizzo" style={{ height: '26px', width: 'auto', borderRadius: '4px' }} />
+            <div>Alessio <span>Ferlizzo</span></div>
+          </div>
           <div className="home-sidebar-sub" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             Operative Manager
             <a href="/knowledge" style={{ display: "flex", alignItems: "center", gap: 4, color: "#9ca3af", fontSize: 11, background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: 6, textDecoration: "none" }}>

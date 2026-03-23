@@ -733,7 +733,10 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
             {/* ═══ SIDEBAR ═══ */}
             <aside className="sidebar">
                 <div className="sidebar-header">
-                    <div className="sidebar-logo">Anti<span>gravity</span></div>
+                    <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <img src="/logo.png" alt="Alessio Ferlizzo" style={{ height: '26px', width: 'auto', borderRadius: '4px' }} />
+                        <div>Alessio <span>Ferlizzo</span></div>
+                    </div>
                     <button onClick={() => window.location.href = "/"} className="sidebar-back">
                         <ArrowLeftIcon style={{ width: 12, height: 12 }} /> Dashboard
                     </button>

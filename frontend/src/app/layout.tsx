@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Antigravity Gestione - AI Script Manager",
+  title: "Alessio Ferlizzo - AI Script Manager",
   description: "Market research and AI video script generation",
 };
 
