@@ -144,21 +144,43 @@ async def generate_complete_strategic_analysis(
     print(f"[Workflow Engine] All {len(workflow['tasks'])} tasks executed successfully.")
 
     # 4. Final Adapter - Map to exactly what React expects
-    # Extract keys safely
-    brand_identity_data = results.get("brand_identity", {})
-    brand_values_data = results.get("brand_values", {})
-    product_portfolio_data = results.get("product_portfolio", {})
-    product_vertical_data = results.get("product_vertical", {})
-    reasons_to_buy_data = results.get("reasons_to_buy", {})
-    customer_personas_data = results.get("customer_personas", {})
-    psychographic_data = results.get("psychographic_analysis", {})
-    brand_voice_data = results.get("brand_voice", {})
-    content_matrix_data = results.get("content_matrix", {})
-    objections_data = results.get("objections_management", {})
-    reviews_voc_data = results.get("reviews_voc", {})
-    battlecards_data = results.get("battlecards", {})
-    seasonal_roadmap_data = results.get("seasonal_roadmap", {})
-    visual_brief_data = results.get("visual_brief", {})
+
+    def safe_dict(val, fallback=None):
+        """Garantisce che val sia sempre un dict, evitando AttributeError su str/list/None."""
+        if isinstance(val, dict):
+            return val
+        if isinstance(val, list):
+            # Se è già una lista di dict, restituisci un wrapper
+            return {"_list": val}
+        return fallback or {}
+
+    def safe_list(val):
+        """Garantisce che val sia sempre una lista."""
+        if isinstance(val, list):
+            return val
+        if isinstance(val, dict):
+            # Prova i campi comuni
+            for key in ["items", "data", "results", "_list"]:
+                if key in val and isinstance(val[key], list):
+                    return val[key]
+            return [val] if val else []
+        return []
+
+    # Extract keys safely — tutto passa sempre per safe_dict
+    brand_identity_data    = safe_dict(results.get("brand_identity"))
+    brand_values_data      = safe_dict(results.get("brand_values"))
+    product_portfolio_data = safe_dict(results.get("product_portfolio"))
+    product_vertical_data  = safe_dict(results.get("product_vertical"))
+    reasons_to_buy_data    = safe_dict(results.get("reasons_to_buy"))
+    customer_personas_data = results.get("customer_personas", {})  # gestito separatamente
+    psychographic_data     = safe_dict(results.get("psychographic_analysis"))
+    brand_voice_data       = safe_dict(results.get("brand_voice"))
+    content_matrix_data    = safe_dict(results.get("content_matrix"))
+    objections_data        = safe_dict(results.get("objections_management"))
+    reviews_voc_data       = safe_dict(results.get("reviews_voc"))
+    battlecards_data       = safe_dict(results.get("battlecards"))
+    seasonal_roadmap_data  = safe_dict(results.get("seasonal_roadmap"))
+    visual_brief_data      = safe_dict(results.get("visual_brief"))
     
     # Customer personas - handle both list and dict formats from AI
     personas_raw = customer_personas_data
