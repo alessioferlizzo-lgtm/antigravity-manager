@@ -43,9 +43,75 @@ class DataCollectionService:
         google_maps_url = ""
 
         # ─── LINK ROUTING ────────────────────────────────────────────────────────
-        # Priority 1: use the declared label type (from dropdown in Sorgenti)
-        # Priority 2: fallback to URL pattern matching (backward compat)
-        SOCIAL_LABELS = {"instagram", "facebook", "tiktok", "youtube", "ads_library"}
+        # Funzione robusta: gestisce dropdown standardizzato, varianti testuali
+        # libere (legacy) e URL pattern matching come fallback finale.
+
+        def classify_link(url: str, label: str, desc: str):
+            """Classifica un link e lo aggiunge alla lista corretta."""
+            nonlocal instagram_handle, google_maps_url
+
+            url_lc = url.lower()
+            label_lc = label.lower().strip()
+
+            # 1. Instagram
+            if label_lc == "instagram" or ("instagram" in label_lc and "ads" not in label_lc):
+                if "instagram.com" in url_lc:
+                    instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
+                    return
+
+            # 2. Google My Business (tutte le varianti testuali)
+            if label_lc == "google_business" or any(x in label_lc for x in [
+                "google my business", "scheda google", "google maps", "gmb",
+                "mappa google", "reviews google", "recensioni google"
+            ]):
+                google_maps_url = url
+                return
+
+            # 3. Recensioni (non-Google)
+            if label_lc == "reviews" or any(x in label_lc for x in [
+                "recensioni", "review", "trustpilot", "opinioni", "recenzion"
+            ]):
+                review_urls.append({"url": url, "context": f"{desc or label}".strip()})
+                return
+
+            # 4. Servizi / Landing Page
+            if label_lc == "service" or any(x in label_lc for x in [
+                "servizi", "servizio", "trattamenti", "trattamento", "landing"
+            ]):
+                service_urls.append({"url": url, "context": f"{desc or label}".strip()})
+                return
+
+            # 5. Sito Web
+            if label_lc == "website" or any(x in label_lc for x in [
+                "sito web", "sito", "website", "web site", "pagina web", "home"
+            ]):
+                site_urls.append({"url": url, "context": f"{desc or label}".strip()})
+                return
+
+            # 6. Facebook / ADS / Social
+            if any(x in label_lc for x in [
+                "facebook", "tiktok", "youtube", "ads library", "libreria ads",
+                "libreria inserzioni", "libreria meta", "meta ads", "ads_library", "inserzioni"
+            ]):
+                site_urls.append({"url": url, "context": f"{label} {desc}".strip()})
+                return
+
+            # 7. FALLBACK: URL pattern matching
+            if "instagram.com" in url_lc:
+                instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
+            elif any(x in url_lc for x in [
+                "google.com/maps", "business.google.com", "g.page",
+                "share.google", "google.com/search"
+            ]):
+                google_maps_url = url
+            elif any(x in url_lc for x in ["trustpilot.com", "tripadvisor.com"]):
+                review_urls.append({"url": url, "context": f"{label} {desc}".strip()})
+            elif "facebook.com/ads/library" in url_lc:
+                site_urls.append({"url": url, "context": f"Libreria ADS {desc}".strip()})
+            elif "facebook.com" in url_lc:
+                site_urls.append({"url": url, "context": f"Facebook {desc}".strip()})
+            else:
+                site_urls.append({"url": url, "context": f"{label} {desc}".strip()})
 
         for link in links:
             if not isinstance(link, dict):
@@ -54,57 +120,14 @@ class DataCollectionService:
                 desc = ""
             else:
                 url = link.get("url", "")
-                label = link.get("label", "")   # e.g. "instagram", "reviews", "google_business"
+                label = link.get("label", "")
                 desc = link.get("description", "")
 
             if not url or "http" not in url.lower():
                 continue
 
-            url_lc = url.lower()
-            label_lc = label.lower().strip()
+            classify_link(url, label, desc)
 
-            # ── DECLARED TYPE ROUTING (new dropdown labels) ──────────────────
-            if label_lc == "instagram":
-                instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
-                continue
-
-            if label_lc in ("google_business",):
-                google_maps_url = url
-                continue
-
-            if label_lc == "reviews":
-                review_urls.append({"url": url, "context": f"{desc or 'Recensioni'}".strip()})
-                continue
-
-            if label_lc == "service":
-                service_urls.append({"url": url, "context": f"{desc or 'Servizio'}".strip()})
-                continue
-
-            if label_lc == "website":
-                site_urls.append({"url": url, "context": f"{desc or 'Sito Web'}".strip()})
-                continue
-
-            if label_lc in SOCIAL_LABELS:
-                # Facebook, TikTok, YouTube, ADS Library — trattiamo come sito da analizzare
-                site_urls.append({"url": url, "context": f"{label} {desc}".strip()})
-                continue
-
-            if label_lc == "other":
-                site_urls.append({"url": url, "context": f"{desc}".strip()})
-                continue
-
-            # ── FALLBACK: URL PATTERN MATCHING (vecchi link senza tipo) ──────
-            # Estendi riconoscimento Google Maps a share.google/
-            if any(x in url_lc for x in ["instagram.com"]):
-                instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
-            elif any(x in url_lc for x in ["google.com/maps", "business.google.com", "g.page", "share.google", "google.com/search"]):
-                google_maps_url = url
-            elif any(x in label_lc or x in url_lc for x in ["recensioni", "review", "trustpilot", "recenzion", "opinioni"]):
-                review_urls.append({"url": url, "context": f"{label} {desc}".strip()})
-            elif any(x in label_lc for x in ["servizi", "service", "trattamenti", "trattamento", "landing"]):
-                service_urls.append({"url": url, "context": f"{label} {desc}".strip()})
-            else:
-                site_urls.append({"url": url, "context": f"{label} {desc}".strip()})
 
         if not site_urls:
             if service_urls:
