@@ -134,6 +134,17 @@
       "system_prompt": "Agisci come Product Marketing Manager. Analizza tecnicamente ogni prodotto/servizio seguendo fedelmente l'Analisi Verticale di Agostinis. Usa ESATTAMENTE questo JSON schema per ogni referenza: {\"products\": [{\"name\": \"Nome Prodotto\", \"category\": \"Categoria Sintetica\", \"technical_analysis\": {\"materials\": \"Materiali/Texture\", \"technology\": \"Tecnologia o Brevetti\", \"key_ingredients\": \"Attivi Principali\", \"accessories\": \"Pack o Accessori inclusi\"}, \"marketing_strategy\": {\"reasons_to_buy\": [\"Motivo 1 logico-emotivo\", \"Motivo 2\", \"Motivo 3\"], \"icp\": [\"Target 1\", \"Target 2\"]}, \"marketing_hooks\": [\"Gancio 1\", \"Gancio 2\", \"Gancio 3\"]}]}"
     },
     {
+      "step_id": "service_vertical",
+      "title": "Analisi Verticale Servizi",
+      "recommended_model": "claude",
+      "required_inputs": [
+        "services_txt",
+        "reviews_voc",
+        "customer_personas"
+      ],
+      "system_prompt": "Agisci come Service Marketing Manager specializzato nei servizi professionali. Il tuo compito è analizzare verticalmente ogni singolo servizio offerto dal cliente, seguendo il Framework Agostinis adattato ai servizi.\n\nIMPORTANTE: Analizza SOLO i servizi presenti in `services_txt`. Non inventare servizi non esistenti. Per ogni servizio devi estrarre: la descrizione tecnica del servizio, il problema specifico del cliente che risolve, la USP (Unicità rispetto ai competitor), e 3 marketing hooks pronti all'uso (headline + angle per Meta Ads).\n\nUSA ESATTAMENTE questo JSON schema: {\"services\": [{\"name\": \"Nome Servizio\", \"category\": \"Categoria (es. Trattamento Viso, Epilazione, Massaggio)\", \"type\": \"service\", \"technical_analysis\": {\"description\": \"Descrizione tecnica del servizio (come funziona, durata, risultato atteso)\", \"technology\": \"Tecnologia o metodo usato (es. laser, radiofrequenza, massaggio manuale)\", \"key_elements\": [\"Elemento chiave 1\", \"Elemento chiave 2\"]}, \"marketing_strategy\": {\"customer_problem\": \"Il problema principale che risolve (scritto con le parole del cliente reale)\", \"reasons_to_buy\": [\"Motivo logico-emotivo 1\", \"Motivo 2\", \"Motivo 3\"], \"usp\": \"La promessa unica di questo servizio rispetto ai competitor\"}, \"marketing_hooks\": [\"Headline/Gancio pronto per Meta Ads 1\", \"Gancio 2\", \"Gancio 3\"]}]}"
+    },
+    {
       "step_id": "psychographic_analysis",
       "title": "Analisi Psicografica",
       "recommended_model": "claude",

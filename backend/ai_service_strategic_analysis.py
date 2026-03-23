@@ -171,6 +171,7 @@ async def generate_complete_strategic_analysis(
     brand_values_data      = safe_dict(results.get("brand_values"))
     product_portfolio_data = safe_dict(results.get("product_portfolio"))
     product_vertical_data  = safe_dict(results.get("product_vertical"))
+    service_vertical_data  = safe_dict(results.get("service_vertical"))
     reasons_to_buy_data    = safe_dict(results.get("reasons_to_buy"))
     customer_personas_data = results.get("customer_personas", {})  # gestito separatamente
     psychographic_data     = safe_dict(results.get("psychographic_analysis"))
@@ -222,6 +223,9 @@ async def generate_complete_strategic_analysis(
         },
         "product_vertical": {
             "products": product_vertical_data.get("products", [])
+        },
+        "service_vertical": {
+            "services": service_vertical_data.get("services", [])
         },
         "reasons_to_buy": {
             "rational": reasons_to_buy_data.get("rational_motives", []),

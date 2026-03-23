@@ -682,6 +682,81 @@ function VisualBriefRenderer({ data }: { data: any }) {
     );
 }
 
+function ServiceVerticalRenderer({ data }: { data: any }) {
+    let items: any[] = [];
+    if (Array.isArray(data)) {
+        items = data;
+    } else if (data?.services) {
+        items = Array.isArray(data.services) ? data.services : [];
+    } else if (data?.products) {
+        // Fallback if AI returns 'products' key instead of 'services'
+        items = Array.isArray(data.products) ? data.products : [];
+    } else if (data && typeof data === "object") {
+        Object.keys(data).forEach(key => {
+            if (Array.isArray(data[key])) {
+                items = items.concat(data[key].map((item: any) => ({ ...item, category: item.category || key.replace(/_/g, " ") })));
+            }
+        });
+    }
+
+    if (!items || !items.length) return <GenericValue value={data} />;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {items.map((item: any, i: number) => (
+                <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ background: "linear-gradient(135deg, #4c1d95, #6d28d9)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{item.name}</span>
+                        <div style={{ display: "flex", gap: 6 }}>
+                            {item.category && <Chip label={item.category} color="#c4b5fd" />}
+                            <Chip label="Servizio" color="#a78bfa" />
+                        </div>
+                    </div>
+                    <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                        {item.technical_analysis && (
+                            <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase" }}>🔬 Come Funziona</div>
+                                {item.technical_analysis.description && <MD text={item.technical_analysis.description} />}
+                                {item.technical_analysis.technology && <p style={{ marginBottom: 4 }}><strong>Tecnologia:</strong> {item.technical_analysis.technology}</p>}
+                                {Array.isArray(item.technical_analysis.key_elements) && (
+                                    <div style={{ marginTop: 4 }}>{item.technical_analysis.key_elements.map((e: string, j: number) => <Chip key={j} label={e} color="#7c3aed" />)}</div>
+                                )}
+                            </div>
+                        )}
+                        {item.marketing_strategy && (
+                            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", marginBottom: 6, textTransform: "uppercase" }}>🎯 Strategia Marketing</div>
+                                {item.marketing_strategy.customer_problem && (
+                                    <div style={{ padding: "6px 10px", background: "rgba(239,68,68,0.06)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
+                                        ❗ <strong>Problema cliente:</strong> {item.marketing_strategy.customer_problem}
+                                    </div>
+                                )}
+                                {Array.isArray(item.marketing_strategy.reasons_to_buy) && (
+                                    <ul style={{ paddingLeft: 18, margin: "0 0 8px" }}>
+                                        {item.marketing_strategy.reasons_to_buy.map((r: string, j: number) => <li key={j} style={{ marginBottom: 4 }}>{r}</li>)}
+                                    </ul>
+                                )}
+                                {item.marketing_strategy.usp && (
+                                    <div style={{ padding: "6px 10px", background: "rgba(124,58,237,0.06)", borderRadius: 6, fontSize: 13 }}>
+                                        ⭐ <strong>USP:</strong> {item.marketing_strategy.usp}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {Array.isArray(item.marketing_hooks) && item.marketing_hooks.length > 0 && (
+                            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#8b5cf6", marginBottom: 8, textTransform: "uppercase" }}>🎣 Marketing Hooks (Headline Pronte)</div>
+                                {item.marketing_hooks.map((h: string, j: number) => (
+                                    <div key={j} style={{ padding: "6px 12px", background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 6, marginBottom: 6, fontStyle: "italic", fontSize: 13 }}>"{h}"</div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  MACRO-AREAS CONFIG
 // ══════════════════════════════════════════════════════════════════════════════
@@ -702,6 +777,7 @@ const MACRO_AREAS = [
         sections: [
             { key: "product_portfolio", label: "3. Portafoglio Prodotti/Servizi", Renderer: ProductPortfolioRenderer },
             { key: "product_vertical", label: "7. Analisi Verticale Prodotti", Renderer: ProductPortfolioRenderer },
+            { key: "service_vertical", label: "7b. Analisi Verticale Servizi", Renderer: ServiceVerticalRenderer },
             { key: "reasons_to_buy", label: "4. Reasons to Buy (RTB)", Renderer: ReasonsToByRenderer },
             { key: "objections", label: "9. Gestione Obiezioni", Renderer: ObjectionsRenderer },
         ],

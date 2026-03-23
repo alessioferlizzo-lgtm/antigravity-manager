@@ -124,6 +124,13 @@ Font Principali: {fonts if fonts else 'Non definiti'}
 {self._format_json_section(analysis["product_vertical"], max_chars=2000)}
 """)
 
+            # Sezione 7b: Analisi Verticale Servizi
+            if analysis.get("service_vertical"):
+                context_parts.append(f"""
+【7b】 ANALISI VERTICALE SERVIZI (hook, problemi cliente, USP per ogni servizio)
+{self._format_json_section(analysis["service_vertical"], max_chars=2500)}
+""")
+
             # Sezione 8: Brand Voice & Guidelines
             if analysis.get("brand_voice"):
                 context_parts.append(f"""

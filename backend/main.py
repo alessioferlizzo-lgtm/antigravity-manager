@@ -2807,9 +2807,18 @@ async def submit_feedback(client_id: str, request: FeedbackRequest):
             with open(script_path, "r") as f:
                 original_script_content = f.read()
 
+    # Load strategic context (replaces the stale research file)
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id,
+        metadata=metadata,
+        supabase_client=supabase,
+        focus_areas=["customer_personas", "brand_voice", "visual_brief", "product_vertical", "service_vertical", "reviews_voc"]
+    )
+
     angle = {"title": request.angle_title or "Script", "description": "Regenerated based on feedback"}
     new_script = await ai_service.generate_script(
-        angle, research, rules, metadata["preferences"], 
+        angle, strategic_context, rules, metadata["preferences"], 
         script_instructions=request.feedback,
         original_script=original_script_content
     )
@@ -3039,7 +3048,7 @@ async def generate_image(request: ImageGenerateRequest):
             client_id=request.client_id,
             metadata=metadata,
             supabase_client=supabase,
-            focus_areas=["visual_brief", "brand_voice", "brand_identity", "psychographic_analysis", "customer_personas"]
+            focus_areas=["visual_brief", "brand_voice", "brand_identity", "psychographic_analysis", "customer_personas", "reviews_voc", "product_vertical", "service_vertical"]
         )
     except Exception as e:
         print(f"Error loading strategic context for graphics: {e}")
@@ -3092,12 +3101,14 @@ Stile visivo: {brand.get('visuals', 'non specificato')}"""
 
 FLUSS DI LAVORO:
 1. Leggi l'idea dell'utente e il contesto del cliente
-2. Consulta gli esempi di ads vincenti nel settore (se presenti)
-3. Scrivi un prompt INGLESE ottimizzato per {model_label}
+2. Se l'utente chiede di usare headline o hook dall'analisi → ESTRAILE dal contesto (sezioni 【10】 VOICE OF CUSTOMER, 【7】 ANALISI VERTICALE PRODOTTI, 【7b】 ANALISI VERTICALE SERVIZI) e includile LETTERALMENTE nel prompt come testo overlay.
+3. Consulta gli esempi di ads vincenti nel settore (se presenti)
+4. Scrivi un prompt INGLESE ottimizzato per {model_label}
 
 REGOLE FONDAMENTALI:
 - Il modello AI vedrà le immagini di riferimento direttamente come pixel. NON descrivere l'aspetto fisico delle persone o dei prodotti — usa frasi come "the woman in Image 1", "the product in Image 2".
 - Specifica la scena, la composizione, l'illuminazione, il mood, il formato e il testo overlay.
+- HEADLINE REALI: Se l'utente dice 'usa una headline dall'analisi' o simili, seleziona il golden hook più rilevante dalla sezione 【10】 VOICE OF CUSTOMER del contesto e includilo come testo overlay in italiano.
 - Il testo in italiano (Headline, bullet point, CTA) va incluso nel prompt tra virgolette come overlay tipografico.
 - Formato richiesto: {request.format}. Specifica esplicitamente nel prompt: "in {request.format} vertical format, portrait orientation".
 - Stile: commercial photography, 8k, photorealistic, NOT illustrated, NOT cartoon.
