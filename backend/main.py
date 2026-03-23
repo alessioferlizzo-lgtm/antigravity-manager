@@ -3458,6 +3458,27 @@ async def generate_complete_client_analysis(client_id: str):
         except Exception as e:
             print(f"⚠️ Errore processamento file {file_path.name}: {e}")
 
+    # 🔥 ESTRAI SERVIZI dalle pagine scrappate (Trattamenti Viso/Corpo/Epilazione)
+    if services_txt == "Non disponibili" and isinstance(site_content, dict):
+        pages_data = site_content.get("pages", [])
+        services_pages = []
+
+        for page in pages_data:
+            if isinstance(page, dict) and "url" in page:
+                url = page["url"]
+                # Cerca pagine che contengono "trattament", "serviz", "epilazione", "service" nell'URL
+                if any(keyword in url.lower() for keyword in ["trattament", "serviz", "epilazione", "service", "treatment"]):
+                    # Estrai il contenuto
+                    if "data" in page and isinstance(page["data"], dict):
+                        raw_text = page["data"].get("raw_text", "")
+                        if raw_text:
+                            services_pages.append(f"--- SERVIZI DA: {url} ---\n{raw_text}")
+                            print(f"✅ Estratti servizi da pagina web: {url}")
+
+        if services_pages:
+            services_txt = "\n\n".join(services_pages)[:15000]  # Limite 15K caratteri per servizi
+            print(f"✅ TOTALE SERVIZI ESTRATTI: {len(services_pages)} pagine web")
+
     # 1. Flatten Instagram Comments for easier Review Mining
     flattened_ig = []
     if isinstance(instagram_data, dict) and "posts" in instagram_data:

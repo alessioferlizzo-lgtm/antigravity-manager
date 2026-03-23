@@ -792,20 +792,18 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
     const handleRegenerateSection = async (e: React.MouseEvent, stepId: string) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        // 🚨 TACTILE DIAGNOSTIC: Se vedi questo alert, il tasto FUNZIONA dal punto di vista UI.
-        alert(`AVVIO RIGENERAZIONE: ${stepId}\nURL: ${apiUrl}/clients/${clientId}/...`);
-        
+
         console.log(`[Regenerate] Starting for ${stepId}`);
         setSectionLoading(prev => ({ ...prev, [stepId]: true }));
         try {
-            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/regenerate/${stepId}`, { 
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/regenerate/${stepId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" }
             });
             if (res.ok) {
                 const result = await res.json();
                 console.log(`[Regenerate] Success:`, result);
+                // Aggiorna lo stato locale con i nuovi dati
                 if (result.new_data) {
                     setAnalysis((prev: any) => ({ ...prev, [stepId]: result.new_data }));
                 } else if (result.analysis_step) {
@@ -813,15 +811,13 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                 } else if (result.analysis) {
                     setAnalysis(result.analysis);
                 }
-                alert(`SUCCESSO: Sezione ${stepId} aggiornata!`);
+                // Nessun alert - l'UI si aggiorna automaticamente
             } else {
                 const errorData = await res.json().catch(() => ({}));
                 console.error(`[Regenerate] Error:`, res.status, errorData);
-                alert(`ERRORE API (${res.status}): Controlla la console.`);
             }
-        } catch (e) { 
+        } catch (e) {
             console.error(`[Regenerate] Network Error:`, e);
-            alert(`ERRORE DI RETE: ${e}`);
         }
         setSectionLoading(prev => ({ ...prev, [stepId]: false }));
     };
