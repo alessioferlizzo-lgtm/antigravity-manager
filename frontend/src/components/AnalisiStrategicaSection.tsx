@@ -760,12 +760,14 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
 
     const generateAnalysis = async () => {
         setGenerating(true);
+        // Svuota subito l'analisi vecchia per non mostrare dati obsoleti
+        setAnalysis(null);
         setGenerationStatus("Raccolta dati: sito web, social, recensioni e competitor…");
         const steps = [
             "🔍 Analisi sito web e contenuti…",
             "📸 Elaborazione dati Instagram…",
             "⭐ Analisi recensioni Google…",
-            "📊 Lettura Meta Ads…",
+            "📊 Lettura Meta Ads delle inserzioni competitor…",
             "🏢 Generazione Brand Identity…",
             "🧠 Creazione Customer Personas…",
             "📈 Matrice contenuti e angoli…",
