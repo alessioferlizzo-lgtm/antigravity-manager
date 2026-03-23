@@ -737,6 +737,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
     const [expandedMacros, setExpandedMacros] = useState<Set<number>>(new Set([0]));
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [generationStatus, setGenerationStatus] = useState<string>("");
+    const [sectionLoading, setSectionLoading] = useState<Record<string, boolean>>({});
 
     // ── Fetch on mount ─────────────────────────────────────────────────────────
     useEffect(() => {
@@ -786,6 +787,24 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
         clearInterval(interval);
         setGenerating(false);
         setGenerationStatus("");
+    };
+
+    const handleRegenerateSection = async (e: React.MouseEvent, stepId: string) => {
+        e.stopPropagation();
+        setSectionLoading(prev => ({ ...prev, [stepId]: true }));
+        try {
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/regenerate/${stepId}`, { method: "POST" });
+            if (res.ok) {
+                const result = await res.json();
+                if (result.new_data) {
+                    setAnalysis((prev: any) => ({
+                        ...prev,
+                        [stepId]: result.new_data
+                    }));
+                }
+            }
+        } catch (e) { /* ignore */ }
+        setSectionLoading(prev => ({ ...prev, [stepId]: false }));
     };
 
     const toggleMacro = (i: number) => {
@@ -902,6 +921,20 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                                                 <button onClick={() => toggleSection(key)} style={{ width: "100%", padding: "12px 16px", border: "none", background: isOpen ? "rgba(0,0,0,0.02)" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
                                                     {isOpen ? <ChevronDownIcon style={{ width: 15, height: 15, color: "var(--navy)" }} /> : <ChevronRightIcon style={{ width: 15, height: 15, color: "var(--navy)" }} />}
                                                     <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-header)", flex: 1, textAlign: "left" }}>{label}</span>
+                                                    
+                                                    {sectionLoading[key] ? (
+                                                        <div className="spinner" style={{ width: 14, height: 14 }} />
+                                                    ) : (
+                                                        <button 
+                                                            className="btn-icon" 
+                                                            title="Rigenera solo questa sezione"
+                                                            onClick={(e) => handleRegenerateSection(e, key)}
+                                                            style={{ padding: 4, borderRadius: 4, color: "var(--text-muted)", hover: { background: "rgba(0,0,0,0.05)", color: "var(--lime)" } } as any}
+                                                        >
+                                                            <ArrowPathIcon style={{ width: 14, height: 14 }} />
+                                                        </button>
+                                                    )}
+
                                                     {hasData ? (
                                                         <CheckCircleIcon style={{ width: 15, height: 15, color: "#10b981" }} />
                                                     ) : (

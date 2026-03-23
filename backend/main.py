@@ -3478,13 +3478,17 @@ async def generate_complete_client_analysis(client_id: str):
             for stars in google_reviews["reviews_by_stars"]:
                 reviews_list.extend(google_reviews["reviews_by_stars"][stars])
         
-        for rev in reviews_list:
-            text = rev.get("text", "").strip()
-            if text:
-                stars = rev.get("stars") or rev.get("rating", "5")
-                flattened_google.append(f"GMB ({stars} stelle) - {rev.get('author', 'Anonimo')}: {text}")
-    
-    google_reviews_text = "\n".join(flattened_google) if flattened_google else "Nessuna recensione Google trovata."
+        # 🚨 FALLBACK: Se non è una lista ma un testo raw (es. da Perplexity quando non produce JSON)
+        if not reviews_list and "raw_text" in google_reviews:
+            google_reviews_text = google_reviews["raw_text"]
+        else:
+            for rev in reviews_list:
+                text = rev.get("text") or rev.get("content") or ""
+                if text:
+                    stars = rev.get("stars") or rev.get("rating") or "5"
+                    author = rev.get("author") or rev.get("user") or "Anonimo"
+                    flattened_google.append(f"GMB ({stars} stelle) - {author}: {text}")
+            google_reviews_text = "\n".join(flattened_google) if flattened_google else "Nessuna recensione Google trovata."
 
     # 3. Serialize remaining data
     import json
@@ -3497,19 +3501,40 @@ async def generate_complete_client_analysis(client_id: str):
     print(f"🧠 GENERAZIONE ANALISI STRATEGICA")
     print(f"{'='*80}\n")
 
+    # 🔥 SALVA SNAPSHOT DATI GREZZI (per rigenerazione veloce)
+    # Rinominiamo alcune chiavi per coerenza nel contesto
+    raw_data_snapshot = {
+        "site_url": site_url,
+        "site_content": site_content_text,
+        "social_data": instagram_comments_text,
+        "ads_data": ads_text,
+        "raw_docs": raw_docs,
+        "google_reviews": google_reviews_text,
+        "instagram_comments": instagram_comments_text,
+        "products_csv": products_csv,
+        "services_txt": services_txt,
+        "competitor_data": competitor_text,
+        "timestamp": str(asyncio.get_event_loop().time())
+    }
+    metadata["raw_data_snapshot"] = raw_data_snapshot
+
+    print(f"🧠 Avvio analisi completa...")
     complete_analysis = await ai_service.generate_complete_analysis(
         client_info=client_info,
         site_url=site_url,
         site_content=site_content_text,
-        social_data=instagram_comments_text, # Use flattened IG text
+        social_data=instagram_comments_text,
         ads_data=ads_text,
         raw_docs=raw_docs,
-        google_reviews=google_reviews_text,  # Use flattened Google text
+        google_reviews=google_reviews_text,
         instagram_comments=instagram_comments_text,
         products_csv=products_csv,
         services_txt=services_txt,
         competitor_data=competitor_text
     )
+
+    # Backup dell'analisi completa originale per la rigenerazione
+    metadata["analysis_completa_raw"] = complete_analysis 
 
     # Aggiungi dati competitor all'analisi per salvataggio
     complete_analysis["competitor_data"] = competitor_data
@@ -3605,3 +3630,55 @@ async def delete_complete_analysis(client_id: str):
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/clients/{client_id}/analysis/regenerate/{step_id}")
+async def regenerate_analysis_section(client_id: str, step_id: str):
+    """
+    ♻️ RIGENERA UN SINGOLO BLOCCO - Usa lo snapshot esistente per velocità
+    """
+    metadata = storage_service.get_metadata(client_id)
+    snapshot = metadata.get("raw_data_snapshot")
+    
+    if not snapshot:
+        return {"error": "Nessun dato raccolto trovato. Esegui prima un'analisi completa."}
+
+    client_info = {
+        "id": client_id,
+        "name": metadata.get("name", ""),
+        "industry": metadata.get("industry", ""),
+        "location": metadata.get("location", ""),
+        "metadata": metadata
+    }
+
+    # Carica il Workflow e trova il task specifico
+    from .ai_service_strategic_analysis import run_workflow_task
+    workflow_path = Path(__file__).parent / "master_workflows" / "agostinis_meta_ads.json"
+    import json
+    with open(workflow_path, "r", encoding="utf-8") as f:
+        workflow = json.load(f)
+    
+    task = next((t for t in workflow["tasks"] if t["step_id"] == step_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Step {step_id} non trovato")
+
+    # Mappa i risultati precedenti per le dipendenze
+    # Usiamo 'analysis_completa_raw' che contiene l'output diretto dell'AI
+    context = {
+        "client_info": client_info,
+        **snapshot,
+        **(metadata.get("analysis_completa_raw", {}))
+    }
+
+    print(f"♻️ Rigenerazione {step_id}...")
+    new_result = await run_workflow_task(ai_service, task, context)
+
+    # Aggiorna il backup raw
+    if "analysis_completa_raw" not in metadata:
+        metadata["analysis_completa_raw"] = {}
+    metadata["analysis_completa_raw"][step_id] = new_result
+    
+    # Salva il nuovo pezzo nell'analisi mappata finale (se necessario)
+    # Ma per semplicità, restituiamo il dato al FE e salviamo il backup
+    storage_service.save_metadata(client_id, metadata)
+    
+    return {"step_id": step_id, "new_data": new_result}

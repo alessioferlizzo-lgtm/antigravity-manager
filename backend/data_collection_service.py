@@ -296,10 +296,15 @@ Formato JSON:
         
         url_instruction = ""
         if gmb_url:
-            if "google.com/search" in gmb_url:
-                url_instruction = f"1. Analizza questo link fornito: {gmb_url}\n2. Esegui anche una ricerca per 'Recensioni Google {client_name} {location}'\n3. Cerca i feedback dei clienti su Facebook o altri aggregatori se Google Maps è bloccato."
+            # Riconoscimento pattern URL specifici (lrd, fid, ecc.)
+            is_direct_review = "#lrd=" in gmb_url or "fid=" in gmb_url or "place_id" in gmb_url.lower()
+            
+            if is_direct_review:
+                url_instruction = f"⚠️ LINK DIRETTO RECENSIONI RILEVATO: {gmb_url}\n1. Apri questo link ed estrai TUTTE le recensioni associate a questo ID specifico.\n2. Non fermarti alla prima pagina."
+            elif "google.com/search" in gmb_url:
+                url_instruction = f"1. Analizza questo link fornito: {gmb_url}\n2. Cerca il pulsante 'Recensioni' nel pannello laterale (Knowledge Panel).\n3. Esegui anche una ricerca per 'Recensioni Google {client_name} {location}'."
             else:
-                url_instruction = f"1. Utilizza questo link esatto: {gmb_url}\n2. Cerca anche 'Recensioni {client_name} {location}' in generale."
+                url_instruction = f"1. Utilizza questo link di Google Maps: {gmb_url}\n2. Cerca la sezione 'Recensioni' (spesso è un tab o in fondo alla colonna sinistra).\n3. Se il link è bloccato, cerca '{client_name} {location}' su Google e clicca sulle recensioni."
         else:
             url_instruction = f"Cerca il Profilo Google My Business di {client_name} a {location} ed estrai le recensioni. Usa query come 'Recensioni {client_name}' e '{client_name} {location} reviews'."
 
@@ -322,28 +327,61 @@ Rispondi in JSON:
   ]
 }}"""
 
-        try:
-            response = await self.ai_service._call_ai(
+        async def _call_reviews_ai(current_prompt):
+            return await self.ai_service._call_ai(
                 model="perplexity/sonar-pro",
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": current_prompt}],
                 temperature=0.1,
                 max_tokens=16000
             )
 
+        def parse_json(resp):
             import re
             import json
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            json_match = re.search(r'\{.*\}', resp, re.DOTALL)
             if json_match:
-                data = json.loads(json_match.group())
-                num_reviews = data.get("total_reviews", 0)
-                print(f"✅ Raccolte {num_reviews} recensioni Google")
+                try:
+                    return json.loads(json_match.group())
+                except:
+                    return None
+            return None
+
+        try:
+            # 🚀 PRIMO TENTATIVO (Diretto o con Link)
+            print(f"⭐ [Passo 1] Tentativo di recupero recensioni per {client_name}...")
+            response = await _call_reviews_ai(prompt)
+            data = parse_json(response)
+            
+            # Se abbiamo dati e recensioni, bene così
+            if data and (data.get("reviews") and len(data.get("reviews")) > 2):
+                num_r = len(data.get("reviews"))
+                print(f"✅ [Passo 1] Successo: {num_r} recensioni trovate.")
                 return data
-            else:
-                print(f"✅ Recensioni raccolte (testo): {len(response)} caratteri")
-                return {"raw_text": response}
+            
+            # 🚨 FALLBACK: Se vuoto, cerca in modo ultra-aggressivo
+            print(f"⚠️ [Passo 1] Risultati scarsi. Lancio ricerca FALLBACK AGGRESSIVA...")
+            fallback_prompt = f"""ERRORE: La ricerca precedente per "{client_name}" ({location}) non ha prodotto risultati.
+IL CLIENTE GARANTISCE CHE LE RECENSIONI ESISTONO.
+
+AZIONI OBBLIGATORIE:
+1. Ignora il link precedente se non funziona.
+2. Cerca "{client_name} {location} recensioni" su Google Search.
+3. Cerca su Treatwell, Facebook, Miodottore, o altri aggregatori per "{client_name}".
+4. Estrai i feedback TESTUALI dei clienti. Non dire 'Nessun risultato'.
+
+Rispondi in JSON (schema identico a prima)."""
+            
+            response_f = await _call_reviews_ai(fallback_prompt)
+            data_f = parse_json(response_f)
+            
+            if data_f:
+                print(f"✅ [Passo 2] Fallback completato: {len(data_f.get('reviews', []))} recensioni recuperate.")
+                return data_f
+            
+            return {"raw_text": response_f if response_f else response}
 
         except Exception as e:
-            print(f"❌ Errore recensioni Google: {e}")
+            print(f"❌ Errore critico recensioni Google: {e}")
             return {"error": str(e), "reviews": []}
 
     async def _collect_instagram_data_complete(
