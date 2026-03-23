@@ -247,18 +247,29 @@ async def generate_complete_strategic_analysis(
             "pain_points": reviews_voc_data.get("pain_points_leverage", reviews_voc_data.get("pain_points", [])),
             "conclusion": reviews_voc_data.get("practical_conclusion", reviews_voc_data.get("conclusion", ""))
         },
-        "battlecards": [
-            battlecards_data.get("direct_competitor", {}),
-            battlecards_data.get("retail_giant", {}),
-            battlecards_data.get("secret_habit", {}),
-            battlecards_data.get("ultimate_solution", {})
-        ],
-        "seasonal_roadmap": [
-            seasonal_roadmap_data.get("q1_recovery", {}),
-            seasonal_roadmap_data.get("q2_pre_summer", {}),
-            seasonal_roadmap_data.get("q3_lifestyle", {}),
-            seasonal_roadmap_data.get("q4_monetization", {})
-        ],
+        "battlecards": (
+            # Nuovo formato: array diretto
+            battlecards_data.get("battlecards", None)
+            or battlecards_data.get("_list", None)
+            # Legacy: dict con chiavi fisse
+            or [v for v in [
+                battlecards_data.get("direct_competitor"),
+                battlecards_data.get("retail_giant"),
+                battlecards_data.get("secret_habit"),
+                battlecards_data.get("ultimate_solution"),
+            ] if v]
+        ),
+        "seasonal_roadmap": (
+            # Nuovo formato potrebbe essere lista
+            seasonal_roadmap_data.get("quarters", None)
+            or seasonal_roadmap_data.get("_list", None)
+            # Legacy: dict con chiavi Q1-Q4
+            or {k: seasonal_roadmap_data[k] for k in [
+                "q1_recovery", "q2_pre_summer", "q3_lifestyle", "q4_monetization",
+                "execution_tips"
+            ] if k in seasonal_roadmap_data}
+            or seasonal_roadmap_data
+        ),
         "visual_brief": {
             "color_palette": visual_brief_data.get("color_palette", []),
             "visual_style": visual_brief_data.get("visual_style", ""),
