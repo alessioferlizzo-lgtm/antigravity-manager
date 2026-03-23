@@ -3406,7 +3406,7 @@ async def generate_complete_client_analysis(client_id: str):
 
     site_url = all_data.get("site_url", "")
     if not site_url:
-        raise HTTPException(status_code=400, detail="Nessun sito web fornito per il cliente. Aggiungi un link nella sezione Sorgenti.")
+        print("⚠️ Nessun sito web trovato nei link forniti. L'analisi proseguirà con i dati disponibili (recensioni, competitor, documenti).")
     
     # Estrai i dati raccolti
     site_content = all_data.get("site_content", {})
