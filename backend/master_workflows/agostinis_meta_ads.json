@@ -10,7 +10,9 @@
         "google_reviews",
         "instagram_comments",
         "site_content",
-        "services_txt"
+        "services_txt",
+        "competitor_data",
+        "raw_docs"
       ],
       "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito (tenendo conto sia dei prodotti che degli eventuali servizi) e genera un documento estremamente lungo e accademico (1000+ parole). STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": {\"style\": \"...\", \"target_audience\": \"...\", \"linguistic_approach\": \"...\", \"vocabulary\": [\"...\"]}, \"positioning\": \"...\", \"statement\": \"...\"}"
     },
@@ -96,20 +98,22 @@
       "required_inputs": [
         "google_reviews",
         "instagram_comments",
-        "raw_docs"
+        "raw_docs",
+        "competitor_data",
+        "services_txt"
       ],
       "system_prompt": "Agisci come un Detective del Target (Review Miner esperto). Il tuo compito è estrarre la VERA VOCE dei clienti dal materiale fornito (google_reviews, instagram_comments, raw_docs).\n\nREGOLE DI ANALISI:\n1. **FONTE PRIMARIA**: Recensioni Google e Commenti Instagram. Cerca i 'Verbatim' (frasi esatte) che esprimono sollievo, gioia, paura o frustrazione.\n2. **REGOLA ANTI-MARKETING**: Ignora ogni frase che suona come uno slogan aziendale o scritta dal proprietario del brand. Se il testo dice 'Siamo i leader...', SCARTALO.\n3. **FALLBACK INTELLIGENTE**: Se `google_reviews` è vuoto, usa `instagram_comments`. Se entrambi sono scarsi, scansiona `raw_docs` (sito/PDF) solo per trovare testimonianze, case studies o citazioni di clienti reali.\n4. **NESSUNA ALLUCINAZIONE**: Se non trovi assolutamente nulla di reale, scrivi 'Dati insufficienti nelle fonti' ma spiega brevemente quali sono i desideri standard del target per questo specifico settore (es. 'In questo settore i clienti cercano solitamente X e Y').\n\nJSON SCHEMA: {\"golden_hooks\": [{\"hook\": \"Il desiderio profondo\", \"verbatim\": \"CITAZIONE REALE\", \"marketing_use\": \"Come usarlo in un Ads\", \"source\": \"GMB/IG/PDF\"}], \"pain_points\": [{\"pain\": \"Il dolore/paura\", \"verbatim\": \"CITAZIONE REALE\", \"marketing_use\": \"Come usarlo in un Copy\", \"source\": \"Fonte\"}], \"sentiment\": \"Analisi del clima emotivo\", \"key_vocabulary\": [\"Parole chiave usate dai clienti\"]}"
     },
     {
       "step_id": "battlecards",
       "title": "Battlecards Competitive",
-      "recommended_model": "perplexity",
+      "recommended_model": "claude",
       "required_inputs": [
         "brand_identity",
         "product_portfolio",
         "competitor_data"
       ],
-      "system_prompt": "Applica il Framework delle Battlecards di Francesco Agostinis. Analizza i competitor DIRETTI forniti nei dati (competitor_data). Se fornito, visita il loro sito web o Google Maps per trovare i punti deboli reali nelle recensioni negative.\n\nISTRUZIONI FERREE: Devi creare ESATTAMENTE 4 categorie di Battlecards (Direct Competitor, Retail Giant, Secret Habit - es. il 'fai da te', Ultimate Solution - es. farmaci per lo stesso problema). Per ogni competitor devi restituire 5 campi JSON obbligatori: {\"direct_competitor\": {\"who\": \"Nome Reale\", \"strength\": \"Punto di forza apparente\", \"weakness\": \"Vero punto debole (da recensioni)\", \"our_move\": \"La nostra mossa\", \"script\": \"Script Ads/Radio\"}, \"retail_giant\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"secret_habit\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"ultimate_solution\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}}"
+      "system_prompt": "Applica il Framework delle Battlecards di Francesco Agostinis. Analizza i competitor DIRETTI forniti nei dati (competitor_data).\n\nISTRUZIONI FERREE:\n1. **SOLO COMPETITOR REALI**: Usa esclusivamente i competitor presenti in `competitor_data`. Se ne è presente solo uno (es. Kokoa), analizza solo quello come 'Direct Competitor'.\n2. **NO ALLUCINAZIONI**: Se non hai dati per 'Retail Giant' o 'Ultimate Solution', usa nomi generici (es. 'Grandi Catene Farmaceutiche', 'Farmaci da Prescrizione') MA NON INVENTARE brand specifici come La Roche Posay se non sono menzionati nelle recensioni del cliente come termine di paragone.\n3. **VOCE DEI CLIENTI**: Cerca i punti deboli reali dei competitor nelle recensioni (se fornite) o analizzando il loro sito.\n\nJSON SCHEMA: {\"direct_competitor\": {\"who\": \"Nome Reale\", \"strength\": \"Punto di forza apparente\", \"weakness\": \"Vero punto debole (da recensioni)\", \"our_move\": \"La nostra mossa\", \"script\": \"Script Ads/Radio\"}, \"retail_giant\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"secret_habit\": {\"who\": \"Abitudine (es. Fai da te)\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}, \"ultimate_solution\": {\"who\": \"...\", \"strength\": \"...\", \"weakness\": \"...\", \"our_move\": \"...\", \"script\": \"...\"}}"
     },
     {
       "step_id": "seasonal_roadmap",

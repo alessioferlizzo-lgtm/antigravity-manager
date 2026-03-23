@@ -34,6 +34,32 @@ import {
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
 
+const LINK_TYPES = [
+    { value: "website",         label: "🌐 Sito Web" },
+    { value: "instagram",       label: "📸 Instagram" },
+    { value: "facebook",        label: "📘 Facebook" },
+    { value: "tiktok",          label: "🎵 TikTok" },
+    { value: "youtube",         label: "▶️ YouTube" },
+    { value: "reviews",         label: "⭐ Recensioni" },
+    { value: "service",         label: "🛠️ Servizio / Landing Page" },
+    { value: "google_business", label: "📍 Google My Business" },
+    { value: "ads_library",     label: "📊 Libreria ADS Meta" },
+    { value: "other",           label: "📎 Altro" },
+];
+
+const LINK_TYPE_COLORS: Record<string, string> = {
+    website:         "#3b82f6",
+    instagram:       "#e1306c",
+    facebook:        "#1877f2",
+    tiktok:          "#000000",
+    youtube:         "#ff0000",
+    reviews:         "#f59e0b",
+    service:         "#8b5cf6",
+    google_business: "#10b981",
+    ads_library:     "#f97316",
+    other:           "#6b7280",
+};
+
 type SectionType = "sorgenti" | "identita" | "analisi-strategica" | "personas" | "reports";
 
 
@@ -292,10 +318,10 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     const [section, setSection] = useState<SectionType>("sorgenti");
     const [editing, setEditing] = useState<Record<string, boolean>>({});
     const [newLink, setNewLink] = useState("");
-    const [newLinkDesc, setNewLinkDesc] = useState("");
+    const [newLinkType, setNewLinkType] = useState("website");
     const [newCompetitor, setNewCompetitor] = useState("");
     const [newCompetitorUrl, setNewCompetitorUrl] = useState("");
-    const [newCompetitorType, setNewCompetitorType] = useState("");
+    const [newCompetitorType, setNewCompetitorType] = useState("website");
     const [selectedCompIdx, setSelectedCompIdx] = useState<number | null>(null);
     const [newColor, setNewColor] = useState("#003366");
     const [researchUserPrompt, setResearchUserPrompt] = useState("");
@@ -415,14 +441,14 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
 
     async function addLink() {
         if (!newLink.trim()) return;
-        const linkObj = { url: newLink.trim(), description: newLinkDesc.trim() };
+        const linkObj = { url: newLink.trim(), label: newLinkType, description: LINK_TYPES.find(t => t.value === newLinkType)?.label ?? newLinkType };
         const updatedLinks = [...(client.links || []), linkObj];
         await fetch(`${API}/clients/${id}/links`, { 
             method: "PATCH", 
             headers: { "Content-Type": "application/json" }, 
             body: JSON.stringify({ links: updatedLinks }) 
         });
-        setNewLink(""); setNewLinkDesc(""); load();
+        setNewLink(""); setNewLinkType("website"); load();
     }
 
     async function removeLink(index: number) {
@@ -477,7 +503,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         });
         if (r.ok) {
             setNewCompetitorUrl("");
-            setNewCompetitorType("");
+            setNewCompetitorType("website");
             load();
         }
     }
@@ -809,13 +835,20 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                 {(client.links || []).map((l: any, i: number) => {
                                     const url = typeof l === 'string' ? l : l.url;
-                                    const desc = typeof l === 'string' ? "" : l.description;
+                                    const desc = typeof l === 'string' ? "" : (l.description || "");
+                                    const linkType = typeof l === 'string' ? "other" : (l.label || "other");
+                                    const typeColor = LINK_TYPE_COLORS[linkType] || LINK_TYPE_COLORS.other;
+                                    const typeLabel = LINK_TYPES.find(t => t.value === linkType)?.label ?? linkType;
                                     return (
                                         <div key={i} className="link-item" style={{ border: "1px solid var(--border)", padding: "10px 12px", overflow: "hidden" }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", overflow: "hidden" }}>
                                                 <div style={{ overflow: "hidden", minWidth: 0, flex: 1 }}>
-                                                    <a href={url} target="_blank" rel="noreferrer" className="link-url" style={{ display: "block", marginBottom: desc ? 4 : 0, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{url}</a>
-                                                    {desc && <span style={{ fontSize: 11, color: "var(--text-muted)", opacity: 0.8 }}>{desc}</span>}
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                                        <span style={{ fontSize: 10, fontWeight: 700, color: typeColor, background: `${typeColor}18`, padding: "2px 7px", borderRadius: 99, whiteSpace: "nowrap", border: `1px solid ${typeColor}40` }}>
+                                                            {typeLabel}
+                                                        </span>
+                                                    </div>
+                                                    <a href={url} target="_blank" rel="noreferrer" className="link-url" style={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{url}</a>
                                                 </div>
                                                 <button className="icon-btn" onClick={() => removeLink(i)}><TrashIcon style={{ width: 14, height: 14 }} /></button>
                                             </div>
@@ -823,9 +856,18 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                     );
                                 })}
                                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8, padding: 12, borderRadius: 8, background: "rgba(0,0,0,0.02)", border: "1px dashed var(--border)" }}>
-                                    <input className="input" placeholder="Incolla l'URL del link (es. https://google.com/...)" value={newLink} onChange={e => setNewLink(e.target.value)} />
+                                    <input className="input" placeholder="Incolla l'URL del link (es. https://...)" value={newLink} onChange={e => setNewLink(e.target.value)} />
                                     <div style={{ display: "flex", gap: 8 }}>
-                                        <input className="input" style={{ flex: 1 }} placeholder="Cosa contiene questo link? (es. Recensioni Google)" value={newLinkDesc} onChange={e => setNewLinkDesc(e.target.value)} onKeyDown={e => e.key === "Enter" && addLink()} />
+                                        <select
+                                            className="input"
+                                            style={{ flex: 1, cursor: "pointer" }}
+                                            value={newLinkType}
+                                            onChange={e => setNewLinkType(e.target.value)}
+                                        >
+                                            {LINK_TYPES.map(t => (
+                                                <option key={t.value} value={t.value}>{t.label}</option>
+                                            ))}
+                                        </select>
                                         <button className="btn btn-primary btn-sm" onClick={addLink}><PlusIcon style={{ width: 14, height: 14 }} />Aggiungi</button>
                                     </div>
                                 </div>
@@ -849,20 +891,25 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                          </div>
                                          
                                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                                             {(c.links || []).map((l: any, li: number) => (
-                                                 <span key={li} className="tag" style={{ border: "1px solid var(--orange)", background: "rgba(255,140,0,0.05)", color: "var(--orange)", display: "flex", alignItems: "center", gap: 4 }}>
-                                                     <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
-                                                         <div style={{ display: "flex", alignItems: "center" }}>
-                                                             <a href={l.url} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline", marginRight: 4, fontWeight: 600 }}>
-                                                                 {l.label || "Link"}
-                                                             </a>
+                                             {(c.links || []).map((l: any, li: number) => {
+                                                 const compLinkType = l.label || "other";
+                                                 const compTypeColor = LINK_TYPE_COLORS[compLinkType] || LINK_TYPE_COLORS.other;
+                                                 const compTypeLabel = LINK_TYPES.find(t => t.value === compLinkType)?.label ?? l.label ?? "Link";
+                                                 return (
+                                                     <span key={li} className="tag" style={{ border: `1px solid ${compTypeColor}60`, background: `${compTypeColor}10`, color: compTypeColor, display: "flex", alignItems: "center", gap: 4 }}>
+                                                         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
+                                                             <div style={{ display: "flex", alignItems: "center" }}>
+                                                                 <a href={l.url} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline", marginRight: 4, fontWeight: 600, fontSize: 11 }}>
+                                                                     {compTypeLabel}
+                                                                 </a>
+                                                             </div>
                                                          </div>
-                                                     </div>
-                                                     <button className="icon-btn" onClick={() => removeCompetitorLink(i, li)}>
-                                                         <XMarkIcon style={{ width: 12, height: 12 }} />
-                                                     </button>
-                                                 </span>
-                                             ))}
+                                                         <button className="icon-btn" onClick={() => removeCompetitorLink(i, li)}>
+                                                             <XMarkIcon style={{ width: 12, height: 12 }} />
+                                                         </button>
+                                                     </span>
+                                                 );
+                                             })}
                                          </div>
 
                                          <div style={{ display: "flex", gap: 6, alignItems: "center", background: "#fff", padding: "4px 8px", borderRadius: 8, border: "1px dashed var(--border)" }}>
@@ -873,14 +920,16 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                                  value={selectedCompIdx === i ? newCompetitorUrl : ""} 
                                                  onChange={e => { setSelectedCompIdx(i); setNewCompetitorUrl(e.target.value); }} 
                                              />
-                                             <input 
-                                                 className="input" 
-                                                 style={{ border: "none", background: "transparent", fontSize: 12, flex: 1 }} 
-                                                 placeholder="Tipo (es. Instagram)" 
-                                                 value={selectedCompIdx === i ? newCompetitorType : ""} 
+                                             <select
+                                                 className="input"
+                                                 style={{ border: "none", background: "transparent", fontSize: 12, flex: 1, cursor: "pointer" }}
+                                                 value={selectedCompIdx === i ? newCompetitorType : "website"}
                                                  onChange={e => { setSelectedCompIdx(i); setNewCompetitorType(e.target.value); }}
-                                                 onKeyDown={e => e.key === "Enter" && addCompetitorLink(i)}
-                                             />
+                                             >
+                                                 {LINK_TYPES.map(t => (
+                                                     <option key={t.value} value={t.value}>{t.label}</option>
+                                                 ))}
+                                             </select>
                                              <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px" }} onClick={() => addCompetitorLink(i)}>
                                                  <PlusIcon style={{ width: 14, height: 14 }} />
                                              </button>

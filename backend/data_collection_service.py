@@ -5,8 +5,10 @@ Raccoglie TUTTI i dati necessari per analisi professionale
 
 import asyncio
 import httpx
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import os
+import re
+import json
 from pathlib import Path
 
 
@@ -32,10 +34,18 @@ class DataCollectionService:
         client_name = metadata.get("name", "")
         links = metadata.get("links", [])
 
-        # Trova sito web, Instagram e Google Maps
-        site_urls = [] # Will now store dicts: {"url": "...", "context": "..."}
+        # CATEGORIE LINK
+        site_urls = []       # Siti web generali da analizzare
+        review_urls = []     # Link a recensioni (Trustpilot, FB, etc.)
+        service_urls = []    # Link a landing page servizi
+        competitor_links = [] # Link a competitor specifici
         instagram_handle = ""
         google_maps_url = ""
+
+        # ─── LINK ROUTING ────────────────────────────────────────────────────────
+        # Priority 1: use the declared label type (from dropdown in Sorgenti)
+        # Priority 2: fallback to URL pattern matching (backward compat)
+        SOCIAL_LABELS = {"instagram", "facebook", "tiktok", "youtube", "ads_library"}
 
         for link in links:
             if not isinstance(link, dict):
@@ -44,63 +54,131 @@ class DataCollectionService:
                 desc = ""
             else:
                 url = link.get("url", "")
-                label = link.get("label", "")
+                label = link.get("label", "")   # e.g. "instagram", "reviews", "google_business"
                 desc = link.get("description", "")
 
             if not url or "http" not in url.lower():
                 continue
-                
-            if "instagram.com" in url:
+
+            url_lc = url.lower()
+            label_lc = label.lower().strip()
+
+            # ── DECLARED TYPE ROUTING (new dropdown labels) ──────────────────
+            if label_lc == "instagram":
                 instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
-            elif any(x in url for x in ["google.com/maps", "business.google.com", "g.page", "google.com/search"]):
+                continue
+
+            if label_lc in ("google_business",):
                 google_maps_url = url
+                continue
+
+            if label_lc == "reviews":
+                review_urls.append({"url": url, "context": f"{desc or 'Recensioni'}".strip()})
+                continue
+
+            if label_lc == "service":
+                service_urls.append({"url": url, "context": f"{desc or 'Servizio'}".strip()})
+                continue
+
+            if label_lc == "website":
+                site_urls.append({"url": url, "context": f"{desc or 'Sito Web'}".strip()})
+                continue
+
+            if label_lc in SOCIAL_LABELS:
+                # Facebook, TikTok, YouTube, ADS Library — trattiamo come sito da analizzare
+                site_urls.append({"url": url, "context": f"{label} {desc}".strip()})
+                continue
+
+            if label_lc == "other":
+                site_urls.append({"url": url, "context": f"{desc}".strip()})
+                continue
+
+            # ── FALLBACK: URL PATTERN MATCHING (vecchi link senza tipo) ──────
+            # Estendi riconoscimento Google Maps a share.google/
+            if any(x in url_lc for x in ["instagram.com"]):
+                instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
+            elif any(x in url_lc for x in ["google.com/maps", "business.google.com", "g.page", "share.google", "google.com/search"]):
+                google_maps_url = url
+            elif any(x in label_lc or x in url_lc for x in ["recensioni", "review", "trustpilot", "recenzion", "opinioni"]):
+                review_urls.append({"url": url, "context": f"{label} {desc}".strip()})
+            elif any(x in label_lc for x in ["servizi", "service", "trattamenti", "trattamento", "landing"]):
+                service_urls.append({"url": url, "context": f"{label} {desc}".strip()})
             else:
-                # Salva sia URL che contesto
                 site_urls.append({"url": url, "context": f"{label} {desc}".strip()})
 
         if not site_urls:
-            raise Exception("Nessun sito web fornito nelle sorgenti")
+            if service_urls:
+                print("ℹ️ Nessun sito web generico, uso il primo link Servizio come base.")
+                site_urls = [service_urls[0]]
+            elif review_urls:
+                print("ℹ️ Nessun sito web generico, uso il primo link Recensioni come base.")
+                site_urls = [review_urls[0]]
+            else:
+                print("❌ Nessun link utile fornito nelle sorgenti")
+                return {"error": "Nessun link utile fornito nelle sorgenti"}
 
         # Raccogli dati in parallelo - TIMEOUT GLOBALE 9 MINUTI per evitare freeze infiniti
         try:
-            # 1. Scraping Siti Web (In parallelo per ogni URL con il suo contesto)
+            # 1. Scraping Siti Web (Generali)
             site_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in site_urls]
-            site_results = await asyncio.gather(*site_tasks, return_exceptions=True)
             
-            # Unisci i contenuti
-            combined_site_content = ""
-            processed_site_results = []
-            for i, res in enumerate(site_results):
-                url = site_urls[i]["url"]
-                if isinstance(res, Exception):
-                    print(f"❌ Errore scraping pagina {url}: {res}")
-                    processed_site_results.append({"url": url, "error": str(res)})
-                    combined_site_content += f"\n\n--- ERRORE DA: {url} ---\n{str(res)}"
-                else:
-                    processed_site_results.append({"url": url, "data": res})
-                    combined_site_content += f"\n\n--- CONTENUTO DA: {url} ---\n{res.get('raw_text', str(res))}"
+            # 2. Scraping Landing Page Servizi (Specifici)
+            service_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in service_urls]
             
-            site_content_combined = {"combined_raw_text": combined_site_content, "pages": processed_site_results}
-
-            results = await asyncio.wait_for(
+            # 3. Task in parallelo principali
+            print(f"   📊 Lancio {len(site_tasks)} task sito, {len(service_tasks)} task servizi, {len(review_urls)} task recensioni extra")
+            
+            main_results = await asyncio.wait_for(
                 asyncio.gather(
+                    asyncio.gather(*site_tasks, return_exceptions=True),
+                    asyncio.gather(*service_tasks, return_exceptions=True),
                     self._collect_google_reviews(client_name, metadata.get("location", ""), google_maps_url),
+                    self._mine_reviews_from_urls(review_urls), # 🔥 NUOVO: Miner multi-fonte
                     self._collect_instagram_data_complete(instagram_handle, metadata),
                     self._collect_meta_ads_data(metadata),
-                    self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata.get("competitors", [])),
+                    self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata.get("competitors", []), competitor_links), # 🔥 PASSATI LINK EXTRA
                     return_exceptions=True
                 ),
                 timeout=540.0 # 9 minuti
             )
         except asyncio.TimeoutError:
             print("⚠️ TIMEOUT GLOBALE RACCOLTA DATI (9 min) - Procedo con i dati parziali")
-            site_content_combined = {"error": "Timeout globale durante lo scraping dei siti"}
-            results = [{}, {}, {}, {}] 
+            main_results = [[], [], {}, {}, {}, {}, {}] 
 
-        reviews_data, instagram_data, ads_data, competitor_data = results
+        site_res, service_res, g_reviews, extra_reviews, instagram_data, ads_data, competitor_data = main_results
 
-        # Gestisci errori
-        google_reviews = reviews_data if not isinstance(reviews_data, Exception) else {"error": str(reviews_data)}
+        # 🔥 UNISCI CONTENUTI SITO
+        combined_site_content = ""
+        processed_site_results = []
+        for i, res in enumerate(site_res or []):
+            url = site_urls[i]["url"]
+            if isinstance(res, Exception):
+                processed_site_results.append({"url": url, "error": str(res)})
+                combined_site_content += f"\n\n--- ERRORE DA: {url} ---\n{str(res)}"
+            else:
+                processed_site_results.append({"url": url, "data": res})
+                combined_site_content += f"\n\n--- CONTENUTO DA: {url} ---\n{res.get('raw_text', str(res))}"
+        
+        # 🔥 UNISCI SERVIZI (Vengono messi in services_txt per l'AI)
+        combined_services_text = ""
+        for i, res in enumerate(service_res or []):
+            url = service_urls[i]["url"]
+            if not isinstance(res, Exception):
+                combined_services_text += f"\n\n--- DETTAGLI SERVIZIO DA: {url} ---\n{res.get('raw_text', str(res))}"
+        
+        site_content_combined = {"combined_raw_text": combined_site_content, "pages": processed_site_results}
+
+        # 🔥 UNISCI RECENSIONI (Google + Extra)
+        merged_reviews = {"all_reviews": []}
+        if isinstance(g_reviews, dict):
+            merged_reviews["all_reviews"].extend(g_reviews.get("reviews", []))
+            for k, v in g_reviews.items():
+                if k != "reviews": merged_reviews[k] = v
+        
+        if isinstance(extra_reviews, dict) and "reviews" in extra_reviews:
+            print(f"✅ Aggiunte {len(extra_reviews['reviews'])} recensioni da fonti extra (Trustpilot/FB/etc)")
+            merged_reviews["all_reviews"].extend(extra_reviews["reviews"])
+
         instagram_full = instagram_data if not isinstance(instagram_data, Exception) else {"error": str(instagram_data)}
         meta_ads = ads_data if not isinstance(ads_data, Exception) else {"error": str(ads_data)}
         competitors = competitor_data if not isinstance(competitor_data, Exception) else {"error": str(competitor_data)}
@@ -109,13 +187,14 @@ class DataCollectionService:
         print("✅ RACCOLTA DATI COMPLETATA")
 
         return {
-            "site_url": site_urls[0]["url"] if site_urls else "",
-            "site_urls": site_urls,
+            "site_url": site_urls[0]["url"] if site_urls else (service_urls[0]["url"] if service_urls else ""),
+            "site_urls": site_urls + service_urls,
             "site_content": site_content_combined,
-            "google_reviews": google_reviews,
+            "google_reviews": merged_reviews,
             "instagram_data": instagram_full,
             "meta_ads": meta_ads,
-            "competitor_data": competitors
+            "competitor_data": competitors,
+            "services_txt": combined_services_text # Ritorniamo questo per il main.py
         }
 
     async def _scrape_single_website_page(self, url: str, context: str = "") -> Dict[str, Any]:
@@ -384,6 +463,57 @@ Rispondi in JSON (schema identico a prima)."""
             print(f"❌ Errore critico recensioni Google: {e}")
             return {"error": str(e), "reviews": []}
 
+    async def _mine_reviews_from_urls(self, review_urls: List[Dict[str, str]]) -> Dict[str, Any]:
+        """
+        🔥 MULTI-SOURCE REVIEW MINER
+        Estrae recensioni da Trustpilot, FB, o qualsiasi link etichettato 'Recensioni'
+        """
+        if not review_urls:
+            return {"reviews": []}
+
+        print(f"   ⛏️ Estrazione recensioni da {len(review_urls)} fonti extra...")
+        
+        all_extra_reviews = []
+        
+        for item in review_urls:
+            url = item["url"]
+            context = item["context"]
+            
+            prompt = f"""Estrai TUTTE le recensioni dei clienti e i feedback testuali da questo URL: {url}
+Contesto: {context}
+
+REGOLE:
+1. Devi estrarre Verbatim REALI (frasi esatte dei clienti).
+2. Estrai: Testo della recensione, Stelle/Rating (se presente), Autore.
+3. Se la pagina è un aggregatore (Trustpilot/FB), prendi almeno le ultime 10-15 recensioni.
+4. Ignora il contenuto marketing del sito.
+
+Rispondi in JSON:
+{{
+  "reviews": [
+    {{"stars": 5, "text": "...", "author": "..."}}
+  ]
+}}"""
+            try:
+                response = await self.ai_service._call_ai(
+                    model="perplexity/sonar-pro",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1
+                )
+                
+                # Parse JSON
+                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group())
+                    reviews = data.get("reviews", [])
+                    if reviews:
+                        print(f"      ✅ Recuperate {len(reviews)} recensioni da {url}")
+                        all_extra_reviews.extend(reviews)
+            except Exception as e:
+                print(f"      ⚠️ Errore mining recensioni da {url}: {e}")
+
+        return {"reviews": all_extra_reviews}
+
     async def _collect_instagram_data_complete(
         self,
         instagram_handle: str,
@@ -566,7 +696,8 @@ Rispondi in JSON (schema identico a prima)."""
         client_name: str,
         industry: str,
         location: str,
-        user_competitors: List[Dict[str, Any]]
+        user_competitors: List[Dict[str, Any]],
+        extra_links: Optional[List[Dict[str, str]]] = None
     ) -> Dict[str, Any]:
         """
         Trova e analizza COMPETITOR:
@@ -579,24 +710,77 @@ Rispondi in JSON (schema identico a prima)."""
 
         all_competitors = []
         
-        # STEP 1: Use user-provided competitors if available
+        # STEP 0: Aggiungi competitor dai link extra (Sorgenti)
+        if extra_links:
+            for link_item in extra_links:
+                url = link_item["url"]
+                label = link_item["label"]
+                # Estrai nome se possibile dalla label "Competitor: Nome"
+                comp_name = label.replace("Competitor", "").replace(":", "").strip()
+                if not comp_name: comp_name = url.split("//")[-1].split("/")[0]
+                
+                all_competitors.append({
+                    "name": comp_name,
+                    "website": url,
+                    "google_maps": ""
+                })
+                print(f"   ➕ Aggiunto competitor da link: {comp_name} ({url})")
+
+        # STEP 1: Use user-provided competitors (Legacy/JSON field)
         if user_competitors and len(user_competitors) > 0:
             print(f"✅ Utilizzando {len(user_competitors)} competitor forniti dall'utente (Sorgenti)")
             for comp in user_competitors:
                 links = comp.get("links", [])
                 website = ""
                 gmaps = ""
+                instagram = ""
+                facebook = ""
+
                 for l in links:
                     u = l.get("url", "") if isinstance(l, dict) else str(l)
-                    if not u: continue
-                    if "maps" in u or "g.page" in u: gmaps = u
-                    elif not website: website = u
-                
+                    lbl = l.get("label", "").lower().strip() if isinstance(l, dict) else ""
+                    if not u:
+                        continue
+
+                    # Usa il tipo dichiarato prima
+                    if lbl == "google_business":
+                        gmaps = u
+                    elif lbl == "reviews":
+                        if not gmaps:
+                            gmaps = u  # tratta link recensioni come GMB per Perplexity
+                        if not gmaps:
+                            gmaps = u
+                    elif lbl == "website":
+                        if not website:
+                            website = u
+                    elif lbl == "instagram":
+                        instagram = u
+                    elif lbl == "facebook":
+                        facebook = u
+                    elif lbl in ("service",):
+                        if not website:
+                            website = u
+                    else:
+                        # Fallback: pattern matching per vecchi dati
+                        u_lc = u.lower()
+                        if any(x in u_lc for x in ["maps", "g.page", "share.google", "google.com/search"]):
+                            if not gmaps:
+                                gmaps = u
+                        elif "instagram.com" in u_lc:
+                            instagram = u
+                        elif "facebook.com" in u_lc and "ads/library" not in u_lc:
+                            facebook = u
+                        elif not website and not any(x in u_lc for x in ["facebook.com/ads", "instagram.com", "tiktok.com"]):
+                            website = u
+
                 all_competitors.append({
                     "name": comp.get("name", ""),
                     "address": "",
                     "website": website,
-                    "google_maps": gmaps
+                    "google_maps": gmaps,
+                    "instagram": instagram,
+                    "facebook": facebook,
+                    "all_links": links,  # Passa tutti i link originali a fetch_comp_reviews
                 })
         else:
             print("⚠️ Nessun competitor fornito nelle Sorgenti. Ricerca online...")
@@ -670,10 +854,33 @@ Formato JSON:
             comp_name = comp.get("name", "")
             comp_url = comp.get("website", "")
             comp_maps = comp.get("google_maps", "")
-            
-            url_context = ""
-            if comp_maps: url_context = f"Utilizza questo link esatto di Google Maps per le recensioni: {comp_maps}"
-            elif comp_url: url_context = f"Il sito web del competitor è: {comp_url}"
+            comp_instagram = comp.get("instagram", "")
+            comp_facebook = comp.get("facebook", "")
+            all_links = comp.get("all_links", [])
+
+            # Costruisci contesto URL il più ricco possibile
+            url_lines = []
+            if comp_maps:
+                url_lines.append(f"- Google My Business / Recensioni: {comp_maps}")
+            if comp_url:
+                url_lines.append(f"- Sito Web: {comp_url}")
+            if comp_instagram:
+                url_lines.append(f"- Instagram: {comp_instagram}")
+            if comp_facebook:
+                url_lines.append(f"- Facebook: {comp_facebook}")
+            # Aggiungi eventuali link extra non già inclusi
+            for lnk in all_links:
+                lnk_url = lnk.get("url", "") if isinstance(lnk, dict) else str(lnk)
+                lnk_lbl = lnk.get("label", "") if isinstance(lnk, dict) else ""
+                if lnk_url and lnk_url not in (comp_maps, comp_url, comp_instagram, comp_facebook):
+                    url_lines.append(f"- {lnk_lbl or 'Link'}: {lnk_url}")
+
+            if url_lines:
+                url_context = f"Link disponibili per {comp_name}:\n" + "\n".join(url_lines)
+            elif comp_url:
+                url_context = f"Il sito web del competitor è: {comp_url}"
+            else:
+                url_context = f"Cerca informazioni su '{comp_name}' online."
             
             reviews_prompt = f"""Raccogli TUTTE le recensioni Google disponibili per "{comp_name}".
 {url_context}

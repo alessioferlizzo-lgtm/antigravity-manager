@@ -3418,7 +3418,7 @@ async def generate_complete_client_analysis(client_id: str):
     # Raccogli documenti caricati (raw-data folder)
     raw_docs = ""
     products_csv = "Non disponibili"
-    services_txt = "Non disponibili"
+    services_txt = all_data.get("services_txt") or "Non disponibili"
 
     raw_files = list((CLIENTS_DIR / client_id / "raw_data").glob("*")) if (CLIENTS_DIR / client_id / "raw_data").exists() else []
     for file_path in raw_files:
@@ -3490,16 +3490,12 @@ async def generate_complete_client_analysis(client_id: str):
     
     instagram_comments_text = "\n".join(flattened_ig) if flattened_ig else "Nessun commento Instagram trovato."
 
-    # 2. Flatten Google Reviews
+    # 2. Flatten Google Reviews (Include ora Extra Reviews da Miner Multi-Fonte)
     flattened_google = []
     if isinstance(google_reviews, dict):
-        # Handle different potential structures
+        # Handle merged structure (all_reviews) or original
         reviews_list = google_reviews.get("all_reviews", []) or google_reviews.get("reviews", [])
-        if not reviews_list and "reviews_by_stars" in google_reviews:
-            for stars in google_reviews["reviews_by_stars"]:
-                reviews_list.extend(google_reviews["reviews_by_stars"][stars])
         
-        # 🚨 FALLBACK: Se non è una lista ma un testo raw (es. da Perplexity quando non produce JSON)
         if not reviews_list and "raw_text" in google_reviews:
             google_reviews_text = google_reviews["raw_text"]
         else:
@@ -3508,8 +3504,8 @@ async def generate_complete_client_analysis(client_id: str):
                 if text:
                     stars = rev.get("stars") or rev.get("rating") or "5"
                     author = rev.get("author") or rev.get("user") or "Anonimo"
-                    flattened_google.append(f"GMB ({stars} stelle) - {author}: {text}")
-            google_reviews_text = "\n".join(flattened_google) if flattened_google else "Nessuna recensione Google trovata."
+                    flattened_google.append(f"({stars} stelle) - {author}: {text}")
+            google_reviews_text = "\n".join(flattened_google) if flattened_google else "Nessuna recensione trovata nelle fonti fornite."
 
     # 3. Serialize remaining data
     import json
