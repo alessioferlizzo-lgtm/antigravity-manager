@@ -765,36 +765,46 @@ Rispondi in JSON:
                     if not u:
                         continue
 
-                    # Usa il tipo dichiarato prima
-                    if lbl == "google_business":
-                        gmaps = u
-                    elif lbl == "reviews":
-                        if not gmaps:
-                            gmaps = u  # tratta link recensioni come GMB per Perplexity
+                    u_lc = u.lower()
+
+                    # Google My Business (tutte le varianti)
+                    if lbl == "google_business" or any(x in lbl for x in [
+                        "google my business", "scheda google", "google maps", "gmb",
+                        "mappa google", "recensioni google"
+                    ]) or any(x in u_lc for x in [
+                        "maps", "g.page", "share.google", "google.com/search", "business.google.com"
+                    ]):
                         if not gmaps:
                             gmaps = u
-                    elif lbl == "website":
-                        if not website:
-                            website = u
-                    elif lbl == "instagram":
+
+                    # Instagram
+                    elif lbl == "instagram" or ("instagram" in lbl and "ads" not in lbl) or "instagram.com" in u_lc:
                         instagram = u
-                    elif lbl == "facebook":
-                        facebook = u
-                    elif lbl in ("service",):
+
+                    # Sito Web
+                    elif lbl == "website" or any(x in lbl for x in ["sito web", "sito", "website"]):
                         if not website:
                             website = u
-                    else:
-                        # Fallback: pattern matching per vecchi dati
-                        u_lc = u.lower()
-                        if any(x in u_lc for x in ["maps", "g.page", "share.google", "google.com/search"]):
-                            if not gmaps:
-                                gmaps = u
-                        elif "instagram.com" in u_lc:
-                            instagram = u
-                        elif "facebook.com" in u_lc and "ads/library" not in u_lc:
-                            facebook = u
-                        elif not website and not any(x in u_lc for x in ["facebook.com/ads", "instagram.com", "tiktok.com"]):
+
+                    # Servizi (trattati come sito web)
+                    elif lbl == "service" or any(x in lbl for x in ["servizio", "servizi", "trattamenti"]):
+                        if not website:
                             website = u
+
+                    # Facebook (non ADS)
+                    elif (lbl == "facebook" or "facebook" in lbl) and "ads" not in lbl and "libreria" not in lbl:
+                        if "facebook.com" in u_lc and "ads/library" not in u_lc:
+                            facebook = u
+
+                    # ADS Library / Libreria inserzioni — ignora (non utile per reviews)
+                    elif any(x in lbl for x in ["libreria", "ads library", "inserzioni", "ads_library"]):
+                        pass  # non aggiungere a nessuna lista
+
+                    # Fallback generico: se non è social/ads prendi come sito
+                    elif not website and not any(x in u_lc for x in [
+                        "facebook.com/ads", "instagram.com", "tiktok.com"
+                    ]):
+                        website = u
 
                 all_competitors.append({
                     "name": comp.get("name", ""),
