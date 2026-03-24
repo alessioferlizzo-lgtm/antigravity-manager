@@ -231,7 +231,10 @@ class StorageService:
 
     def create_task(self, title: str, client_id: Optional[str], client_name: Optional[str],
                     priority: str, due_date: Optional[str], notes: str,
-                    estimated_time: Optional[str] = "") -> Dict[str, Any]:
+                    estimated_time: Optional[str] = "", parent_id: Optional[str] = None,
+                    task_type: Optional[str] = "", subtasks: Optional[List[Dict]] = None,
+                    recurring: Optional[bool] = False, recurring_frequency: Optional[str] = "",
+                    reminder_at: Optional[str] = "") -> Dict[str, Any]:
         tasks = self.get_tasks()
         task = {
             "id": str(uuid.uuid4()), "title": title,
@@ -239,6 +242,13 @@ class StorageService:
             "priority": priority, "status": "todo",
             "due_date": due_date or "", "notes": notes or "",
             "estimated_time": estimated_time or "",
+            "parent_id": parent_id,
+            "task_type": task_type or "",
+            "subtasks": subtasks or [],
+            "recurring": recurring or False,
+            "recurring_frequency": recurring_frequency or "",
+            "reminder_at": reminder_at or "",
+            "completed_at": None,
             "created_at": datetime.now().isoformat()
         }
         tasks.append(task)

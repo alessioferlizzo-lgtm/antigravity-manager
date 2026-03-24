@@ -2851,7 +2851,13 @@ class TaskCreate(BaseModel):
     priority: Optional[str] = "media"
     due_date: Optional[str] = ""
     notes: Optional[str] = ""
-    estimated_time: Optional[str] = ""   # es: "30min", "1h", "2h"
+    estimated_time: Optional[str] = ""
+    parent_id: Optional[str] = None
+    task_type: Optional[str] = ""          # ads, report, contenuto, chiamata, admin
+    subtasks: Optional[List[Dict]] = []    # [{id, text, done}]
+    recurring: Optional[bool] = False
+    recurring_frequency: Optional[str] = ""  # daily, weekly, monthly
+    reminder_at: Optional[str] = ""           # ISO datetime string
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -2862,6 +2868,13 @@ class TaskUpdate(BaseModel):
     client_id: Optional[str] = None
     client_name: Optional[str] = None
     estimated_time: Optional[str] = None
+    parent_id: Optional[str] = None
+    task_type: Optional[str] = None
+    subtasks: Optional[List[Dict]] = None
+    recurring: Optional[bool] = None
+    recurring_frequency: Optional[str] = None
+    reminder_at: Optional[str] = None
+    completed_at: Optional[str] = None
 
 @app.get("/tasks")
 async def list_tasks():
@@ -2876,13 +2889,20 @@ async def create_task(task: TaskCreate):
         priority=task.priority,
         due_date=task.due_date,
         notes=task.notes,
-        estimated_time=task.estimated_time
+        estimated_time=task.estimated_time,
+        parent_id=task.parent_id,
+        task_type=task.task_type,
+        subtasks=task.subtasks,
+        recurring=task.recurring,
+        recurring_frequency=task.recurring_frequency,
+        reminder_at=task.reminder_at,
     )
 
 @app.patch("/tasks/{task_id}")
 async def update_task(task_id: str, update: TaskUpdate):
     try:
-        updates = {k: v for k, v in update.dict(exclude_unset=True).items() if v is not None}
+        updates = {k: v for k, v in update.dict(exclude_unset=True).items()}
+        updates = {k: v for k, v in updates.items() if v is not None or k in ("subtasks", "recurring", "completed_at")}
         return storage_service.update_task(task_id, updates)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Task not found")
