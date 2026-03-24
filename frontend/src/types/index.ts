@@ -28,6 +28,7 @@ export interface Task {
   parent_id?: string | null;
   task_type?: string;
   list_id?: string;
+  flagged?: boolean;
   subtasks?: Subtask[];
   recurring?: boolean;
   recurring_frequency?: string;

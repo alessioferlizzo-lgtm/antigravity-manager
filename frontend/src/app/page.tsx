@@ -8,8 +8,10 @@ import {
   LightBulbIcon, DocumentTextIcon, PencilSquareIcon,
   ChevronRightIcon, SparklesIcon, ArrowPathIcon,
   PhotoIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, TagIcon, ShoppingBagIcon, BookmarkSquareIcon,
-  ChartBarIcon, ArrowTrendingUpIcon, ChevronDownIcon, InboxIcon, CheckCircleIcon
+  ChartBarIcon, ArrowTrendingUpIcon, ChevronDownIcon, InboxIcon, CheckCircleIcon,
+  FlagIcon,
 } from "@heroicons/react/24/outline";
+import { FlagIcon as FlagIconSolid } from "@heroicons/react/24/solid";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import TasksSection from "@/components/TasksSection";
@@ -750,12 +752,13 @@ export default function Dashboard() {
           <div className="smart-lists-grid">
             {[
               { id: "oggi", label: "Oggi", icon: CalendarIcon, color: "#007aff", count: tasks.filter(t => t.status !== "done" && t.due_date === new Date().toISOString().split("T")[0]).length },
-              { id: "scheduled", label: "Programmate", icon: CalendarIcon, color: "#ff9500", count: tasks.filter(t => t.status !== "done" && t.due_date).length },
-              { id: "all", label: "Tutte", icon: InboxIcon, color: "#1a1a1a", count: tasks.filter(t => t.status !== "done").length },
-              { id: "completed", label: "Completate", icon: CheckCircleIcon, color: "#afafb1", count: tasks.filter(t => t.status === "done").length }
+              { id: "scheduled", label: "Programmate", icon: CalendarIcon, color: "#ff3b30", count: tasks.filter(t => t.status !== "done" && t.due_date).length },
+              { id: "all", label: "Tutte", icon: InboxIcon, color: "#636366", count: tasks.filter(t => t.status !== "done").length },
+              { id: "flagged", label: "Contrassegnate", icon: FlagIconSolid, color: "#ff9500", count: tasks.filter(t => t.status !== "done" && t.flagged).length },
+              { id: "completed", label: "Completate", icon: CheckCircleIcon, color: "#8e8e93", count: tasks.filter(t => t.status === "done").length },
             ].map(sl => (
-              <div 
-                key={sl.id} 
+              <div
+                key={sl.id}
                 className={`smart-list-card ${activeSmartList === sl.id ? 'active' : ''}`}
                 onClick={() => {
                   setActiveSmartList(sl.id);
@@ -780,11 +783,11 @@ export default function Dashboard() {
               <PlusIcon width={14} height={14} />
             </button>
           </div>
-          
+
           <div className="custom-lists-container">
             {customLists.map(list => (
-              <div 
-                key={list.id} 
+              <div
+                key={list.id}
                 className={`custom-list-item ${activeCustomListId === list.id ? 'active' : ''}`}
                 onClick={() => {
                   setActiveCustomListId(list.id);
@@ -799,7 +802,7 @@ export default function Dashboard() {
                 <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
                   {tasks.filter(t => t.status !== "done" && t.list_id === list.id).length}
                 </span>
-                <button 
+                <button
                   className="list-delete-btn"
                   onClick={(e) => { e.stopPropagation(); deleteCustomList(list.id); }}
                   style={{ background: "none", border: "none", color: "rgba(239,68,68,0.5)", cursor: "pointer", fontSize: 10, padding: 4 }}

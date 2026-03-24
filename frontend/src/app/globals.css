@@ -1986,15 +1986,71 @@ textarea.input {
   border-color: rgba(0, 122, 255, 0.2);
 }
 
-.nlp-badge-priority.priority-alta {
-  color: #ff3b30;
-  background: rgba(255, 59, 48, 0.1);
-  border-color: rgba(255, 59, 48, 0.2);
+.tasks-quickadd-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 0 40px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+.toolbar-left {
+  display: flex;
+  gap: 12px;
+}
+
+.toolbar-icon-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.toolbar-icon-btn.active {
+  color: var(--lime);
+}
+
+.nlp-badge-flag {
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.1);
+  border-color: rgba(255, 149, 0, 0.2);
+}
+
+/* Flag on Card */
+.task-card-flag-container {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  z-index: 5;
+}
+
+.task-flag-btn {
+  color: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.task-card:hover .task-flag-btn {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.task-flag-btn.active {
+  color: #ff9500 !important;
+}
+
+.task-flag-icon {
+  margin-left: 6px;
+  color: #ff9500;
 }
 
 .tasks-quickadd-circle {

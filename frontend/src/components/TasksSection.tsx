@@ -7,8 +7,9 @@ import {
   ArrowPathIcon, MagnifyingGlassIcon, InboxIcon, CheckCircleIcon,
   ExclamationTriangleIcon, BellIcon, BellSlashIcon, ArrowTrendingUpIcon,
   ChevronDownIcon, ChevronUpIcon, PencilIcon, EllipsisHorizontalIcon,
+  FlagIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
+import { CheckCircleIcon as CheckCircleSolid, FlagIcon as FlagIconSolid } from "@heroicons/react/24/solid";
 import DatePicker from "react-datepicker";
 import { Client, Subtask, Task } from "@/types";
 
@@ -70,7 +71,7 @@ const FREQ_LABELS: Record<string, string> = {
 
 
 
-export type SmartListId = "oggi" | "scadute" | "scheduled" | "all" | "completed";
+export type SmartListId = "oggi" | "scadute" | "scheduled" | "all" | "completed" | "flagged";
 
 interface TasksSectionProps {
   tasks: Task[];
@@ -200,6 +201,7 @@ export default function TasksSection({
       case "scadute": return overdueTasks;
       case "scheduled": return scheduledTasks;
       case "completed": return completedTasks;
+      case "flagged": return tasks.filter(t => t.status !== "done" && t.flagged);
       default: return allOpenTasks;
     }
   };
@@ -244,6 +246,20 @@ export default function TasksSection({
     });
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   })();
+
+  /* ─── Flag/Unflag ─── */
+  async function toggleFlag(task: Task) {
+    const newVal = !task.flagged;
+    try {
+      const r = await fetch(`${API}/tasks/${task.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ flagged: newVal })
+      });
+      if (r.ok) {
+        setTasks(p => p.map(t => t.id === task.id ? { ...t, flagged: newVal } : t));
+      }
+    } catch (err) { console.error("Flag toggle failed:", err); }
+  }
 
   /* ─── NLP Parsing Logic ─── */
   const parseNLP = (text: string) => {
@@ -306,7 +322,10 @@ export default function TasksSection({
     // Fallback to manual date if NLP didn't find one but quickAddDate is set
     if (!dueDate && quickAddDate) dueDate = quickAddDate;
 
-    return { title: title || "Nuova task", clientId, clientName, priority, dueDate };
+    const flagged = text.includes("#flag");
+    if (flagged) title = title.replace("#flag", "").trim();
+
+    return { title: title || "Nuova task", clientId, clientName, priority, dueDate, flagged };
   };
 
   const nlpData = parseNLP(quickAdd);
@@ -316,7 +335,7 @@ export default function TasksSection({
     if (!quickAdd.trim()) return;
     setQuickAddLoading(true);
     
-    const { title, clientId, clientName, priority, dueDate } = nlpData;
+    const { title, clientId, clientName, priority, dueDate, flagged } = nlpData;
     
     const payload = {
       title,
@@ -327,6 +346,7 @@ export default function TasksSection({
       notes: "",
       estimated_time: "",
       list_id: activeCustomListId || "",
+      flagged: flagged
     };
 
     try {
@@ -660,13 +680,6 @@ export default function TasksSection({
               placeholder='Nuova task... (es: Draft @Cliente !alta domani)'
               className="tasks-quickadd-input"
             />
-            {/* Date input - Optional manual fallback */}
-            <input
-              type="date"
-              value={quickAddDate}
-              onChange={e => setQuickAddDate(e.target.value)}
-              className="tasks-quickadd-date"
-            />
             <button
               onClick={handleQuickAdd}
               disabled={!quickAdd.trim() || quickAddLoading}
@@ -676,20 +689,59 @@ export default function TasksSection({
             </button>
           </div>
 
-          {/* NLP Feedback Badges */}
-          {quickAdd.trim() && (
-            <div className="tasks-nlp-feedback">
-              {nlpData.clientName && (
-                <span className="nlp-badge nlp-badge-client">@ {nlpData.clientName}</span>
-              )}
-              {nlpData.dueDate && (
-                <span className="nlp-badge nlp-badge-date">📅 {nlpData.dueDate}</span>
-              )}
-              <span className={`nlp-badge nlp-badge-priority priority-${nlpData.priority}`}>
-                {nlpData.priority === "alta" ? "!!!" : nlpData.priority === "media" ? "!!" : "!"} {nlpData.priority}
-              </span>
+          <div className="tasks-quickadd-toolbar">
+            <div className="toolbar-left">
+              <button className="toolbar-icon-btn" title="Aggiungi data">
+                <CalendarIcon width={16} />
+              </button>
+              <button 
+                className={`toolbar-icon-btn ${nlpData.priority !== "media" ? "active" : ""}`} 
+                title="Imposta priorità"
+                onClick={() => {
+                  const nextP = nlpData.priority === "bassa" ? "alta" : nlpData.priority === "alta" ? "media" : "bassa";
+                  setQuickAdd(prev => {
+                    const clean = prev.replace(/!(alta|media|bassa|[1-3])/, "").trim();
+                    return `${clean} !${nextP}`;
+                  });
+                }}
+              >
+                <ExclamationTriangleIcon width={16} />
+              </button>
+              <button 
+                className="toolbar-icon-btn" 
+                title="Contrassegna"
+                onClick={() => {
+                   // This is a bit of a hack to "flag" via NLP without a dedicated char, or we just use it to toggle a local state for the next add.
+                   // Let's assume the user can just click it to toggle a "!flag" in the text or we handle it in state.
+                   // For now, let's keep it simple: clicking it adds #flag to text.
+                   setQuickAdd(prev => prev.includes("#flag") ? prev.replace("#flag", "").trim() : `${prev} #flag`);
+                }}
+              >
+                <FlagIcon width={16} />
+              </button>
+              <button className="toolbar-icon-btn" title="Assegna cliente">
+                <ClipboardDocumentListIcon width={16} />
+              </button>
             </div>
-          )}
+
+            {/* NLP Feedback Badges */}
+            {quickAdd.trim() && (
+              <div className="tasks-nlp-feedback">
+                {nlpData.clientName && (
+                  <span className="nlp-badge nlp-badge-client">@ {nlpData.clientName}</span>
+                )}
+                {nlpData.dueDate && (
+                  <span className="nlp-badge nlp-badge-date">📅 {nlpData.dueDate}</span>
+                )}
+                <span className={`nlp-badge nlp-badge-priority priority-${nlpData.priority}`}>
+                  {nlpData.priority === "alta" ? "!!!" : nlpData.priority === "media" ? "!!" : "!"} {nlpData.priority}
+                </span>
+                {quickAdd.includes("#flag") && (
+                  <span className="nlp-badge nlp-badge-flag">🚩 Contrassegnata</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ─── Filters bar ─── */}
@@ -739,6 +791,7 @@ export default function TasksSection({
                     task={task}
                     onComplete={completeTask}
                     onOpen={openDrawer}
+                    onToggleFlag={toggleFlag}
                     onDelete={id => setDeleteConfirmId(id)}
                     onSubtaskToggle={toggleSubtask}
                     onDragStart={onDragStart}
@@ -762,6 +815,7 @@ export default function TasksSection({
                 task={task}
                 onComplete={completeTask}
                 onOpen={openDrawer}
+                onToggleFlag={toggleFlag}
                 onDelete={id => setDeleteConfirmId(id)}
                 onSubtaskToggle={toggleSubtask}
                 onDragStart={onDragStart}
@@ -809,6 +863,7 @@ interface TaskCardProps {
   task: Task;
   onComplete: (t: Task) => void;
   onOpen: (t: Task) => void;
+  onToggleFlag: (t: Task) => void;
   onDelete: (id: string) => void;
   onSubtaskToggle: (t: Task, stId: string) => void;
   onDragStart: (id: string) => void;
@@ -824,7 +879,7 @@ interface TaskCardProps {
 }
 
 function TaskCard({
-  task, onComplete, onOpen, onDelete, onSubtaskToggle,
+  task, onComplete, onOpen, onToggleFlag, onDelete, onSubtaskToggle,
   onDragStart, onDragEnter, onDrop, onDragEnd,
   dragOver, completing, hidden, deleteConfirm, onDeleteConfirm, onDeleteCancel
 }: TaskCardProps) {
@@ -861,6 +916,12 @@ function TaskCard({
 
         {/* Content */}
         <div className="task-card-content" onClick={() => onOpen(task)}>
+          <div className="task-card-flag-container" onClick={(e) => {
+            e.stopPropagation();
+            onToggleFlag(task);
+          }}>
+            {task.flagged ? <FlagIconSolid className="task-flag-btn active" width={16} /> : <FlagIcon className="task-flag-btn" width={16} />}
+          </div>
           <div className="task-card-title-row">
             {task.priority !== "bassa" && (
               <span className={`task-priority-marker priority-${task.priority}`}>
@@ -869,6 +930,7 @@ function TaskCard({
             )}
             <span className={`task-card-title ${isDone ? "done" : ""}`}>{task.title}</span>
             {task.recurring && <span className="task-recurring-badge" title={FREQ_LABELS[task.recurring_frequency || ""] || "Ricorrente"}>🔁</span>}
+            {task.flagged && <FlagIconSolid className="task-flag-icon active" width={14} />}
           </div>
 
           {/* Badges row */}
