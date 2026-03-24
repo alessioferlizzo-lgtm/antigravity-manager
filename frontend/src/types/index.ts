@@ -9,6 +9,12 @@ export interface Subtask {
   done: boolean;
 }
 
+export interface List {
+  id: string;
+  title: string;
+  color: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -21,6 +27,7 @@ export interface Task {
   estimated_time?: string;
   parent_id?: string | null;
   task_type?: string;
+  list_id?: string;
   subtasks?: Subtask[];
   recurring?: boolean;
   recurring_frequency?: string;

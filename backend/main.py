@@ -32,10 +32,10 @@ def extract_ig_handle(url: str) -> str:
 # Load .env from backend directory
 load_dotenv(Path(__file__).parent / ".env")
 
-from .ai_service import AIService
-from .storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
-from .notion_service import notion_service
-from .strategic_context_loader import get_strategic_context_for_generator
+from ai_service import AIService
+from storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
+from notion_service import notion_service
+from strategic_context_loader import get_strategic_context_for_generator
 
 app = FastAPI(title="Antigravity Script Manager")
 
@@ -2841,6 +2841,34 @@ async def submit_feedback(client_id: str, request: FeedbackRequest):
 
 
 # ═══════════════════════════════════════════════
+#  LISTS (global)
+# ═══════════════════════════════════════════════
+
+class ListCreate(BaseModel):
+    title: str
+    color: Optional[str] = "#007aff"
+
+@app.get("/lists")
+async def list_custom_lists():
+    return storage_service.get_lists()
+
+@app.post("/lists")
+async def create_custom_list(lst: ListCreate):
+    lists = storage_service.get_lists()
+    new_lst = {"id": str(uuid.uuid4()), "title": lst.title, "color": lst.color}
+    lists.append(new_lst)
+    storage_service.save_lists(lists)
+    return new_lst
+
+@app.delete("/lists/{list_id}")
+async def delete_custom_list(list_id: str):
+    lists = storage_service.get_lists()
+    new_lists = [l for l in lists if l["id"] != list_id]
+    storage_service.save_lists(new_lists)
+    return {"message": "List deleted"}
+
+
+# ═══════════════════════════════════════════════
 #  TASKS (global)
 # ═══════════════════════════════════════════════
 
@@ -2858,6 +2886,7 @@ class TaskCreate(BaseModel):
     recurring: Optional[bool] = False
     recurring_frequency: Optional[str] = ""  # daily, weekly, monthly
     reminder_at: Optional[str] = ""           # ISO datetime string
+    list_id: Optional[str] = ""               # Custom list ID
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -2874,6 +2903,7 @@ class TaskUpdate(BaseModel):
     recurring: Optional[bool] = None
     recurring_frequency: Optional[str] = None
     reminder_at: Optional[str] = None
+    list_id: Optional[str] = None
     completed_at: Optional[str] = None
 
 @app.get("/tasks")
@@ -2896,6 +2926,7 @@ async def create_task(task: TaskCreate):
         recurring=task.recurring,
         recurring_frequency=task.recurring_frequency,
         reminder_at=task.reminder_at,
+        list_id=task.list_id,
     )
 
 @app.patch("/tasks/{task_id}")

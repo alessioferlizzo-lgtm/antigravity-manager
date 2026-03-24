@@ -95,7 +95,9 @@ export default function Dashboard() {
   const [taskModal, setTaskModal] = useState(false);
   const [clientForm, setClientForm] = useState({ name: "", industry: "", links: "", competitors: "" });
   const [taskForm, setTaskForm] = useState({ title: "", client_id: "", client_name: "", priority: "media", due_date: "", notes: "", estimated_time: "" });
-  const [activeSmartList, setActiveSmartList] = useState<string | null>("all");
+  const [activeSmartList, setActiveSmartList] = useState<string>("all");
+  const [activeCustomListId, setActiveCustomListId] = useState<string | null>(null);
+  const [customLists, setCustomLists] = useState<any[]>([]);
 
 
   // Sidebar enhancements
@@ -214,7 +216,8 @@ export default function Dashboard() {
     Promise.all([
       fetch(`${API}/clients`, { signal: controller.signal }).then(r => r.ok ? r.json() : Promise.reject("Clients failed")),
       fetch(`${API}/tasks`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Tasks failed"))),
-    ]).then(([c, t]) => {
+      fetch(`${API}/lists`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Lists failed"))),
+    ]).then(([c, t, l]) => {
       clearTimeout(timeout);
       // Success: update state and local cache
       const savedOrder: string[] = JSON.parse(localStorage.getItem("ag_clientOrder") || "[]");
@@ -226,12 +229,14 @@ export default function Dashboard() {
         : c;
       setClients(sorted);
       setTasks(t);
+      setCustomLists(l);
       setLoading(false);
       setIsOffline(false);
       setBackendError(false);
       // Save for offline use
       localStorage.setItem("ag_clients_cache", JSON.stringify(sorted));
       localStorage.setItem("ag_tasks_cache", JSON.stringify(t));
+      localStorage.setItem("ag_lists_cache", JSON.stringify(l));
     }).catch(err => {
       clearTimeout(timeout);
       console.warn("Backend not reachable, loading from cache...", err);
@@ -239,9 +244,11 @@ export default function Dashboard() {
       // Try to load from localStorage cache
       const cachedClients = JSON.parse(localStorage.getItem("ag_clients_cache") || "[]");
       const cachedTasks = JSON.parse(localStorage.getItem("ag_tasks_cache") || "[]");
+      const cachedLists = JSON.parse(localStorage.getItem("ag_lists_cache") || "[]");
       
       setClients(cachedClients);
       setTasks(cachedTasks);
+      setCustomLists(cachedLists);
       setLoading(false);
       setIsOffline(true);
       setBackendError(true);
@@ -475,11 +482,47 @@ export default function Dashboard() {
     const clientName = clients.find(c => c.id === sidebarInlineAdd)?.name || "";
     const r = await fetch(`${API}/tasks`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: sidebarInlineText.trim(), client_id: sidebarInlineAdd, client_name: clientName, priority: "media", due_date: "", notes: "", estimated_time: "" })
+      body: JSON.stringify({ 
+        title: sidebarInlineText.trim(), 
+        client_id: sidebarInlineAdd, 
+        client_name: clientName, 
+        priority: "media", 
+        due_date: "", 
+        notes: "", 
+        estimated_time: "",
+        list_id: activeCustomListId || "" 
+      })
     });
     if (r.ok) { const t = await r.json(); setTasks(p => [t, ...p]); }
     setSidebarInlineText("");
     setSidebarInlineAdd(null);
+  }
+
+  /* ─── list helpers ─── */
+  async function createCustomList() {
+    const title = prompt("Nome della nuova lista:");
+    if (!title) return;
+    const color = "#007aff";
+    const r = await fetch(`${API}/lists`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, color, icon: "list" })
+    });
+    if (r.ok) {
+      const newList = await r.json();
+      setCustomLists(p => [...p, newList]);
+      setActiveCustomListId(newList.id);
+      setActiveSmartList("all"); // Switch to focus on custom list
+      setSection("tasks");
+    }
+  }
+
+  async function deleteCustomList(id: string) {
+    if (!confirm("Sei sicuro di voler eliminare questa lista? Le task non verranno eliminate ma rimosse dalla lista.")) return;
+    const r = await fetch(`${API}/lists/${id}`, { method: "DELETE" });
+    if (r.ok) {
+      setCustomLists(p => p.filter(l => l.id !== id));
+      if (activeCustomListId === id) setActiveCustomListId(null);
+    }
   }
 
   /* ─── AI sort ─── */
@@ -661,7 +704,6 @@ export default function Dashboard() {
   }
 
   const topNavItems: { key: WsSection; icon: any; label: string; badge?: number }[] = [
-    { key: "tasks", icon: ClipboardDocumentListIcon, label: "Tasks", badge: todoCount || undefined },
     { key: "angoli", icon: LightBulbIcon, label: "Angoli" },
     { key: "script", icon: DocumentTextIcon, label: "Script Video" },
     { key: "copy", icon: PencilSquareIcon, label: "Copy" },
@@ -728,6 +770,40 @@ export default function Dashboard() {
                   <div className="smart-list-count">{sl.count}</div>
                 </div>
                 <div className="smart-list-label">{sl.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="home-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 14px 8px" }}>
+            <span className="home-section-label" style={{ padding: 0, margin: 0 }}>Mie Liste</span>
+            <button onClick={createCustomList} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", display: "flex" }}>
+              <PlusIcon width={14} height={14} />
+            </button>
+          </div>
+          
+          <div className="custom-lists-container">
+            {customLists.map(list => (
+              <div 
+                key={list.id} 
+                className={`custom-list-item ${activeCustomListId === list.id ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveCustomListId(list.id);
+                  setActiveSmartList("all");
+                  setActiveClientFilter(null);
+                  setSection("tasks");
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 14px", cursor: "pointer", position: "relative" }}
+              >
+                <div className="list-bullet" style={{ backgroundColor: list.color || "#007aff" }} />
+                <span style={{ flex: 1, fontSize: 13, color: activeCustomListId === list.id ? "#fff" : "rgba(255,255,255,0.7)" }}>{list.title}</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                  {tasks.filter(t => t.status !== "done" && t.list_id === list.id).length}
+                </span>
+                <button 
+                  className="list-delete-btn"
+                  onClick={(e) => { e.stopPropagation(); deleteCustomList(list.id); }}
+                  style={{ background: "none", border: "none", color: "rgba(239,68,68,0.5)", cursor: "pointer", fontSize: 10, padding: 4 }}
+                >✕</button>
               </div>
             ))}
           </div>
@@ -896,6 +972,11 @@ export default function Dashboard() {
                 clients={clients}
                 activeClientFilter={activeClientFilter}
                 setActiveClientFilter={setActiveClientFilter}
+                activeSmartList={activeSmartList as any}
+                setActiveSmartList={setActiveSmartList as any}
+                activeCustomListId={activeCustomListId}
+                setActiveCustomListId={setActiveCustomListId}
+                customLists={customLists}
                 onAiSort={() => {
                   setAiSorting(true);
                   const todoAndDoing = tasks.filter(t => t.status !== "done");

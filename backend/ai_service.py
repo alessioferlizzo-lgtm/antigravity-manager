@@ -5,7 +5,7 @@ import json_repair
 import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from .notion_service import notion_service, NOTION_ANGLES_VAULT_DB_ID, NOTION_COPY_VAULT_DB_ID
+from notion_service import notion_service, NOTION_ANGLES_VAULT_DB_ID, NOTION_COPY_VAULT_DB_ID
 
 # Caricamento prioritario del file .env in backend/
 env_path = os.path.join(os.path.dirname(__file__), ".env")

@@ -63,14 +63,6 @@ function formatDateBadge(dateStr: string, status: string) {
   return { label: d.toLocaleDateString("it-IT", { day: "numeric", month: "short" }), color: "#636366", pulse: false };
 }
 
-const TASK_TYPES: Record<string, { label: string; color: string; emoji: string }> = {
-  ads:       { label: "ADS",       color: "#007aff", emoji: "📣" },
-  report:    { label: "Report",    color: "#ff9500", emoji: "📊" },
-  contenuto: { label: "Contenuto", color: "#34c759", emoji: "🎬" },
-  chiamata:  { label: "Chiamata",  color: "#ff3b30", emoji: "📞" },
-  admin:     { label: "Admin",     color: "#8e8e93", emoji: "⚙️" },
-};
-
 const FREQ_LABELS: Record<string, string> = {
   daily: "Ogni giorno", weekly: "Ogni settimana", monthly: "Ogni mese"
 };
@@ -78,12 +70,19 @@ const FREQ_LABELS: Record<string, string> = {
 
 
 
+export type SmartListId = "oggi" | "scadute" | "scheduled" | "all" | "completed";
+
 interface TasksSectionProps {
   tasks: Task[];
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   clients: Client[];
   activeClientFilter: string | null;
   setActiveClientFilter: (id: string | null) => void;
+  activeSmartList: SmartListId;
+  setActiveSmartList: (id: SmartListId) => void;
+  activeCustomListId: string | null;
+  setActiveCustomListId: (id: string | null) => void;
+  customLists: any[];
   onAiSort: () => void;
   aiSorting: boolean;
   isOffline?: boolean;
@@ -93,26 +92,27 @@ interface TasksSectionProps {
 const STATUS_CYCLE: Record<string, string> = { todo: "doing", doing: "done", done: "todo" };
 const PRIORITY_ORDER: Record<string, number> = { alta: 0, media: 1, bassa: 2 };
 
-type SmartListId = "oggi" | "scadute" | "scheduled" | "all" | "completed";
 
 /* ════════════════════════════════════════════════════════════════
    TASKS SECTION COMPONENT
 ════════════════════════════════════════════════════════════════ */
 export default function TasksSection({
-  tasks, setTasks, clients, activeClientFilter, setActiveClientFilter, onAiSort, aiSorting, isOffline
+  tasks, setTasks, clients, 
+  activeClientFilter, setActiveClientFilter, 
+  activeSmartList, setActiveSmartList,
+  activeCustomListId, setActiveCustomListId,
+  customLists,
+  onAiSort, aiSorting, isOffline
 }: TasksSectionProps) {
 
 
-  /* ─── smart list ─── */
-  const [activeSmartList, setActiveSmartList] = useState<SmartListId>("all");
+  /* ─── internal filters ─── */
   const [fPriority, setFPriority] = useState("all");
-  const [fType, setFType] = useState("all");
   const [search, setSearch] = useState("");
 
   /* ─── quick add ─── */
   const [quickAdd, setQuickAdd] = useState("");
   const [quickAddDate, setQuickAddDate] = useState("");
-  const [quickAddType, setQuickAddType] = useState("");
   const [quickAddLoading, setQuickAddLoading] = useState(false);
   const quickAddRef = useRef<HTMLInputElement>(null);
 
@@ -206,8 +206,8 @@ export default function TasksSection({
 
   const filteredTasks = getBaseList()
     .filter(t => !activeClientFilter || t.client_id === activeClientFilter)
+    .filter(t => !activeCustomListId || t.list_id === activeCustomListId)
     .filter(t => fPriority === "all" || t.priority === fPriority)
-    .filter(t => fType === "all" || t.task_type === fType)
     .filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.client_name?.toLowerCase().includes(search.toLowerCase()));
 
   const displayTasks: Task[] = (() => {
@@ -245,18 +245,88 @@ export default function TasksSection({
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   })();
 
+  /* ─── NLP Parsing Logic ─── */
+  const parseNLP = (text: string) => {
+    let title = text;
+    let clientId = "";
+    let clientName = "";
+    let priority = "media";
+    let dueDate = "";
+
+    // 1. Extract Client (@ClientName)
+    const clientMatch = text.match(/@(\w+)/);
+    if (clientMatch) {
+      const slug = clientMatch[1].toLowerCase();
+      const found = clients.find(c => c.name.toLowerCase().includes(slug));
+      if (found) {
+        clientId = found.id;
+        clientName = found.name;
+        title = title.replace(clientMatch[0], "").trim();
+      }
+    }
+
+    // 2. Extract Priority (!alta, !media, !bassa or !1, !2, !3)
+    const priorityMatch = text.match(/!(\w+|[1-3])/);
+    if (priorityMatch) {
+      const p = priorityMatch[1].toLowerCase();
+      if (p === "alta" || p === "1") priority = "alta";
+      else if (p === "bassa" || p === "3") priority = "bassa";
+      else priority = "media";
+      title = title.replace(priorityMatch[0], "").trim();
+    }
+
+    // 3. Extract Dates (oggi, domani, lunedi, etc.)
+    const dateKeywords: Record<string, number> = {
+      "oggi": 0, "domani": 1, "dopodomani": 2,
+      "lunedi": 1, "martedi": 2, "mercoledi": 3, "giovedi": 4, "venerdi": 5, "sabato": 6, "domenica": 0
+    };
+    
+    // Simple word match for dates
+    const words = title.toLowerCase().split(" ");
+    for (const word of words) {
+      if (dateKeywords[word] !== undefined) {
+        const d = new Date();
+        if (word === "oggi" || word === "domani" || word === "dopodomani") {
+          d.setDate(d.getDate() + dateKeywords[word]);
+        } else {
+          // day of week
+          const targetDay = dateKeywords[word];
+          const currentDay = d.getDay();
+          let diff = targetDay - currentDay;
+          if (diff <= 0) diff += 7;
+          d.setDate(d.getDate() + diff);
+        }
+        dueDate = d.toISOString().split("T")[0];
+        // Remove the date word from title if it's a known keyword
+        title = title.split(" ").filter(w => w.toLowerCase() !== word).join(" ");
+        break;
+      }
+    }
+
+    // Fallback to manual date if NLP didn't find one but quickAddDate is set
+    if (!dueDate && quickAddDate) dueDate = quickAddDate;
+
+    return { title: title || "Nuova task", clientId, clientName, priority, dueDate };
+  };
+
+  const nlpData = parseNLP(quickAdd);
+
   /* ─── quick add ─── */
   async function handleQuickAdd() {
     if (!quickAdd.trim()) return;
     setQuickAddLoading(true);
-    const clientId = activeClientFilter || "";
-    const clientName = clientId ? (clients.find(c => c.id === clientId)?.name || "") : "";
+    
+    const { title, clientId, clientName, priority, dueDate } = nlpData;
+    
     const payload = {
-      title: quickAdd.trim(),
-      client_id: clientId, client_name: clientName,
-      priority: "media", due_date: quickAddDate,
-      notes: "", estimated_time: "",
-      task_type: quickAddType,
+      title,
+      client_id: clientId || activeClientFilter || "",
+      client_name: clientName || (activeClientFilter ? (clients.find(c => c.id === activeClientFilter)?.name || "") : ""),
+      priority,
+      due_date: dueDate,
+      notes: "",
+      estimated_time: "",
+      list_id: activeCustomListId || "",
     };
 
     try {
@@ -270,9 +340,10 @@ export default function TasksSection({
       } else throw new Error("Server error");
     } catch (err) {
       console.error("Task creation failed:", err);
-      alert("❌ Errore: Impossibile salvare la task online. Assicurati che il server sia attivo.");
+      alert("❌ Errore: Impossibile salvare la task online.");
     }
-    setQuickAdd(""); setQuickAddDate(""); setQuickAddType("");
+    setQuickAdd(""); 
+    setQuickAddDate("");
     setQuickAddLoading(false);
   }
 
@@ -503,81 +574,6 @@ export default function TasksSection({
 
   return (
     <div className="tasks-root">
-      {/* ════ LEFT PANEL ════ */}
-      <div className="tasks-left">
-        {/* Smart Lists grid */}
-        <div className="tasks-smart-grid">
-          {smartLists.map(sl => (
-            <button
-              key={sl.id}
-              className={`tasks-smart-card ${activeSmartList === sl.id ? "active" : ""}`}
-              style={{ "--sl-color": sl.color } as React.CSSProperties}
-              onClick={() => { setActiveSmartList(sl.id); setActiveClientFilter(null); }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div className="tasks-smart-icon">
-                  <sl.icon width={22} height={22} />
-                </div>
-                <span className="tasks-smart-count" style={{ color: sl.id === "scadute" && sl.count > 0 ? "#ff3b30" : undefined }}>
-                  {sl.count}
-                </span>
-              </div>
-              <div className="tasks-smart-label">{sl.label}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* Type filter */}
-        <div style={{ padding: "4px 12px 8px" }}>
-          <div className="tasks-section-label">Tipo</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-            <button
-              className={`tasks-type-chip ${fType === "all" ? "active" : ""}`}
-              onClick={() => setFType("all")}
-            >Tutti</button>
-            {Object.entries(TASK_TYPES).map(([key, val]) => (
-              <button
-                key={key}
-                className={`tasks-type-chip ${fType === key ? "active" : ""}`}
-                style={{ "--chip-color": val.color } as React.CSSProperties}
-                onClick={() => setFType(key === fType ? "all" : key)}
-              >
-                {val.emoji} {val.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Client filter */}
-        <div style={{ padding: "0 12px 8px" }}>
-          <div className="tasks-section-label">Cliente</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <button
-              className={`tasks-client-row ${!activeClientFilter ? "active" : ""}`}
-              onClick={() => setActiveClientFilter(null)}
-            >
-              <InboxIcon width={14} />
-              <span>Tutti</span>
-            </button>
-            {clients.map(c => {
-              const cnt = tasks.filter(t => t.status !== "done" && t.client_id === c.id).length;
-              return (
-                <button
-                  key={c.id}
-                  className={`tasks-client-row ${activeClientFilter === c.id ? "active" : ""}`}
-                  onClick={() => setActiveClientFilter(activeClientFilter === c.id ? null : c.id)}
-                >
-                  <div className="tasks-client-avatar" style={{ background: avatarColor(c.name) }}>
-                    {initials(c.name)}
-                  </div>
-                  <span>{c.name}</span>
-                  {cnt > 0 && <span className="tasks-client-badge">{cnt}</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* ════ MAIN CONTENT ════ */}
       <div className="tasks-main">
@@ -651,43 +647,49 @@ export default function TasksSection({
         </div>
 
         {/* ─── Quick add ─── */}
-        <div className="tasks-quickadd">
-          <div className="tasks-quickadd-circle">
-            <PlusIcon width={14} />
+        <div className="tasks-quickadd-container">
+          <div className="tasks-quickadd">
+            <div className="tasks-quickadd-circle">
+              <PlusIcon width={14} />
+            </div>
+            <input
+              ref={quickAddRef}
+              value={quickAdd}
+              onChange={e => setQuickAdd(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleQuickAdd(); }}
+              placeholder='Nuova task... (es: Draft @Cliente !alta domani)'
+              className="tasks-quickadd-input"
+            />
+            {/* Date input - Optional manual fallback */}
+            <input
+              type="date"
+              value={quickAddDate}
+              onChange={e => setQuickAddDate(e.target.value)}
+              className="tasks-quickadd-date"
+            />
+            <button
+              onClick={handleQuickAdd}
+              disabled={!quickAdd.trim() || quickAddLoading}
+              className="tasks-quickadd-btn"
+            >
+              {quickAddLoading ? "..." : "Aggiungi"}
+            </button>
           </div>
-          <input
-            ref={quickAddRef}
-            value={quickAdd}
-            onChange={e => setQuickAdd(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") handleQuickAdd(); }}
-            placeholder='Nuova task... (premi N per focus)'
-            className="tasks-quickadd-input"
-          />
-          {/* Type selector */}
-          <select
-            value={quickAddType}
-            onChange={e => setQuickAddType(e.target.value)}
-            className="tasks-quickadd-select"
-          >
-            <option value="">Tipo...</option>
-            {Object.entries(TASK_TYPES).map(([k, v]) => (
-              <option key={k} value={k}>{v.emoji} {v.label}</option>
-            ))}
-          </select>
-          {/* Date input */}
-          <input
-            type="date"
-            value={quickAddDate}
-            onChange={e => setQuickAddDate(e.target.value)}
-            className="tasks-quickadd-date"
-          />
-          <button
-            onClick={handleQuickAdd}
-            disabled={!quickAdd.trim() || quickAddLoading}
-            className="tasks-quickadd-btn"
-          >
-            {quickAddLoading ? "..." : "Aggiungi"}
-          </button>
+
+          {/* NLP Feedback Badges */}
+          {quickAdd.trim() && (
+            <div className="tasks-nlp-feedback">
+              {nlpData.clientName && (
+                <span className="nlp-badge nlp-badge-client">@ {nlpData.clientName}</span>
+              )}
+              {nlpData.dueDate && (
+                <span className="nlp-badge nlp-badge-date">📅 {nlpData.dueDate}</span>
+              )}
+              <span className={`nlp-badge nlp-badge-priority priority-${nlpData.priority}`}>
+                {nlpData.priority === "alta" ? "!!!" : nlpData.priority === "media" ? "!!" : "!"} {nlpData.priority}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ─── Filters bar ─── */}
@@ -702,10 +704,10 @@ export default function TasksSection({
               {p === "alta" ? "🔴" : p === "media" ? "🟠" : "⚪"} {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
-          {(fPriority !== "all" || fType !== "all" || search || activeClientFilter) && (
+          {(fPriority !== "all" || search || activeClientFilter) && (
             <button
               className="tasks-filter-clear"
-              onClick={() => { setFPriority("all"); setFType("all"); setSearch(""); setActiveClientFilter(null); }}
+              onClick={() => { setFPriority("all"); setSearch(""); setActiveClientFilter(null); }}
             >
               <XMarkIcon width={12} /> Pulisci
             </button>
@@ -785,6 +787,7 @@ export default function TasksSection({
           form={drawerForm}
           setForm={setDrawerForm}
           clients={clients}
+          customLists={customLists}
           saving={drawerSaving}
           onSave={saveDrawer}
           onClose={() => setDrawerTask(null)}
@@ -827,7 +830,6 @@ function TaskCard({
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const isDone = task.status === "done";
-  const typeInfo = task.task_type ? TASK_TYPES[task.task_type] : null;
   const dateBadge = formatDateBadge(task.due_date, task.status);
   const doneSubtasks = (task.subtasks || []).filter(s => s.done).length;
   const totalSubtasks = (task.subtasks || []).length;
@@ -841,7 +843,7 @@ function TaskCard({
       onDragEnd={onDragEnd}
       className={`task-card ${isDone ? "done" : ""} ${completing ? "completing" : ""} ${hidden ? "hiding" : ""} ${dragOver ? "drag-over" : ""}`}
       style={{
-        "--task-type-color": typeInfo?.color || "transparent",
+        "--task-type-color": "transparent",
       } as React.CSSProperties}
     >
       {/* Left border accent */}
@@ -860,17 +862,17 @@ function TaskCard({
         {/* Content */}
         <div className="task-card-content" onClick={() => onOpen(task)}>
           <div className="task-card-title-row">
+            {task.priority !== "bassa" && (
+              <span className={`task-priority-marker priority-${task.priority}`}>
+                {task.priority === "alta" ? "!!!" : "!!"}
+              </span>
+            )}
             <span className={`task-card-title ${isDone ? "done" : ""}`}>{task.title}</span>
             {task.recurring && <span className="task-recurring-badge" title={FREQ_LABELS[task.recurring_frequency || ""] || "Ricorrente"}>🔁</span>}
           </div>
 
           {/* Badges row */}
           <div className="task-badges">
-            {typeInfo && (
-              <span className="task-badge task-badge-type" style={{ background: typeInfo.color + "22", color: typeInfo.color }}>
-                {typeInfo.emoji} {typeInfo.label}
-              </span>
-            )}
             {task.client_name && (
               <span className="task-badge task-badge-client">
                 <span className="task-badge-avatar" style={{ background: avatarColor(task.client_name) }}>
@@ -882,20 +884,17 @@ function TaskCard({
             {dateBadge && (
               <span
                 className={`task-badge task-badge-date ${dateBadge.pulse ? "pulse" : ""}`}
-                style={{ background: dateBadge.color + "22", color: dateBadge.color, borderColor: dateBadge.color + "44" }}
+                style={{ color: dateBadge.color }}
               >
-                📅 {dateBadge.label}
+                {dateBadge.label}
               </span>
             )}
             {task.estimated_time && (
-              <span className="task-badge task-badge-time">⏱ {task.estimated_time}</span>
+              <span className="task-badge task-badge-time">{task.estimated_time}</span>
             )}
-            <span className={`task-badge task-badge-priority priority-${task.priority}`}>
-              {task.priority === "alta" ? "🔴" : task.priority === "media" ? "🟠" : "⚪"} {task.priority}
-            </span>
             {totalSubtasks > 0 && (
               <span className="task-badge task-badge-subtasks">
-                ✓ {doneSubtasks}/{totalSubtasks}
+                {doneSubtasks}/{totalSubtasks} sotto-task
               </span>
             )}
           </div>
@@ -967,13 +966,14 @@ interface TaskDrawerProps {
   setSubtaskInput: (v: string) => void;
   onToggleSubtask: (t: Task, stId: string) => void;
   onDeleteSubtask: (t: Task, stId: string) => void;
+  customLists: any[];
 }
 
 function TaskDrawer({
   task, form, setForm, clients, saving, onSave, onClose,
-  onAddSubtask, subtaskInput, setSubtaskInput, onToggleSubtask, onDeleteSubtask
+  onAddSubtask, subtaskInput, setSubtaskInput, onToggleSubtask, onDeleteSubtask,
+  customLists
 }: TaskDrawerProps) {
-  const typeInfo = form.task_type ? TASK_TYPES[form.task_type] : null;
   const subtasks = task.subtasks || [];
   const doneCount = subtasks.filter(s => s.done).length;
   const [titleEdit, setTitleEdit] = useState(false);
@@ -989,9 +989,6 @@ function TaskDrawer({
         {/* Header */}
         <div className="task-drawer-header">
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {typeInfo && (
-              <span style={{ fontSize: 20 }}>{typeInfo.emoji}</span>
-            )}
             {titleEdit ? (
               <input
                 autoFocus
@@ -1040,13 +1037,13 @@ function TaskDrawer({
               </select>
             </div>
 
-            {/* Tipo */}
+            {/* Lista */}
             <div className="task-drawer-field">
-              <label>Tipo</label>
-              <select value={form.task_type || ""} onChange={e => set("task_type", e.target.value)}>
-                <option value="">— nessuno —</option>
-                {Object.entries(TASK_TYPES).map(([k, v]) => (
-                  <option key={k} value={k}>{v.emoji} {v.label}</option>
+              <label>Lista</label>
+              <select value={form.list_id || ""} onChange={e => set("list_id", e.target.value)}>
+                <option value="">— Nessuna lista —</option>
+                {customLists.map(l => (
+                  <option key={l.id} value={l.id}>{l.title}</option>
                 ))}
               </select>
             </div>

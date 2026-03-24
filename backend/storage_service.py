@@ -11,6 +11,8 @@ from datetime import datetime
 PROJECT_ROOT = Path(__file__).parent.parent
 CLIENTS_DIR = PROJECT_ROOT / "clients"
 TASKS_FILE = PROJECT_ROOT / "tasks.json"
+LISTS_FILE = PROJECT_ROOT / "lists.json"
+
 
 # ─────────────────────────────────────────────────────────────────
 # Supabase — lazy init, fail-silent
@@ -219,22 +221,42 @@ class StorageService:
         with open(TASKS_FILE, "r") as f:
             return json.load(f)
 
-    def save_tasks(self, tasks: List[Dict[str, Any]]):
+    def save_tasks(self, tasks: List[Dict]):
         with open(TASKS_FILE, "w") as f:
             json.dump(tasks, f, indent=4)
-        def _sync(sb):
-            sb.table("tasks").delete().neq("id", "____never____").execute()
-            if tasks:
-                rows = [{"id": t["id"], "data": t, "created_at": t.get("created_at", datetime.now().isoformat())} for t in tasks]
-                sb.table("tasks").insert(rows).execute()
-        _sb_run(_sync)
+        _sb_run(lambda sb: sb.table("tasks").delete().neq("id", "0").execute()) # Clear all
+        for t in tasks:
+            _sb_run(lambda sb: sb.table("tasks").insert({"data": t}).execute())
+
+    # ─── LISTS CRUD ───────────────────────────────────────────────
+    def get_lists(self) -> List[Dict]:
+        if not LISTS_FILE.exists():
+            return []
+        try:
+            with open(LISTS_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def save_lists(self, lists: List[Dict]):
+        with open(LISTS_FILE, "w") as f:
+            json.dump(lists, f, indent=4)
+        # Sync to Supabase table 'task_lists'
+        def _sync_lists(sb):
+            try:
+                sb.table("task_lists").delete().neq("id", "0").execute()
+                for l in lists:
+                    sb.table("task_lists").insert({"data": l}).execute()
+            except Exception as e:
+                print(f"[Supabase] Lists sync failed: {e}")
+        _sb_run(_sync_lists)
 
     def create_task(self, title: str, client_id: Optional[str], client_name: Optional[str],
                     priority: str, due_date: Optional[str], notes: str,
                     estimated_time: Optional[str] = "", parent_id: Optional[str] = None,
                     task_type: Optional[str] = "", subtasks: Optional[List[Dict]] = None,
                     recurring: Optional[bool] = False, recurring_frequency: Optional[str] = "",
-                    reminder_at: Optional[str] = "") -> Dict[str, Any]:
+                    reminder_at: Optional[str] = "", list_id: Optional[str] = "") -> Dict[str, Any]:
         tasks = self.get_tasks()
         task = {
             "id": str(uuid.uuid4()), "title": title,
@@ -248,6 +270,7 @@ class StorageService:
             "recurring": recurring or False,
             "recurring_frequency": recurring_frequency or "",
             "reminder_at": reminder_at or "",
+            "list_id": list_id or "",
             "completed_at": None,
             "created_at": datetime.now().isoformat()
         }
@@ -460,6 +483,16 @@ class StorageService:
             print(f"[Supabase] Synced {len(tasks)} tasks")
         except Exception as e:
             print(f"[Supabase] Tasks sync failed: {e}")
+
+        # 3b. Lists
+        try:
+            result = sb.table("task_lists").select("data").execute()
+            l_lists = [row["data"] for row in result.data]
+            with open(LISTS_FILE, "w") as f:
+                json.dump(l_lists, f, indent=4)
+            print(f"[Supabase] Synced {len(l_lists)} lists")
+        except Exception as e:
+            print(f"[Supabase] Lists sync failed: {e}")
 
         # 4. Reports
         try:
