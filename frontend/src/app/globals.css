@@ -2121,22 +2121,28 @@ textarea.input {
 }
 
 .tasks-filter-chip {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.5);
+  padding: 6px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.08);
+  border: 1.5px solid transparent;
+  color: rgba(255,255,255,0.7);
   cursor: pointer;
-  font-family: inherit;
-  transition: all 0.14s;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.tasks-filter-chip:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.tasks-filter-chip:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  transform: translateY(-1px);
+}
 .tasks-filter-chip.active {
-  background: color-mix(in srgb, var(--fc-color, #fff) 20%, transparent);
+  background: var(--fc-color, #fff);
   border-color: var(--fc-color, #fff);
-  color: var(--fc-color, #fff);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1);
+  font-weight: 700;
 }
 
 .tasks-filter-clear {
@@ -2184,14 +2190,21 @@ textarea.input {
 /* Individual Card - More compact and subtle */
 .task-card {
   position: relative;
-  background: transparent;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  transition: all 0.2s;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  padding: 14px 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .task-card:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.05);
+  transform: translateY(-1px);
 }
 
 .task-card.done {
