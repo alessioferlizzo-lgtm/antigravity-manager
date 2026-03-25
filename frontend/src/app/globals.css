@@ -13,42 +13,28 @@
 
 
 :root {
-  /* Brand Core - Apple Reminders Light Theme */
-  --navy: #f2f2f7; /* Sfondo Sidebar macOS/iOS */
-  --orange: #007aff; /* Action Blue Apple */
-  --lime: #34c759; /* Green Apple */
+  /* Brand Core - Antigravity identity */
+  --navy: #042558; /* Sfondo Sidebar Brand Navy */
+  --orange: #f2901a; /* Action Orange Brand */
+  --lime: #a3d906; /* Lime Brand */
   --text-dark: #000000;
-  --gray-mid: #e5e5ea; /* Separatori Apple */
+  --gray-mid: #e5e5ea;
 
   /* Derivatives & System Colors */
-  --navy-mid: #e5e5ea;
-  --navy-light: #d1d1d6;
+  --page-bg: #f8f9fb; /* Subtle off-white for better contrast */
+  --navy-light: #f2f2f7; 
   --navy-card: #ffffff;
 
-  --orange-dark: #005bb5;
-  --lime-dark: #248a3d;
-  --lime-deep: #1e7132;
-
-  /* Sfondi principali e Card Base */
-  --page-bg: #ffffff; /* Sfondo principale bianco */
-  --card-bg: #ffffff;
-  --inset-bg: #f9f9eb; /* Sfondo input / inserti leggeri */
-
-  /* Bordi */
-  --border: rgba(0, 0, 0, 0.08); /* Bordi molto delicati */
-  --border-mid: rgba(0, 0, 0, 0.15);
-
-  /* Testo System (Sfondo Principale Bianco) */
+  /* System Colors for text on light backgrounds */
   --text-primary: #000000;
   --text-body: #1c1c1e;
   --text-muted: #8e8e93;
   --text-xmuted: #c7c7cc;
 
-  /* Testo System (Light Mode = sfondo card/sidebar) */
-  --text-dark-primary: var(--text-dark);
-  --text-dark-body: var(--text-dark);
-  --text-dark-muted: #8e8e93;
-  --text-dark-xmuted: #c7c7cc;
+  /* Text on dark sidebar */
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: rgba(255,255,255,0.6);
+  --sidebar-accent: rgba(255,255,255,0.1);
 
   --sidebar-w: 240px;
 }
@@ -1710,12 +1696,13 @@ textarea.input {
 
 /* ─── Left panel ─── */
 .tasks-left {
-  width: 230px;
-  min-width: 230px;
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  border-right: 1px solid rgba(255,255,255,0.08);
+  background: var(--navy);
+  color: var(--sidebar-text);
   padding: 12px 0;
   display: flex;
   flex-direction: column;
@@ -1731,8 +1718,8 @@ textarea.input {
 }
 
 .tasks-smart-card {
-  background: rgba(255,255,255,0.05);
-  border: 1.5px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 14px;
   padding: 12px 12px 10px;
   cursor: pointer;
@@ -1742,6 +1729,7 @@ textarea.input {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  color: var(--sidebar-text);
 }
 
 .tasks-smart-card:hover {
@@ -1864,6 +1852,8 @@ textarea.input {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background: var(--page-bg);
+  position: relative;
 }
 
 .tasks-header {
@@ -2711,22 +2701,20 @@ textarea.input {
 }
 
 .smart-list-card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
-  border: 1px solid transparent;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .smart-list-card:hover {
-  background: #fdfdfd;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .smart-list-card.active {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
   border: 1.5px solid var(--orange);
 }
 
@@ -2743,18 +2731,18 @@ textarea.input {
 .smart-list-count {
   font-size: 22px;
   font-weight: 700;
-  color: #000;
+  color: var(--sidebar-text);
 }
 
 .smart-list-label {
   font-size: 13px;
   font-weight: 600;
-  color: #8e8e93;
+  color: var(--sidebar-text-muted);
   margin-top: 4px;
 }
 
 .smart-list-card.active .smart-list-label {
-  color: #000;
+  color: var(--sidebar-text);
 }
 
 .home-section-header {
@@ -2775,7 +2763,7 @@ textarea.input {
   padding: 8px 16px;
   border-radius: 8px;
   margin: 0 8px;
-  color: #000;
+  color: var(--sidebar-text);
 }
 
 .custom-list-item:hover {
