@@ -91,7 +91,7 @@ class SmartListsService:
 
     def __init__(self):
         # Import qui per evitare circular imports
-        from storage_service import _get_sb
+        from .storage_service import _get_sb
         self.sb = _get_sb()
 
     def get_all_smart_lists(self) -> List[Dict]:
