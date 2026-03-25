@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
 /*
   BRAND ANTIGRAVITY — COLOR SYSTEM
@@ -11,7 +11,7 @@
   · #f3f4f6  → sfondi intermedi/card alternative
 */
 
-@layer base {
+
 :root {
   /* Brand Core - Alessio Ferlizzo */
   --navy: #042558;
@@ -2953,4 +2953,4 @@ textarea.input {
   border-radius: 2px;
 }
 
-} /* Close @layer base */
+
