@@ -1598,9 +1598,9 @@ textarea.input {
 .smart-list-label {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: #ffffff !important; /* Force White for high contrast on Navy cards */
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 .smart-list-count {
@@ -2408,14 +2408,19 @@ textarea.input {
 
 .tasks-header {
   padding: 24px 0 8px;
-  font-size: 28px;
-  font-weight: 800;
-  color: #042558; /* Changed from Orange/White to Brand Navy for visibility */
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #e5e5e7;
   margin-bottom: 16px;
+}
+
+.tasks-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #042558 !important; /* Force Brand Navy for visibility */
+  margin: 0;
+  letter-spacing: -0.03em;
 }
 
 /* ─── TASK ROW (formerly card) ─── */
