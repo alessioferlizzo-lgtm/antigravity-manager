@@ -959,14 +959,40 @@ export default function Dashboard() {
 
         <div className="home-sidebar-scroll">
           {/* ═══ Apple Smart Lists ═══ */}
+          <div style={{ padding: "0 8px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Smart Lists</span>
+              <button
+                onClick={() => openSmartListEditor()}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "rgba(255,255,255,0.5)",
+                  cursor: "pointer",
+                  display: "flex",
+                  padding: 4,
+                  borderRadius: 4,
+                  transition: "all 0.15s"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                title="Crea nuova Smart List"
+              >
+                <PlusIcon width={14} height={14} />
+              </button>
+            </div>
+          </div>
+
           <div className="smart-lists-grid">
-            {smartLists.filter(sl => sl.is_system).map(sl => {
+            {smartLists.map(sl => {
               // Map icon names to components
               const iconMap: Record<string, any> = {
                 "calendar": CalendarIcon,
                 "inbox": InboxIcon,
                 "flag": FlagIconSolid,
                 "check-circle": CheckCircleIcon,
+                "list": InboxIcon,
+                "star": FlagIconSolid,
               };
               const IconComponent = iconMap[sl.icon] || InboxIcon;
 
@@ -980,6 +1006,13 @@ export default function Dashboard() {
                     setActiveCustomListId(null);
                     setSection("tasks");
                   }}
+                  onContextMenu={(e) => {
+                    if (!sl.is_system) {
+                      e.preventDefault();
+                      openSmartListEditor(sl);
+                    }
+                  }}
+                  style={{ position: "relative" }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <div className="smart-list-icon" style={{ backgroundColor: sl.color }}>
@@ -988,88 +1021,42 @@ export default function Dashboard() {
                     <div className="smart-list-count">{getSmartListCount(sl)}</div>
                   </div>
                   <div className="smart-list-label">{sl.title}</div>
+
+                  {/* Delete button for custom Smart Lists */}
+                  {!sl.is_system && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Eliminare la Smart List "${sl.title}"?`)) {
+                          deleteSmartList(sl.id);
+                        }
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        background: "rgba(0,0,0,0.4)",
+                        border: "none",
+                        color: "#ef4444",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: 0,
+                        transition: "opacity 0.15s",
+                      }}
+                      className="smart-list-delete-btn"
+                    >×</button>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* ═══ Custom Smart Lists ═══ */}
-          {smartLists.filter(sl => !sl.is_system).length > 0 && (
-            <>
-              <div className="home-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 14px 8px" }}>
-                <span className="home-section-label" style={{ padding: 0, margin: 0 }}>Liste Intelligenti</span>
-                <button onClick={() => openSmartListEditor()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", display: "flex" }}>
-                  <PlusIcon width={14} height={14} />
-                </button>
-              </div>
-
-              <div style={{ padding: "0 8px" }}>
-                {smartLists.filter(sl => !sl.is_system).map(list => (
-                  <div
-                    key={list.id}
-                    className={`custom-list-item ${activeSmartList === list.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveSmartList(list.id);
-                      setActiveCustomListId(null);
-                      setActiveClientFilter(null);
-                      setSection("tasks");
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      openSmartListEditor(list);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "7px 14px",
-                      cursor: "pointer",
-                      position: "relative",
-                      background: activeSmartList === list.id ? "rgba(255,255,255,0.08)" : "transparent",
-                      borderRadius: 6,
-                      marginBottom: 2,
-                    }}
-                  >
-                    <div
-                      className="list-bullet"
-                      style={{
-                        backgroundColor: list.color || "#007aff",
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{
-                      flex: 1,
-                      fontSize: 13,
-                      color: activeSmartList === list.id ? "#fff" : "rgba(255,255,255,0.7)",
-                      fontWeight: activeSmartList === list.id ? 600 : 400,
-                    }}>
-                      {list.title}
-                    </span>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-                      {getSmartListCount(list)}
-                    </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteSmartList(list.id); }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "rgba(239,68,68,0.5)",
-                        cursor: "pointer",
-                        fontSize: 10,
-                        padding: 4,
-                        opacity: 0,
-                        transition: "opacity 0.15s",
-                      }}
-                      className="list-delete-btn"
-                    >✕</button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
 
           <div className="home-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 14px 8px" }}>
             <span className="home-section-label" style={{ padding: 0, margin: 0 }}>Mie Liste</span>
