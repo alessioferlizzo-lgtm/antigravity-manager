@@ -256,11 +256,21 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 }
 
 .card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
   padding: 24px;
-  color: var(--text-dark-body);
+  color: var(--text-body);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
+  transform: translateY(-2px);
 }
 
 .card .page-title,
@@ -326,84 +336,98 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  padding: 9px 18px;
-  border-radius: 8px;
+  padding: 11px 20px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.btn:hover::before {
+  opacity: 1;
 }
 
 /* Primary = orange CTA */
-.btn-primary {
-  background: var(--orange);
+.btn-primary, .btn-orange {
+  background: linear-gradient(135deg, var(--orange) 0%, #e5850f 100%);
   color: #fff;
+  box-shadow: 0 4px 16px rgba(242, 144, 26, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.btn-primary:hover {
-  background: var(--orange-dark);
+.btn-primary:hover, .btn-orange:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(242, 144, 26, 0.4);
 }
 
-.btn-primary:disabled {
-  opacity: 0.45;
+.btn-primary:active, .btn-orange:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled, .btn-orange:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* Secondary = navy (structure, confirmation) */
-.btn-secondary {
-  background: var(--navy);
-  color: #fff;
-}
-
-.btn-secondary:hover {
-  background: var(--navy-mid);
-}
-
-.btn-secondary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.btn-orange,
-.btn-primary {
-  background: var(--orange) !important;
-  color: #fff !important;
-  box-shadow: 0 4px 14px rgba(255, 158, 28, 0.4);
-}
-
-.btn-orange:hover,
-.btn-primary:hover {
-  background: var(--orange-dark) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(255, 158, 28, 0.6);
-}
-
+/* Lime button */
 .btn-lime {
-  background: var(--lime) !important;
-  color: #1a2600 !important;
-  box-shadow: 0 4px 14px rgba(199, 239, 0, 0.3);
+  background: linear-gradient(135deg, var(--lime) 0%, #95c705 100%);
+  color: #1a2600;
+  box-shadow: 0 4px 16px rgba(163, 217, 6, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-lime:hover {
-  background: var(--lime-dark) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(199, 239, 0, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(163, 217, 6, 0.4);
 }
 
+/* Secondary = navy */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Ghost button */
 .btn-ghost {
   background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border-mid);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .btn-ghost:hover {
-  color: var(--text-primary);
-  background: var(--inset-bg);
-  border-color: #bbb;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .btn-sm {
@@ -417,16 +441,30 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 ══════════════════════════ */
 .input {
   width: 100%;
-  background: var(--inset-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 13px;
-  font-size: 13px;
-  color: #333333;
-  /* <--- Explicit dark text */
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 11px 15px;
+  font-size: 14px;
+  color: #ffffff;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(5px);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(242, 144, 26, 0.1);
+}
+
+.input:hover:not(:focus) {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Custom DatePicker Styles */
