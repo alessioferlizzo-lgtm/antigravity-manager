@@ -14,15 +14,19 @@
 
 :root {
   /* Brand Core - Antigravity identity */
-  --navy: #042558; /* Sfondo Sidebar Brand Navy */
-  --orange: #f2901a; /* Action Orange Brand */
-  --lime: #a3d906; /* Lime Brand */
+  --navy: #042558;
+  /* Sfondo Sidebar Brand Navy */
+  --orange: #f2901a;
+  /* Action Orange Brand */
+  --lime: #a3d906;
+  /* Lime Brand */
   --text-dark: #000000;
   --gray-mid: #e5e5ea;
 
   /* Derivatives & System Colors */
-  --page-bg: #f8f9fb; /* Subtle off-white for better contrast */
-  --navy-light: #f2f2f7; 
+  --page-bg: #f8f9fb;
+  /* Subtle off-white for better contrast */
+  --navy-light: #f2f2f7;
   --navy-card: #ffffff;
 
   /* System Colors for text on light backgrounds */
@@ -33,8 +37,8 @@
 
   /* Text on dark sidebar */
   --sidebar-text: #ffffff;
-  --sidebar-text-muted: rgba(255,255,255,0.6);
-  --sidebar-accent: rgba(255,255,255,0.1);
+  --sidebar-text-muted: rgba(255, 255, 255, 0.6);
+  --sidebar-accent: rgba(255, 255, 255, 0.1);
 
   --sidebar-w: 240px;
 }
@@ -63,19 +67,50 @@ body {
 }
 
 /* Typography - Modern Headings */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--text-primary);
 }
 
-h1 { font-size: 32px; font-weight: 800; }
-h2 { font-size: 24px; font-weight: 700; }
-h3 { font-size: 20px; font-weight: 700; }
-h4 { font-size: 18px; font-weight: 600; }
-h5 { font-size: 16px; font-weight: 600; }
-h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+h1 {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+h4 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+h5 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+h6 {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
 
 /* ══════════════════════════
    LAYOUT
@@ -184,7 +219,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   color: #000;
   background: #ffffff;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-link svg {
@@ -328,17 +363,20 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 }
 
 /* Primary = Apple Action Color */
-.btn-primary, .btn-orange {
+.btn-primary,
+.btn-orange {
   background: var(--orange);
   color: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.btn-primary:hover, .btn-orange:hover {
+.btn-primary:hover,
+.btn-orange:hover {
   background: var(--orange-dark);
 }
 
-.btn-primary:disabled, .btn-orange:disabled {
+.btn-primary:disabled,
+.btn-orange:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
@@ -373,7 +411,8 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 }
 
 .btn-ghost:hover {
-  background: rgba(0, 122, 255, 0.08); /* Faint tint of primary action */
+  background: rgba(0, 122, 255, 0.08);
+  /* Faint tint of primary action */
 }
 
 .btn-sm {
@@ -396,7 +435,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   font-family: inherit;
   outline: none;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .input::placeholder {
@@ -973,7 +1012,8 @@ textarea.input {
 .home-sidebar {
   width: 240px;
   min-width: 240px;
-  background: #042558 !important; /* Force Brand Navy */
+  background: #042558 !important;
+  /* Force Brand Navy */
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   position: fixed;
   top: 0;
@@ -1508,46 +1548,59 @@ textarea.input {
 }
 /* ═══ Apple Reminders Style Overhaul ═══ */
 
-/* Smart List Cards */
+/* Smart List Cards - Compact & Professional */
 .smart-lists-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  padding: 16px 12px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .smart-list-card {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .smart-list-card:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-1px);
 }
 
 .smart-list-card.active {
   background: rgba(255, 255, 255, 0.15) !important;
-  border-color: #f2901a !important; /* Brand Orange */
+  border-color: #f2901a !important;
+  /* Brand Orange */
+}
+
+.smart-list-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
 }
 
 .smart-list-count {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: #ffffff !important;
 }
 
 .smart-list-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: rgba(255, 255, 255, 0.6) !important;
-  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .smart-list-count {
@@ -1649,8 +1702,17 @@ textarea.input {
   border-left: 1px solid var(--border);
 }
 
-@keyframes fadeIn { to { opacity: 1; } }
-@keyframes slideInRight { to { transform: translateX(0); } }
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  to {
+    transform: translateX(0);
+  }
+}
 
 /* Quick Add Minimalist */
 .quick-add-modern {
@@ -1717,12 +1779,12 @@ textarea.input {
 }
 
 .tasks-smart-card {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 12px 12px 10px;
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
   font-family: inherit;
   display: flex;
@@ -1732,7 +1794,7 @@ textarea.input {
 }
 
 .tasks-smart-card:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
 }
 
@@ -1756,14 +1818,14 @@ textarea.input {
 .tasks-smart-count {
   font-size: 18px;
   font-weight: 700;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1;
 }
 
 .tasks-smart-label {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* Section labels inside left panel */
@@ -1772,7 +1834,7 @@ textarea.input {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255, 255, 255, 0.3);
   padding: 6px 12px 4px;
 }
 
@@ -1782,14 +1844,18 @@ textarea.input {
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.6);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.14s;
 }
-.tasks-type-chip:hover { background: rgba(255,255,255,0.1); }
+
+.tasks-type-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .tasks-type-chip.active {
   background: color-mix(in srgb, var(--chip-color, #fff) 22%, transparent);
   border-color: var(--chip-color, #fff);
@@ -1807,7 +1873,7 @@ textarea.input {
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
   background: transparent;
   border: none;
   width: 100%;
@@ -1816,8 +1882,16 @@ textarea.input {
   white-space: nowrap;
   overflow: hidden;
 }
-.tasks-client-row:hover { color: #fff; background: rgba(255,255,255,0.05); }
-.tasks-client-row.active { color: var(--lime); background: rgba(163,217,6,0.08); }
+
+.tasks-client-row:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tasks-client-row.active {
+  color: var(--lime);
+  background: rgba(163, 217, 6, 0.08);
+}
 
 .tasks-client-avatar {
   width: 20px;
@@ -1837,7 +1911,7 @@ textarea.input {
   font-size: 10px;
   font-weight: 700;
   color: var(--lime);
-  background: rgba(163,217,6,0.12);
+  background: rgba(163, 217, 6, 0.12);
   padding: 1px 6px;
   border-radius: 8px;
   flex-shrink: 0;
@@ -1874,16 +1948,16 @@ textarea.input {
   font-size: 11px;
   font-weight: 700;
   color: #ff3b30;
-  background: rgba(255,59,48,0.15);
-  border: 1px solid rgba(255,59,48,0.3);
+  background: rgba(255, 59, 48, 0.15);
+  border: 1px solid rgba(255, 59, 48, 0.3);
   padding: 3px 9px;
   border-radius: 20px;
 }
 
 /* Search input */
 .tasks-search-input {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 6px 10px 6px 28px;
   font-size: 12px;
@@ -1893,26 +1967,44 @@ textarea.input {
   width: 160px;
   transition: all 0.15s;
 }
-.tasks-search-input:focus { border-color: rgba(255,255,255,0.3); width: 200px; }
-.tasks-search-input::placeholder { color: rgba(255,255,255,0.3); }
+
+.tasks-search-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  width: 200px;
+}
+
+.tasks-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
 
 /* View and action buttons */
-.tasks-view-btn, .tasks-icon-btn {
+.tasks-view-btn,
+.tasks-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.6);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: all 0.14s;
   font-family: inherit;
 }
-.tasks-view-btn:hover, .tasks-icon-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
-.tasks-view-btn.active { background: rgba(0,122,255,0.15); border-color: #007aff; color: #007aff; }
+
+.tasks-view-btn:hover,
+.tasks-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.tasks-view-btn.active {
+  background: rgba(0, 122, 255, 0.15);
+  border-color: #007aff;
+  color: #007aff;
+}
 
 .tasks-ai-btn {
   display: flex;
@@ -1920,8 +2012,8 @@ textarea.input {
   gap: 5px;
   padding: 6px 12px;
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(0,122,255,0.2));
-  border: 1px solid rgba(124,58,237,0.3);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 122, 255, 0.2));
+  border: 1px solid rgba(124, 58, 237, 0.3);
   color: #a78bfa;
   font-size: 12px;
   font-weight: 600;
@@ -1929,15 +2021,22 @@ textarea.input {
   font-family: inherit;
   transition: all 0.15s;
 }
-.tasks-ai-btn:hover { background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(0,122,255,0.3)); }
-.tasks-ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tasks-ai-btn:hover {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(0, 122, 255, 0.3));
+}
+
+.tasks-ai-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .tasks-quickadd-container {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(255,255,255,0.025);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding: 10px 20px;
 }
 
@@ -1950,7 +2049,8 @@ textarea.input {
 .tasks-nlp-feedback {
   display: flex;
   gap: 8px;
-  padding-left: 40px; /* Align with input text after icon */
+  padding-left: 40px;
+  /* Align with input text after icon */
   min-height: 20px;
 }
 
@@ -1959,9 +2059,9 @@ textarea.input {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 6px;
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.5);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1985,6 +2085,7 @@ textarea.input {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .tasks-form-toggle-btn:hover {
   background: var(--navy-light);
 }
@@ -1998,7 +2099,7 @@ textarea.input {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   margin-bottom: 20px;
 }
 
@@ -2016,7 +2117,10 @@ textarea.input {
   outline: none;
   background: transparent;
 }
-.form-title-input::placeholder { color: #c7c7cc; }
+
+.form-title-input::placeholder {
+  color: #c7c7cc;
+}
 
 .form-grid {
   display: grid;
@@ -2038,7 +2142,9 @@ textarea.input {
   letter-spacing: 0.05em;
 }
 
-.form-field input, .form-field select, .form-field textarea {
+.form-field input,
+.form-field select,
+.form-field textarea {
   background: var(--navy);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2049,7 +2155,9 @@ textarea.input {
   font-family: inherit;
 }
 
-.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
   border-color: var(--orange);
   background: #ffffff;
 }
@@ -2188,15 +2296,23 @@ textarea.input {
   outline: none;
   font-family: inherit;
 }
-.tasks-quickadd-input::placeholder { color: #8e8e93; }
 
-.tasks-quickadd-select, .tasks-quickadd-date {
-  color: rgba(255,255,255,0.7);
+.tasks-quickadd-input::placeholder {
+  color: #8e8e93;
+}
+
+.tasks-quickadd-select,
+.tasks-quickadd-date {
+  color: rgba(255, 255, 255, 0.7);
   font-family: inherit;
   outline: none;
   cursor: pointer;
 }
-.tasks-quickadd-select option { background: #1c1c1e; color: #fff; }
+
+.tasks-quickadd-select option {
+  background: #1c1c1e;
+  color: #fff;
+}
 
 .tasks-quickadd-btn {
   padding: 6px 14px;
@@ -2210,8 +2326,17 @@ textarea.input {
   font-family: inherit;
   transition: all 0.15s;
 }
-.tasks-quickadd-btn:hover { background: var(--lime-dark); transform: translateY(-1px); }
-.tasks-quickadd-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.tasks-quickadd-btn:hover {
+  background: var(--lime-dark);
+  transform: translateY(-1px);
+}
+
+.tasks-quickadd-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* Filters bar */
 .tasks-filters {
@@ -2228,23 +2353,25 @@ textarea.input {
   font-weight: 600;
   padding: 6px 16px;
   border-radius: 18px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   border: 1.5px solid transparent;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .tasks-filter-chip:hover {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
   transform: translateY(-1px);
 }
+
 .tasks-filter-chip.active {
   background: var(--fc-color, #fff);
   border-color: var(--fc-color, #fff);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.1);
   font-weight: 700;
 }
 
@@ -2256,13 +2383,17 @@ textarea.input {
   padding: 4px 9px;
   border-radius: 20px;
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.14s;
 }
-.tasks-filter-clear:hover { color: #fff; border-color: rgba(255,255,255,0.4); }
+
+.tasks-filter-clear:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
 
 /* Task list scroll area */
 .tasks-list {
@@ -2281,7 +2412,8 @@ textarea.input {
   padding: 24px 0 8px;
   font-size: 19px;
   font-weight: 700;
-  color: var(--orange); /* Apple Reminders uses primary color for headers */
+  color: var(--orange);
+  /* Apple Reminders uses primary color for headers */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2291,19 +2423,24 @@ textarea.input {
 
 /* ─── TASK ROW (formerly card) ─── */
 .task-card {
-  position: relative;
-  background: transparent;
-  border-bottom: 1px solid var(--border);
-  padding: 4px 0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  border: 1px solid #e5e5e7;
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 12px;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
 }
 
 .task-card:hover {
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
   z-index: 10;
+  border-color: #d1d1d6;
 }
 
 .task-card.done {
@@ -2311,18 +2448,36 @@ textarea.input {
 }
 
 .task-card.drag-over {
-  background: rgba(0,122,255,0.05);
+  background: rgba(0, 122, 255, 0.05);
   border-bottom: 2px solid var(--orange);
 }
 
 /* Completion animation */
 @keyframes task-complete {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.98); opacity: 0.5; }
-  100% { transform: scale(1); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(0.98);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
 }
-.task-card.completing .task-card-title { text-decoration: line-through; color: #8e8e93; }
-.task-card.hiding { animation: task-complete 0.4s ease-out forwards; }
+
+.task-card.completing .task-card-title {
+  text-decoration: line-through;
+  color: #8e8e93;
+}
+
+.task-card.hiding {
+  animation: task-complete 0.4s ease-out forwards;
+}
 
 /* Left color accent bar */
 .task-card-accent {
@@ -2359,11 +2514,14 @@ textarea.input {
   flex-shrink: 0;
   margin-top: 1px;
 }
+
 .task-checkbox:hover {
   border-color: var(--orange);
-  background: rgba(0,122,255,0.05);
+  background: rgba(0, 122, 255, 0.05);
 }
-.task-checkbox.checked, .task-checkbox.completing {
+
+.task-checkbox.checked,
+.task-checkbox.completing {
   background: var(--orange);
   border-color: var(--orange);
   color: #fff;
@@ -2390,12 +2548,16 @@ textarea.input {
   word-break: break-word;
   transition: color 0.2s;
 }
+
 .task-card-title.done {
   text-decoration: line-through;
   color: #8e8e93;
 }
 
-.task-recurring-badge { font-size: 13px; flex-shrink: 0; }
+.task-recurring-badge {
+  font-size: 13px;
+  flex-shrink: 0;
+}
 
 /* Badge row */
 .task-badges {
@@ -2416,16 +2578,31 @@ textarea.input {
   white-space: nowrap;
 }
 
-.task-badge-type { }
+.task-badge-type {}
+
 .task-badge-client {
   background: #f2f2f7;
   color: #3a3a3c;
   border-color: #e5e5ea;
 }
 
-.priority-alta { background: rgba(255,59,48,0.1); color: #ff3b30; border-color: rgba(255,59,48,0.2); }
-.priority-media { background: rgba(255,149,0,0.1); color: #ff9500; border-color: rgba(255,149,0,0.2); }
-.priority-bassa { background: rgba(142,142,147,0.1); color: #8e8e93; border-color: rgba(142,142,147,0.2); }
+.priority-alta {
+  background: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+  border-color: rgba(255, 59, 48, 0.2);
+}
+
+.priority-media {
+  background: rgba(255, 149, 0, 0.1);
+  color: #ff9500;
+  border-color: rgba(255, 149, 0, 0.2);
+}
+
+.priority-bassa {
+  background: rgba(142, 142, 147, 0.1);
+  color: #8e8e93;
+  border-color: rgba(142, 142, 147, 0.2);
+}
 
 /* Card right actions */
 .task-card-actions {
@@ -2436,7 +2613,10 @@ textarea.input {
   opacity: 0;
   transition: opacity 0.15s;
 }
-.task-card:hover .task-card-actions { opacity: 1; }
+
+.task-card:hover .task-card-actions {
+  opacity: 1;
+}
 
 .task-action-btn {
   width: 28px;
@@ -2451,11 +2631,26 @@ textarea.input {
   cursor: pointer;
   transition: all 0.14s;
 }
-.task-action-btn:hover { background: #e5e5ea; color: #000; }
-.task-action-btn.danger:hover { background: rgba(255,59,48,0.1); color: #ff3b30; }
 
-.task-delete-yes { background: #ff3b30; color: #fff; }
-.task-delete-no { background: #f2f2f7; color: #3a3a3c; }
+.task-action-btn:hover {
+  background: #e5e5ea;
+  color: #000;
+}
+
+.task-action-btn.danger:hover {
+  background: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+}
+
+.task-delete-yes {
+  background: #ff3b30;
+  color: #fff;
+}
+
+.task-delete-no {
+  background: #f2f2f7;
+  color: #3a3a3c;
+}
 
 /* Inline subtasks expanded */
 .task-subtasks-inline {
@@ -2463,7 +2658,7 @@ textarea.input {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 8px;
 }
 
@@ -2472,34 +2667,47 @@ textarea.input {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
   transition: all 0.15s;
 }
-.task-subtask-row.done { color: rgba(255,255,255,0.3); text-decoration: line-through; }
+
+.task-subtask-row.done {
+  color: rgba(255, 255, 255, 0.3);
+  text-decoration: line-through;
+}
 
 .task-subtask-check {
   width: 16px;
   height: 16px;
   min-width: 16px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.25);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   color: transparent;
-  transition: all 0.18s cubic-bezier(0.34,1.56,0.64,1);
+  transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
   flex-shrink: 0;
 }
-.task-subtask-check:hover { border-color: #34c759; background: rgba(52,199,89,0.1); }
-.task-subtask-check.checked { background: #34c759; border-color: #34c759; color: #fff; }
+
+.task-subtask-check:hover {
+  border-color: #34c759;
+  background: rgba(52, 199, 89, 0.1);
+}
+
+.task-subtask-check.checked {
+  background: #34c759;
+  border-color: #34c759;
+  color: #fff;
+}
 
 /* ─── TASK DRAWER ─── */
 .task-drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   z-index: 200;
   animation: fadeIn 0.2s ease forwards;
 }
@@ -2515,8 +2723,8 @@ textarea.input {
   z-index: 201;
   display: flex;
   flex-direction: column;
-  animation: slideInRight 0.3s cubic-bezier(0.4,0,0.2,1) forwards;
-  box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.05);
 }
 
 .task-drawer-header {
@@ -2567,7 +2775,11 @@ textarea.input {
   cursor: pointer;
   flex-shrink: 0;
 }
-.task-drawer-close:hover { background: var(--gray-mid); color: #000; }
+
+.task-drawer-close:hover {
+  background: var(--gray-mid);
+  color: #000;
+}
 
 .task-drawer-body {
   flex: 1;
@@ -2614,13 +2826,18 @@ textarea.input {
   cursor: pointer;
   text-align: right;
 }
-.task-drawer-field select option { background: #fff; color: #000; }
+
+.task-drawer-field select option {
+  background: #fff;
+  color: #000;
+}
 
 /* Priority buttons */
 .task-drawer-priority-btns {
   display: flex;
   gap: 6px;
 }
+
 .task-prio-btn {
   padding: 4px 10px;
   border-radius: 6px;
@@ -2630,6 +2847,7 @@ textarea.input {
   border: none;
   cursor: pointer;
 }
+
 .task-prio-btn.active {
   background: var(--orange);
   color: #fff;
@@ -2643,6 +2861,7 @@ textarea.input {
   margin-bottom: 6px;
   display: block;
 }
+
 .task-drawer-notes textarea {
   background: var(--navy);
   border: 1px solid var(--border);
@@ -2659,7 +2878,10 @@ textarea.input {
   padding: 8px 0;
   color: #000;
 }
-.task-drawer-subtask-row.done { color: #8e8e93; }
+
+.task-drawer-subtask-row.done {
+  color: #8e8e93;
+}
 
 .task-subtask-input {
   background: transparent;
@@ -2686,19 +2908,16 @@ textarea.input {
 }
 
 /* Spin animation (reused) */
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 
 /* ══════════════════════════
    APPLE REMINDERS SIDEBAR
    ══════════════════════════ */
-.smart-lists-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 12px;
-}
-
 /* Removed duplicate smart list styles */
 
 .home-section-header {
@@ -2746,5 +2965,3 @@ textarea.input {
   background: rgba(0, 0, 0, 0.1);
   border-radius: 2px;
 }
-
-
