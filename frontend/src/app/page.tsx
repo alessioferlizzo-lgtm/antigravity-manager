@@ -15,6 +15,7 @@ import { FlagIcon as FlagIconSolid } from "@heroicons/react/24/solid";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import TasksSection from "@/components/TasksSection";
+import SmartListEditor from "@/components/SmartListEditor";
 import { Client, Task } from "@/types";
 
 
@@ -100,6 +101,9 @@ export default function Dashboard() {
   const [activeSmartList, setActiveSmartList] = useState<string>("all");
   const [activeCustomListId, setActiveCustomListId] = useState<string | null>(null);
   const [customLists, setCustomLists] = useState<any[]>([]);
+  const [smartLists, setSmartLists] = useState<any[]>([]);
+  const [smartListEditorOpen, setSmartListEditorOpen] = useState(false);
+  const [editingSmartList, setEditingSmartList] = useState<any | null>(null);
 
 
   // Sidebar enhancements
@@ -219,7 +223,8 @@ export default function Dashboard() {
       fetch(`${API}/clients`, { signal: controller.signal }).then(r => r.ok ? r.json() : Promise.reject("Clients failed")),
       fetch(`${API}/tasks`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Tasks failed"))),
       fetch(`${API}/lists`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Lists failed"))),
-    ]).then(([c, t, l]) => {
+      fetch(`${API}/smart-lists`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Smart lists failed"))),
+    ]).then(([c, t, l, s]) => {
       clearTimeout(timeout);
       // Success: update state and local cache
       const savedOrder: string[] = JSON.parse(localStorage.getItem("ag_clientOrder") || "[]");
@@ -232,6 +237,7 @@ export default function Dashboard() {
       setClients(sorted);
       setTasks(t);
       setCustomLists(l);
+      setSmartLists(s);
       setLoading(false);
       setIsOffline(false);
       setBackendError(false);
@@ -239,6 +245,7 @@ export default function Dashboard() {
       localStorage.setItem("ag_clients_cache", JSON.stringify(sorted));
       localStorage.setItem("ag_tasks_cache", JSON.stringify(t));
       localStorage.setItem("ag_lists_cache", JSON.stringify(l));
+      localStorage.setItem("ag_smart_lists_cache", JSON.stringify(s));
     }).catch(err => {
       clearTimeout(timeout);
       console.warn("Backend not reachable, loading from cache...", err);
@@ -247,10 +254,12 @@ export default function Dashboard() {
       const cachedClients = JSON.parse(localStorage.getItem("ag_clients_cache") || "[]");
       const cachedTasks = JSON.parse(localStorage.getItem("ag_tasks_cache") || "[]");
       const cachedLists = JSON.parse(localStorage.getItem("ag_lists_cache") || "[]");
-      
+      const cachedSmartLists = JSON.parse(localStorage.getItem("ag_smart_lists_cache") || "[]");
+
       setClients(cachedClients);
       setTasks(cachedTasks);
       setCustomLists(cachedLists);
+      setSmartLists(cachedSmartLists);
       setLoading(false);
       setIsOffline(true);
       setBackendError(true);
@@ -527,6 +536,81 @@ export default function Dashboard() {
     }
   }
 
+  /* ─── Smart Lists Management ─── */
+  async function loadSmartLists() {
+    try {
+      const r = await fetch(`${API}/smart-lists`);
+      if (r.ok) {
+        const data = await r.json();
+        setSmartLists(data);
+      }
+    } catch (error) {
+      console.error("Failed to load smart lists:", error);
+    }
+  }
+
+  async function createSmartList(data: any) {
+    try {
+      const r = await fetch(`${API}/smart-lists`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (r.ok) {
+        const newList = await r.json();
+        setSmartLists(p => [...p, newList]);
+        setActiveSmartList(newList.id);
+        setSmartListEditorOpen(false);
+      }
+    } catch (error) {
+      console.error("Failed to create smart list:", error);
+    }
+  }
+
+  async function updateSmartList(id: string, data: any) {
+    try {
+      const r = await fetch(`${API}/smart-lists/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (r.ok) {
+        const updated = await r.json();
+        setSmartLists(p => p.map(l => l.id === id ? updated : l));
+        setSmartListEditorOpen(false);
+        setEditingSmartList(null);
+      }
+    } catch (error) {
+      console.error("Failed to update smart list:", error);
+    }
+  }
+
+  async function deleteSmartList(id: string) {
+    if (!confirm("Sei sicuro di voler eliminare questa lista intelligente?")) return;
+    try {
+      const r = await fetch(`${API}/smart-lists/${id}`, { method: "DELETE" });
+      if (r.ok) {
+        setSmartLists(p => p.filter(l => l.id !== id));
+        if (activeSmartList === id) setActiveSmartList("all");
+      }
+    } catch (error) {
+      console.error("Failed to delete smart list:", error);
+    }
+  }
+
+  function openSmartListEditor(list?: any) {
+    setEditingSmartList(list || null);
+    setSmartListEditorOpen(true);
+  }
+
+  function handleSmartListSave(data: any) {
+    if (editingSmartList) {
+      updateSmartList(editingSmartList.id, data);
+    } else {
+      createSmartList(data);
+    }
+  }
+
   /* ─── AI sort ─── */
   async function runAiSort() {
     setAiSorting(true); setAiSortResult(null); setAiSortOrderIds(null);
@@ -588,12 +672,138 @@ export default function Dashboard() {
   }
 
   /* ─── computed ─── */
-  const filtTasks = tasks
+  // Helper function to apply Smart List filtering
+  function applySmartListFilter(taskList: Task[]): Task[] {
+    const activeList = smartLists.find(sl => sl.id === activeSmartList);
+    if (!activeList || !activeList.criteria) return taskList;
+
+    const { match, filters } = activeList.criteria;
+
+    const matchesFilter = (task: Task, filter: any): boolean => {
+      const { field, operator, value } = filter;
+      const taskValue = (task as any)[field];
+
+      // Handle special date values
+      let compareValue = value;
+      if (value === "today") {
+        compareValue = new Date().toISOString().split("T")[0];
+      } else if (value === "tomorrow") {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        compareValue = tomorrow.toISOString().split("T")[0];
+      }
+
+      // Apply operator
+      switch (operator) {
+        case "equals":
+          return taskValue === compareValue;
+        case "not_equals":
+          return taskValue !== compareValue;
+        case "contains":
+          if (Array.isArray(taskValue)) return taskValue.includes(compareValue);
+          if (typeof taskValue === "string") return taskValue.toLowerCase().includes(compareValue.toLowerCase());
+          return false;
+        case "not_contains":
+          if (Array.isArray(taskValue)) return !taskValue.includes(compareValue);
+          if (typeof taskValue === "string") return !taskValue.toLowerCase().includes(compareValue.toLowerCase());
+          return true;
+        case "exists":
+          return compareValue === true ? (taskValue !== null && taskValue !== undefined && taskValue !== "") : (taskValue === null || taskValue === undefined || taskValue === "");
+        case "greater_than":
+          return parseFloat(taskValue || "0") > parseFloat(compareValue);
+        case "less_than":
+          return parseFloat(taskValue || "0") < parseFloat(compareValue);
+        case "before":
+          if (!taskValue) return false;
+          return new Date(taskValue) < new Date(compareValue);
+        case "after":
+          if (!taskValue) return false;
+          return new Date(taskValue) > new Date(compareValue);
+        default:
+          return false;
+      }
+    };
+
+    return taskList.filter(task => {
+      if (match === "all") {
+        // ALL filters must match (AND)
+        return filters.every((f: any) => matchesFilter(task, f));
+      } else {
+        // ANY filter must match (OR)
+        return filters.some((f: any) => matchesFilter(task, f));
+      }
+    });
+  }
+
+  let filtTasks = tasks
     .filter(t => fStatus === "all" || t.status === fStatus)
     .filter(t => fPriority === "all" || t.priority === fPriority)
-    .filter(t => !activeClientFilter || t.client_id === activeClientFilter)
-    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    .filter(t => !activeClientFilter || t.client_id === activeClientFilter);
 
+  // Apply Smart List filtering if a Smart List is active
+  if (activeSmartList) {
+    filtTasks = applySmartListFilter(filtTasks);
+  }
+
+  filtTasks = filtTasks.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+
+  // Helper function to calculate task count for a Smart List
+  const getSmartListCount = (smartList: any): number => {
+    if (!smartList || !smartList.criteria) return 0;
+
+    const { match, filters } = smartList.criteria;
+
+    const matchesFilter = (task: Task, filter: any): boolean => {
+      const { field, operator, value } = filter;
+      const taskValue = (task as any)[field];
+
+      let compareValue = value;
+      if (value === "today") {
+        compareValue = new Date().toISOString().split("T")[0];
+      } else if (value === "tomorrow") {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        compareValue = tomorrow.toISOString().split("T")[0];
+      }
+
+      switch (operator) {
+        case "equals":
+          return taskValue === compareValue;
+        case "not_equals":
+          return taskValue !== compareValue;
+        case "contains":
+          if (Array.isArray(taskValue)) return taskValue.includes(compareValue);
+          if (typeof taskValue === "string") return taskValue.toLowerCase().includes(compareValue.toLowerCase());
+          return false;
+        case "not_contains":
+          if (Array.isArray(taskValue)) return !taskValue.includes(compareValue);
+          if (typeof taskValue === "string") return !taskValue.toLowerCase().includes(compareValue.toLowerCase());
+          return true;
+        case "exists":
+          return compareValue === true ? (taskValue !== null && taskValue !== undefined && taskValue !== "") : (taskValue === null || taskValue === undefined || taskValue === "");
+        case "greater_than":
+          return parseFloat(taskValue || "0") > parseFloat(compareValue);
+        case "less_than":
+          return parseFloat(taskValue || "0") < parseFloat(compareValue);
+        case "before":
+          if (!taskValue) return false;
+          return new Date(taskValue) < new Date(compareValue);
+        case "after":
+          if (!taskValue) return false;
+          return new Date(taskValue) > new Date(compareValue);
+        default:
+          return false;
+      }
+    };
+
+    return tasks.filter(task => {
+      if (match === "all") {
+        return filters.every((f: any) => matchesFilter(task, f));
+      } else {
+        return filters.some((f: any) => matchesFilter(task, f));
+      }
+    }).length;
+  };
 
   const todoCount = tasks.filter(t => t.status === "todo").length;
 
@@ -776,6 +986,84 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+
+          {/* ═══ Custom Smart Lists ═══ */}
+          {smartLists.filter(sl => !sl.is_system).length > 0 && (
+            <>
+              <div className="home-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 14px 8px" }}>
+                <span className="home-section-label" style={{ padding: 0, margin: 0 }}>Liste Intelligenti</span>
+                <button onClick={() => openSmartListEditor()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", display: "flex" }}>
+                  <PlusIcon width={14} height={14} />
+                </button>
+              </div>
+
+              <div style={{ padding: "0 8px" }}>
+                {smartLists.filter(sl => !sl.is_system).map(list => (
+                  <div
+                    key={list.id}
+                    className={`custom-list-item ${activeSmartList === list.id ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveSmartList(list.id);
+                      setActiveCustomListId(null);
+                      setActiveClientFilter(null);
+                      setSection("tasks");
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      openSmartListEditor(list);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "7px 14px",
+                      cursor: "pointer",
+                      position: "relative",
+                      background: activeSmartList === list.id ? "rgba(255,255,255,0.08)" : "transparent",
+                      borderRadius: 6,
+                      marginBottom: 2,
+                    }}
+                  >
+                    <div
+                      className="list-bullet"
+                      style={{
+                        backgroundColor: list.color || "#007aff",
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{
+                      flex: 1,
+                      fontSize: 13,
+                      color: activeSmartList === list.id ? "#fff" : "rgba(255,255,255,0.7)",
+                      fontWeight: activeSmartList === list.id ? 600 : 400,
+                    }}>
+                      {list.title}
+                    </span>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                      {getSmartListCount(list)}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteSmartList(list.id); }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "rgba(239,68,68,0.5)",
+                        cursor: "pointer",
+                        fontSize: 10,
+                        padding: 4,
+                        opacity: 0,
+                        transition: "opacity 0.15s",
+                      }}
+                      className="list-delete-btn"
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="home-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 14px 8px" }}>
             <span className="home-section-label" style={{ padding: 0, margin: 0 }}>Mie Liste</span>
@@ -2265,6 +2553,17 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* ═══ Smart List Editor ═══ */}
+      <SmartListEditor
+        isOpen={smartListEditorOpen}
+        onClose={() => {
+          setSmartListEditorOpen(false);
+          setEditingSmartList(null);
+        }}
+        onSave={handleSmartListSave}
+        initialData={editingSmartList}
+      />
 
     </div>
   );

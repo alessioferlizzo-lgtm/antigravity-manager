@@ -36,6 +36,7 @@ from .ai_service import AIService
 from .storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
 from .notion_service import notion_service
 from .strategic_context_loader import get_strategic_context_for_generator
+from .smart_lists_service import smart_lists_service
 
 app = FastAPI(title="Antigravity Script Manager")
 
@@ -3772,4 +3773,87 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
         "step_id": step_id,
         "new_data": new_result,
         "analysis_step": new_result  # Compatibilità frontend
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SMART LISTS API (Apple Reminders style)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/smart-lists")
+async def get_smart_lists():
+    """Get all Smart Lists (system + custom)"""
+    return smart_lists_service.get_all_smart_lists()
+
+
+@app.get("/smart-lists/custom")
+async def get_custom_smart_lists():
+    """Get only custom Smart Lists (created by user)"""
+    return smart_lists_service.get_custom_smart_lists()
+
+
+class SmartListCreate(BaseModel):
+    title: str
+    color: str
+    icon: str
+    criteria: Dict[str, Any]
+
+
+@app.post("/smart-lists")
+async def create_smart_list(data: SmartListCreate):
+    """Create a new custom Smart List"""
+    return smart_lists_service.create_smart_list(
+        title=data.title,
+        color=data.color,
+        icon=data.icon,
+        criteria=data.criteria
+    )
+
+
+class SmartListUpdate(BaseModel):
+    title: Optional[str] = None
+    color: Optional[str] = None
+    icon: Optional[str] = None
+    criteria: Optional[Dict[str, Any]] = None
+
+
+@app.patch("/smart-lists/{list_id}")
+async def update_smart_list(list_id: str, data: SmartListUpdate):
+    """Update a custom Smart List (system lists cannot be modified)"""
+    updates = {k: v for k, v in data.dict().items() if v is not None}
+    result = smart_lists_service.update_smart_list(list_id, updates)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Smart List not found")
+    return result
+
+
+@app.delete("/smart-lists/{list_id}")
+async def delete_smart_list(list_id: str):
+    """Delete a custom Smart List (system lists cannot be deleted)"""
+    success = smart_lists_service.delete_smart_list(list_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Smart List not found")
+    return {"message": "Smart List deleted successfully"}
+
+
+@app.post("/smart-lists/{list_id}/filter-tasks")
+async def filter_tasks_by_smart_list(list_id: str):
+    """Get tasks filtered by a specific Smart List criteria"""
+    # Get the Smart List
+    all_lists = smart_lists_service.get_all_smart_lists()
+    smart_list = next((l for l in all_lists if l["id"] == list_id), None)
+
+    if not smart_list:
+        raise HTTPException(status_code=404, detail="Smart List not found")
+
+    # Get all tasks
+    tasks = storage_service.get_tasks()
+
+    # Filter tasks using the Smart List criteria
+    filtered_tasks = smart_lists_service.filter_tasks(tasks, smart_list["criteria"])
+
+    return {
+        "smart_list": smart_list,
+        "tasks": filtered_tasks,
+        "count": len(filtered_tasks)
     }
