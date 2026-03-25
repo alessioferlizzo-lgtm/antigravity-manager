@@ -2306,12 +2306,15 @@ textarea.input {
   background: transparent;
   border-bottom: 1px solid var(--border);
   padding: 4px 0;
-  transition: background 0.1s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .task-card:hover {
-  background: rgba(0,0,0,0.015);
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  transform: translateY(-1px);
+  z-index: 10;
 }
 
 .task-card.done {
