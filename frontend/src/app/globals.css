@@ -971,10 +971,10 @@ textarea.input {
 }
 
 .home-sidebar {
-  width: var(--home-sidebar-w);
-  min-width: var(--home-sidebar-w);
-  background: var(--navy-card);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  width: 240px;
+  min-width: 240px;
+  background: #042558 !important; /* Force Brand Navy */
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   position: fixed;
   top: 0;
   left: 0;
@@ -983,6 +983,7 @@ textarea.input {
   flex-direction: column;
   z-index: 50;
   overflow: hidden;
+  color: #ffffff !important;
 }
 
 .home-sidebar-header {
@@ -994,7 +995,7 @@ textarea.input {
 .home-sidebar-logo {
   font-size: 18px;
   font-weight: 800;
-  color: #000;
+  color: #ffffff !important;
   letter-spacing: -0.02em;
   margin-bottom: 4px;
 }
@@ -1005,7 +1006,7 @@ textarea.input {
 
 .home-sidebar-sub {
   font-size: 10px;
-  color: #8e8e93;
+  color: var(--sidebar-text-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .1em;
@@ -1022,7 +1023,7 @@ textarea.input {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #8e8e93;
+  color: var(--sidebar-text-muted);
   padding: 14px 16px 5px;
 }
 
@@ -1042,11 +1043,11 @@ textarea.input {
 }
 
 .client-list-item:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .client-list-item.active {
-  background: var(--navy-mid);
+  background: rgba(255, 255, 255, 0.1);
   border-left-color: var(--orange);
 }
 
@@ -1066,7 +1067,7 @@ textarea.input {
 .client-list-name {
   font-size: 13px;
   font-weight: 500;
-  color: #3a3a3c;
+  color: rgba(255, 255, 255, 0.7);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1074,7 +1075,7 @@ textarea.input {
 }
 
 .client-list-item.active .client-list-name {
-  color: #000;
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -1516,7 +1517,7 @@ textarea.input {
 }
 
 .smart-list-card {
-  background: rgba(255, 255, 255, 0.08); /* Dark mode style */
+  background: rgba(255, 255, 255, 0.08) !important;
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
@@ -1524,32 +1525,29 @@ textarea.input {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .smart-list-card:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.12) !important;
 }
 
 .smart-list-card.active {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: #f2901a !important; /* Brand Orange */
 }
 
-.smart-list-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
+.smart-list-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff !important;
 }
 
 .smart-list-label {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.6) !important;
+  margin-top: 4px;
 }
 
 .smart-list-count {
@@ -1688,8 +1686,9 @@ textarea.input {
 /* Root layout: left sidebar + main content */
 .tasks-root {
   display: flex;
-  gap: 0;
-  height: calc(100vh - 56px);
+  height: 100vh;
+  width: 100%;
+  padding-left: var(--sidebar-w);
   overflow: hidden;
   position: relative;
 }
@@ -2700,50 +2699,7 @@ textarea.input {
   padding: 12px;
 }
 
-.smart-list-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 12px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.smart-list-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.smart-list-card.active {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1.5px solid var(--orange);
-}
-
-.smart-list-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-}
-
-.smart-list-count {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--sidebar-text);
-}
-
-.smart-list-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sidebar-text-muted);
-  margin-top: 4px;
-}
-
-.smart-list-card.active .smart-list-label {
-  color: var(--sidebar-text);
-}
+/* Removed duplicate smart list styles */
 
 .home-section-header {
   margin-top: 16px;

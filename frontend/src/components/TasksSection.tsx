@@ -664,7 +664,7 @@ export default function TasksSection({
             <h2 className="tasks-title">
               {smartLists.find(s => s.id === activeSmartList)?.label || "Task"}
               {activeClientFilter && (
-                <span style={{ fontSize: 14, fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>
                   · {clients.find(c => c.id === activeClientFilter)?.name}
                 </span>
               )}
