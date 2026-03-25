@@ -32,10 +32,10 @@ def extract_ig_handle(url: str) -> str:
 # Load .env from backend directory
 load_dotenv(Path(__file__).parent / ".env")
 
-from ai_service import AIService
-from storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
-from notion_service import notion_service
-from strategic_context_loader import get_strategic_context_for_generator
+from .ai_service import AIService
+from .storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
+from .notion_service import notion_service
+from .strategic_context_loader import get_strategic_context_for_generator
 
 app = FastAPI(title="Antigravity Script Manager")
 
