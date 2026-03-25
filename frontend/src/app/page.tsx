@@ -223,7 +223,7 @@ export default function Dashboard() {
       fetch(`${API}/clients`, { signal: controller.signal }).then(r => r.ok ? r.json() : Promise.reject("Clients failed")),
       fetch(`${API}/tasks`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Tasks failed"))),
       fetch(`${API}/lists`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Lists failed"))),
-      fetch(`${API}/smart-lists`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Smart lists failed"))),
+      fetch(`${API}/smart-lists`, { signal: controller.signal }).then(r => r.ok ? r.json() : []).catch(() => []), // Fallback to empty array if endpoint doesn't exist yet
     ]).then(([c, t, l, s]) => {
       clearTimeout(timeout);
       // Success: update state and local cache
