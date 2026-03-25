@@ -2418,7 +2418,7 @@ textarea.input {
 .tasks-title {
   font-size: 32px;
   font-weight: 800;
-  color: #042558 !important; /* Force Brand Navy for visibility */
+  color: #ff0000 !important; /* TEMPORARY TEST: If you see RED, the update is working. */
   margin: 0;
   letter-spacing: -0.03em;
 }
