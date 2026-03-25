@@ -116,6 +116,8 @@ export default function TasksSection({
   const [quickAddDate, setQuickAddDate] = useState("");
   const [quickAddLoading, setQuickAddLoading] = useState(false);
   const quickAddRef = useRef<HTMLInputElement>(null);
+  const [useFormMode, setUseFormMode] = useState(false); // Toggle between quick add and form
+  const [formData, setFormData] = useState({ title: "", client_id: "", priority: "media", due_date: "", notes: "", flagged: false });
 
   /* ─── task view ─── */
   const [view, setView] = useState<"list" | "scheduled">("list");
@@ -334,9 +336,9 @@ export default function TasksSection({
   async function handleQuickAdd() {
     if (!quickAdd.trim()) return;
     setQuickAddLoading(true);
-    
+
     const { title, clientId, clientName, priority, dueDate, flagged } = nlpData;
-    
+
     const payload = {
       title,
       client_id: clientId || activeClientFilter || "",
@@ -354,16 +356,52 @@ export default function TasksSection({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      if (r.ok) { 
-        const t = await r.json(); 
-        setTasks(p => [t, ...p]); 
+      if (r.ok) {
+        const t = await r.json();
+        setTasks(p => [t, ...p]);
       } else throw new Error("Server error");
     } catch (err) {
       console.error("Task creation failed:", err);
       alert("❌ Errore: Impossibile salvare la task online.");
     }
-    setQuickAdd(""); 
+    setQuickAdd("");
     setQuickAddDate("");
+    setQuickAddLoading(false);
+  }
+
+  /* ─── form add ─── */
+  async function handleFormAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!formData.title.trim()) return;
+    setQuickAddLoading(true);
+
+    const selectedClient = clients.find(c => c.id === formData.client_id);
+    const payload = {
+      title: formData.title,
+      client_id: formData.client_id,
+      client_name: selectedClient?.name || "",
+      priority: formData.priority,
+      due_date: formData.due_date,
+      notes: formData.notes,
+      estimated_time: "",
+      list_id: activeCustomListId || "",
+      flagged: formData.flagged
+    };
+
+    try {
+      const r = await fetch(`${API}/tasks`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (r.ok) {
+        const t = await r.json();
+        setTasks(p => [t, ...p]);
+        setFormData({ title: "", client_id: "", priority: "media", due_date: "", notes: "", flagged: false });
+      } else throw new Error("Server error");
+    } catch (err) {
+      console.error("Task creation failed:", err);
+      alert("❌ Errore: Impossibile salvare la task online.");
+    }
     setQuickAddLoading(false);
   }
 
@@ -666,82 +704,193 @@ export default function TasksSection({
           </div>
         </div>
 
-        {/* ─── Quick add ─── */}
+        {/* ─── Add Task Section ─── */}
         <div className="tasks-quickadd-container">
-          <div className="tasks-quickadd">
-            <div className="tasks-quickadd-circle">
-              <PlusIcon width={14} />
-            </div>
-            <input
-              ref={quickAddRef}
-              value={quickAdd}
-              onChange={e => setQuickAdd(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") handleQuickAdd(); }}
-              placeholder='Nuova task... (es: Draft @Cliente !alta domani)'
-              className="tasks-quickadd-input"
-            />
+          {/* Toggle Button */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
             <button
-              onClick={handleQuickAdd}
-              disabled={!quickAdd.trim() || quickAddLoading}
-              className="tasks-quickadd-btn"
+              onClick={() => setUseFormMode(!useFormMode)}
+              style={{
+                background: "none",
+                border: "1px solid #e5e7eb",
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontSize: 11,
+                color: "#6b7280",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6
+              }}
             >
-              {quickAddLoading ? "..." : "Aggiungi"}
+              {useFormMode ? "← Quick Add" : "Form Completo →"}
             </button>
           </div>
 
-          <div className="tasks-quickadd-toolbar">
-            <div className="toolbar-left">
-              <button className="toolbar-icon-btn" title="Aggiungi data">
-                <CalendarIcon width={16} />
-              </button>
-              <button 
-                className={`toolbar-icon-btn ${nlpData.priority !== "media" ? "active" : ""}`} 
-                title="Imposta priorità"
-                onClick={() => {
-                  const nextP = nlpData.priority === "bassa" ? "alta" : nlpData.priority === "alta" ? "media" : "bassa";
-                  setQuickAdd(prev => {
-                    const clean = prev.replace(/!(alta|media|bassa|[1-3])/, "").trim();
-                    return `${clean} !${nextP}`;
-                  });
-                }}
-              >
-                <ExclamationTriangleIcon width={16} />
-              </button>
-              <button 
-                className="toolbar-icon-btn" 
-                title="Contrassegna"
-                onClick={() => {
-                   // This is a bit of a hack to "flag" via NLP without a dedicated char, or we just use it to toggle a local state for the next add.
-                   // Let's assume the user can just click it to toggle a "!flag" in the text or we handle it in state.
-                   // For now, let's keep it simple: clicking it adds #flag to text.
-                   setQuickAdd(prev => prev.includes("#flag") ? prev.replace("#flag", "").trim() : `${prev} #flag`);
-                }}
-              >
-                <FlagIcon width={16} />
-              </button>
-              <button className="toolbar-icon-btn" title="Assegna cliente">
-                <ClipboardDocumentListIcon width={16} />
-              </button>
-            </div>
+          {!useFormMode ? (
+            /* Quick Add Mode */
+            <>
+              <div className="tasks-quickadd">
+                <div className="tasks-quickadd-circle">
+                  <PlusIcon width={14} />
+                </div>
+                <input
+                  ref={quickAddRef}
+                  value={quickAdd}
+                  onChange={e => setQuickAdd(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleQuickAdd(); }}
+                  placeholder='Nuova task... (es: Draft @Cliente !alta domani)'
+                  className="tasks-quickadd-input"
+                />
+                <button
+                  onClick={handleQuickAdd}
+                  disabled={!quickAdd.trim() || quickAddLoading}
+                  className="tasks-quickadd-btn"
+                >
+                  {quickAddLoading ? "..." : "Aggiungi"}
+                </button>
+              </div>
 
-            {/* NLP Feedback Badges */}
-            {quickAdd.trim() && (
-              <div className="tasks-nlp-feedback">
-                {nlpData.clientName && (
-                  <span className="nlp-badge nlp-badge-client">@ {nlpData.clientName}</span>
-                )}
-                {nlpData.dueDate && (
-                  <span className="nlp-badge nlp-badge-date">📅 {nlpData.dueDate}</span>
-                )}
-                <span className={`nlp-badge nlp-badge-priority priority-${nlpData.priority}`}>
-                  {nlpData.priority === "alta" ? "!!!" : nlpData.priority === "media" ? "!!" : "!"} {nlpData.priority}
-                </span>
-                {quickAdd.includes("#flag") && (
-                  <span className="nlp-badge nlp-badge-flag">🚩 Contrassegnata</span>
+              <div className="tasks-quickadd-toolbar">
+                <div className="toolbar-left">
+                  <button className="toolbar-icon-btn" title="Aggiungi data">
+                    <CalendarIcon width={16} />
+                  </button>
+                  <button
+                    className={`toolbar-icon-btn ${nlpData.priority !== "media" ? "active" : ""}`}
+                    title="Imposta priorità"
+                    onClick={() => {
+                      const nextP = nlpData.priority === "bassa" ? "alta" : nlpData.priority === "alta" ? "media" : "bassa";
+                      setQuickAdd(prev => {
+                        const clean = prev.replace(/!(alta|media|bassa|[1-3])/, "").trim();
+                        return `${clean} !${nextP}`;
+                      });
+                    }}
+                  >
+                    <ExclamationTriangleIcon width={16} />
+                  </button>
+                  <button
+                    className="toolbar-icon-btn"
+                    title="Contrassegna"
+                    onClick={() => {
+                      setQuickAdd(prev => prev.includes("#flag") ? prev.replace("#flag", "").trim() : `${prev} #flag`);
+                    }}
+                  >
+                    <FlagIcon width={16} />
+                  </button>
+                  <button className="toolbar-icon-btn" title="Assegna cliente">
+                    <ClipboardDocumentListIcon width={16} />
+                  </button>
+                </div>
+
+                {/* NLP Feedback Badges */}
+                {quickAdd.trim() && (
+                  <div className="tasks-nlp-feedback">
+                    {nlpData.clientName && (
+                      <span className="nlp-badge nlp-badge-client">@ {nlpData.clientName}</span>
+                    )}
+                    {nlpData.dueDate && (
+                      <span className="nlp-badge nlp-badge-date">📅 {nlpData.dueDate}</span>
+                    )}
+                    <span className={`nlp-badge nlp-badge-priority priority-${nlpData.priority}`}>
+                      {nlpData.priority === "alta" ? "!!!" : nlpData.priority === "media" ? "!!" : "!"} {nlpData.priority}
+                    </span>
+                    {quickAdd.includes("#flag") && (
+                      <span className="nlp-badge nlp-badge-flag">🚩 Contrassegnata</span>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            /* Form Mode */
+            <form onSubmit={handleFormAdd} style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Titolo</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Descrivi la task..."
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14 }}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Cliente</label>
+                  <select
+                    value={formData.client_id}
+                    onChange={e => setFormData({ ...formData, client_id: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}
+                  >
+                    <option value="">Nessun cliente</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Priorità</label>
+                  <select
+                    value={formData.priority}
+                    onChange={e => setFormData({ ...formData, priority: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}
+                  >
+                    <option value="bassa">Bassa</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Data scadenza</label>
+                  <input
+                    type="date"
+                    value={formData.due_date}
+                    onChange={e => setFormData({ ...formData, due_date: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}
+                  />
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-end" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", cursor: "pointer", background: formData.flagged ? "#fef3c7" : "#fff", border: "1px solid #d1d5db", borderRadius: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.flagged}
+                      onChange={e => setFormData({ ...formData, flagged: e.target.checked })}
+                      style={{ width: 16, height: 16 }}
+                    />
+                    <FlagIcon width={16} color={formData.flagged ? "#f59e0b" : "#9ca3af"} />
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Note (opzionale)</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Aggiungi dettagli..."
+                  rows={2}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, resize: "vertical" }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!formData.title.trim() || quickAddLoading}
+                style={{
+                  padding: "10px 16px",
+                  background: formData.title.trim() ? "#007aff" : "#d1d5db",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: formData.title.trim() ? "pointer" : "not-allowed"
+                }}
+              >
+                {quickAddLoading ? "Creazione..." : "Crea Task"}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* ─── Filters bar ─── */}
@@ -753,7 +902,7 @@ export default function TasksSection({
               style={{ "--fc-color": p === "alta" ? "#ff3b30" : p === "media" ? "#ff9500" : "#636366" } as React.CSSProperties}
               onClick={() => setFPriority(fPriority === p ? "all" : p)}
             >
-              {p === "alta" ? "🔴" : p === "media" ? "🟠" : "⚪"} {p.charAt(0).toUpperCase() + p.slice(1)}
+              {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
           {(fPriority !== "all" || search || activeClientFilter) && (

@@ -960,31 +960,37 @@ export default function Dashboard() {
         <div className="home-sidebar-scroll">
           {/* ═══ Apple Smart Lists ═══ */}
           <div className="smart-lists-grid">
-            {[
-              { id: "oggi", label: "Oggi", icon: CalendarIcon, color: "#007aff", count: tasks.filter(t => t.status !== "done" && t.due_date === new Date().toISOString().split("T")[0]).length },
-              { id: "scheduled", label: "Programmate", icon: CalendarIcon, color: "#ff3b30", count: tasks.filter(t => t.status !== "done" && t.due_date).length },
-              { id: "all", label: "Tutte", icon: InboxIcon, color: "#636366", count: tasks.filter(t => t.status !== "done").length },
-              { id: "flagged", label: "Contrassegnate", icon: FlagIconSolid, color: "#ff9500", count: tasks.filter(t => t.status !== "done" && t.flagged).length },
-              { id: "completed", label: "Completate", icon: CheckCircleIcon, color: "#8e8e93", count: tasks.filter(t => t.status === "done").length },
-            ].map(sl => (
-              <div
-                key={sl.id}
-                className={`smart-list-card ${activeSmartList === sl.id ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveSmartList(sl.id);
-                  setActiveClientFilter(null);
-                  setSection("tasks");
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div className="smart-list-icon" style={{ backgroundColor: sl.color }}>
-                    <sl.icon width={18} height={18} />
+            {smartLists.filter(sl => sl.is_system).map(sl => {
+              // Map icon names to components
+              const iconMap: Record<string, any> = {
+                "calendar": CalendarIcon,
+                "inbox": InboxIcon,
+                "flag": FlagIconSolid,
+                "check-circle": CheckCircleIcon,
+              };
+              const IconComponent = iconMap[sl.icon] || InboxIcon;
+
+              return (
+                <div
+                  key={sl.id}
+                  className={`smart-list-card ${activeSmartList === sl.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveSmartList(sl.id);
+                    setActiveClientFilter(null);
+                    setActiveCustomListId(null);
+                    setSection("tasks");
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div className="smart-list-icon" style={{ backgroundColor: sl.color }}>
+                      <IconComponent width={18} height={18} />
+                    </div>
+                    <div className="smart-list-count">{getSmartListCount(sl)}</div>
                   </div>
-                  <div className="smart-list-count">{sl.count}</div>
+                  <div className="smart-list-label">{sl.title}</div>
                 </div>
-                <div className="smart-list-label">{sl.label}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* ═══ Custom Smart Lists ═══ */}
