@@ -40,7 +40,7 @@ from .smart_lists_service import smart_lists_service
 
 app = FastAPI(title="Antigravity Script Manager")
 
-# CORS configuration
+# CORS configuration — Triggering redeploy for task data sync
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
