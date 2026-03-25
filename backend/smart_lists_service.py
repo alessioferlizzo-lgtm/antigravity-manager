@@ -1,112 +1,114 @@
 """
 Smart Lists Service - Apple Reminders style
 Gestisce liste intelligenti con criteri di filtro dinamici
+Usa Supabase per la persistenza
 """
 import json
-from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+import uuid
 
-PROJECT_ROOT = Path(__file__).parent.parent
-SMART_LISTS_FILE = PROJECT_ROOT / "smart_lists.json"
+# Default Smart Lists di sistema
+DEFAULT_SYSTEM_LISTS = [
+    {
+        "id": "oggi",
+        "title": "Oggi",
+        "icon": "calendar",
+        "color": "#007aff",
+        "is_system": True,
+        "is_smart": True,
+        "criteria": {
+            "match": "all",
+            "filters": [
+                {"field": "status", "operator": "not_equals", "value": "done"},
+                {"field": "due_date", "operator": "equals", "value": "today"}
+            ]
+        }
+    },
+    {
+        "id": "scheduled",
+        "title": "Programmate",
+        "icon": "calendar",
+        "color": "#ff3b30",
+        "is_system": True,
+        "is_smart": True,
+        "criteria": {
+            "match": "all",
+            "filters": [
+                {"field": "status", "operator": "not_equals", "value": "done"},
+                {"field": "due_date", "operator": "exists", "value": True}
+            ]
+        }
+    },
+    {
+        "id": "all",
+        "title": "Tutte",
+        "icon": "inbox",
+        "color": "#636366",
+        "is_system": True,
+        "is_smart": True,
+        "criteria": {
+            "match": "all",
+            "filters": [
+                {"field": "status", "operator": "not_equals", "value": "done"}
+            ]
+        }
+    },
+    {
+        "id": "flagged",
+        "title": "Contrassegnate",
+        "icon": "flag",
+        "color": "#ff9500",
+        "is_system": True,
+        "is_smart": True,
+        "criteria": {
+            "match": "all",
+            "filters": [
+                {"field": "status", "operator": "not_equals", "value": "done"},
+                {"field": "flagged", "operator": "equals", "value": True}
+            ]
+        }
+    },
+    {
+        "id": "completed",
+        "title": "Completate",
+        "icon": "check-circle",
+        "color": "#8e8e93",
+        "is_system": True,
+        "is_smart": True,
+        "criteria": {
+            "match": "all",
+            "filters": [
+                {"field": "status", "operator": "equals", "value": "done"}
+            ]
+        }
+    }
+]
 
 
 class SmartListsService:
-    """Gestisce le Smart Lists personalizzate dall'utente"""
+    """Gestisce le Smart Lists personalizzate dall'utente usando Supabase"""
 
     def __init__(self):
-        if not SMART_LISTS_FILE.exists():
-            self._init_default_smart_lists()
-
-    def _init_default_smart_lists(self):
-        """Inizializza le Smart Lists di sistema (non modificabili)"""
-        default_lists = [
-            {
-                "id": "oggi",
-                "title": "Oggi",
-                "icon": "calendar",
-                "color": "#007aff",
-                "is_system": True,
-                "is_smart": True,
-                "criteria": {
-                    "match": "all",  # 'all' (AND) o 'any' (OR)
-                    "filters": [
-                        {"field": "status", "operator": "not_equals", "value": "done"},
-                        {"field": "due_date", "operator": "equals", "value": "today"}
-                    ]
-                }
-            },
-            {
-                "id": "scheduled",
-                "title": "Programmate",
-                "icon": "calendar",
-                "color": "#ff3b30",
-                "is_system": True,
-                "is_smart": True,
-                "criteria": {
-                    "match": "all",
-                    "filters": [
-                        {"field": "status", "operator": "not_equals", "value": "done"},
-                        {"field": "due_date", "operator": "exists", "value": True}
-                    ]
-                }
-            },
-            {
-                "id": "all",
-                "title": "Tutte",
-                "icon": "inbox",
-                "color": "#636366",
-                "is_system": True,
-                "is_smart": True,
-                "criteria": {
-                    "match": "all",
-                    "filters": [
-                        {"field": "status", "operator": "not_equals", "value": "done"}
-                    ]
-                }
-            },
-            {
-                "id": "flagged",
-                "title": "Contrassegnate",
-                "icon": "flag",
-                "color": "#ff9500",
-                "is_system": True,
-                "is_smart": True,
-                "criteria": {
-                    "match": "all",
-                    "filters": [
-                        {"field": "status", "operator": "not_equals", "value": "done"},
-                        {"field": "flagged", "operator": "equals", "value": True}
-                    ]
-                }
-            },
-            {
-                "id": "completed",
-                "title": "Completate",
-                "icon": "check-circle",
-                "color": "#8e8e93",
-                "is_system": True,
-                "is_smart": True,
-                "criteria": {
-                    "match": "all",
-                    "filters": [
-                        {"field": "status", "operator": "equals", "value": "done"}
-                    ]
-                }
-            }
-        ]
-
-        with open(SMART_LISTS_FILE, "w") as f:
-            json.dump(default_lists, f, indent=2)
+        # Import qui per evitare circular imports
+        from storage_service import _get_sb
+        self.sb = _get_sb()
 
     def get_all_smart_lists(self) -> List[Dict]:
-        """Ottiene tutte le Smart Lists (sistema + custom)"""
+        """Ottiene tutte le Smart Lists (sistema + custom da Supabase)"""
+        # Inizia con le liste di sistema (sempre presenti)
+        all_lists = list(DEFAULT_SYSTEM_LISTS)
+
+        # Aggiungi le liste custom da Supabase
         try:
-            with open(SMART_LISTS_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            self._init_default_smart_lists()
-            return self.get_all_smart_lists()
+            if self.sb:
+                response = self.sb.table("smart_lists").select("*").execute()
+                custom_lists = response.data if response.data else []
+                all_lists.extend(custom_lists)
+        except Exception as e:
+            print(f"Error loading custom smart lists from Supabase: {e}")
+
+        return all_lists
 
     def get_custom_smart_lists(self) -> List[Dict]:
         """Ottiene solo le Smart Lists custom (create dall'utente)"""
@@ -114,9 +116,7 @@ class SmartListsService:
         return [l for l in all_lists if not l.get("is_system", False)]
 
     def create_smart_list(self, title: str, color: str, icon: str, criteria: Dict) -> Dict:
-        """Crea una nuova Smart List custom"""
-        import uuid
-
+        """Crea una nuova Smart List custom in Supabase"""
         new_list = {
             "id": str(uuid.uuid4()),
             "title": title,
@@ -128,53 +128,49 @@ class SmartListsService:
             "created_at": datetime.now().isoformat()
         }
 
-        all_lists = self.get_all_smart_lists()
-        all_lists.append(new_list)
-
-        with open(SMART_LISTS_FILE, "w") as f:
-            json.dump(all_lists, f, indent=2)
+        if self.sb:
+            try:
+                response = self.sb.table("smart_lists").insert(new_list).execute()
+                if response.data:
+                    return response.data[0]
+            except Exception as e:
+                print(f"Error creating smart list in Supabase: {e}")
 
         return new_list
 
     def update_smart_list(self, list_id: str, updates: Dict) -> Optional[Dict]:
-        """Aggiorna una Smart List (solo se custom, non sistema)"""
-        all_lists = self.get_all_smart_lists()
+        """Aggiorna una Smart List (solo se custom, non sistema) in Supabase"""
+        # Verifica che non sia una lista di sistema
+        if list_id in [sl["id"] for sl in DEFAULT_SYSTEM_LISTS]:
+            raise ValueError("Cannot modify system Smart Lists")
 
-        for i, lst in enumerate(all_lists):
-            if lst["id"] == list_id:
-                if lst.get("is_system", False):
-                    raise ValueError("Cannot modify system Smart Lists")
+        if self.sb:
+            try:
+                # Prepara gli update
+                update_data = {k: v for k, v in updates.items() if k not in ["id", "is_system"]}
+                update_data["updated_at"] = datetime.now().isoformat()
 
-                # Update fields
-                for key, value in updates.items():
-                    if key != "id" and key != "is_system":
-                        lst[key] = value
-
-                lst["updated_at"] = datetime.now().isoformat()
-                all_lists[i] = lst
-
-                with open(SMART_LISTS_FILE, "w") as f:
-                    json.dump(all_lists, f, indent=2)
-
-                return lst
+                response = self.sb.table("smart_lists").update(update_data).eq("id", list_id).execute()
+                if response.data:
+                    return response.data[0]
+            except Exception as e:
+                print(f"Error updating smart list in Supabase: {e}")
 
         return None
 
     def delete_smart_list(self, list_id: str) -> bool:
-        """Elimina una Smart List (solo se custom)"""
-        all_lists = self.get_all_smart_lists()
+        """Elimina una Smart List (solo se custom) da Supabase"""
+        # Verifica che non sia una lista di sistema
+        if list_id in [sl["id"] for sl in DEFAULT_SYSTEM_LISTS]:
+            raise ValueError("Cannot delete system Smart Lists")
 
-        for i, lst in enumerate(all_lists):
-            if lst["id"] == list_id:
-                if lst.get("is_system", False):
-                    raise ValueError("Cannot delete system Smart Lists")
-
-                all_lists.pop(i)
-
-                with open(SMART_LISTS_FILE, "w") as f:
-                    json.dump(all_lists, f, indent=2)
-
+        if self.sb:
+            try:
+                self.sb.table("smart_lists").delete().eq("id", list_id).execute()
                 return True
+            except Exception as e:
+                print(f"Error deleting smart list from Supabase: {e}")
+                return False
 
         return False
 
@@ -213,9 +209,6 @@ class SmartListsService:
                 value = datetime.now().strftime("%Y-%m-%d")
             elif value == "tomorrow":
                 value = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-            elif value == "this_week":
-                # For range queries, we'll handle separately
-                pass
 
             # Apply operator
             if operator == "equals":
