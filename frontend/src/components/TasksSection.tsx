@@ -296,7 +296,13 @@ export default function TasksSection({
     // 3. Extract Dates (oggi, domani, lunedi, etc.)
     const dateKeywords: Record<string, number> = {
       "oggi": 0, "domani": 1, "dopodomani": 2,
-      "lunedi": 1, "martedi": 2, "mercoledi": 3, "giovedi": 4, "venerdi": 5, "sabato": 6, "domenica": 0
+      "lunedi": 1, "lunedì": 1,
+      "martedi": 2, "martedì": 2,
+      "mercoledi": 3, "mercoledì": 3,
+      "giovedi": 4, "giovedì": 4,
+      "venerdi": 5, "venerdì": 5,
+      "sabato": 6,
+      "domenica": 0
     };
     
     // Simple word match for dates
@@ -319,6 +325,14 @@ export default function TasksSection({
         title = title.split(" ").filter(w => w.toLowerCase() !== word).join(" ");
         break;
       }
+    }
+    
+    // Check for "prossima settimana"
+    if (title.toLowerCase().includes("prossima settimana")) {
+       const d = new Date();
+       d.setDate(d.getDate() + 7);
+       dueDate = d.toISOString().split("T")[0];
+       title = title.replace(/prossima settimana/i, "").trim();
     }
 
     // Fallback to manual date if NLP didn't find one but quickAddDate is set
@@ -707,23 +721,12 @@ export default function TasksSection({
         {/* ─── Add Task Section ─── */}
         <div className="tasks-quickadd-container">
           {/* Toggle Button */}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <div className="tasks-form-toggle-row">
             <button
               onClick={() => setUseFormMode(!useFormMode)}
-              style={{
-                background: "none",
-                border: "1px solid #e5e7eb",
-                padding: "4px 10px",
-                borderRadius: 6,
-                fontSize: 11,
-                color: "#6b7280",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6
-              }}
+              className="tasks-form-toggle-btn"
             >
-              {useFormMode ? "← Quick Add" : "Form Completo →"}
+              {useFormMode ? "← Quick Add" : "Dettagli →"}
             </button>
           </div>
 
@@ -804,91 +807,80 @@ export default function TasksSection({
             </>
           ) : (
             /* Form Mode */
-            <form onSubmit={handleFormAdd} style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
-              <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Titolo</label>
+            /* Form Mode (Full Apple Style) */
+            <form onSubmit={handleFormAdd} className="tasks-full-form">
+              <div className="form-row main-field">
                 <input
                   type="text"
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Descrivi la task..."
-                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14 }}
+                  placeholder="Titolo della task..."
+                  className="form-title-input"
                   autoFocus
                 />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Cliente</label>
+              
+              <div className="form-grid">
+                <div className="form-field">
+                  <label>Cliente</label>
                   <select
                     value={formData.client_id}
                     onChange={e => setFormData({ ...formData, client_id: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}
                   >
                     <option value="">Nessun cliente</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Priorità</label>
+                
+                <div className="form-field">
+                  <label>Priorità</label>
                   <select
                     value={formData.priority}
                     onChange={e => setFormData({ ...formData, priority: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}
+                    className={`priority-select priority-${formData.priority}`}
                   >
                     <option value="bassa">Bassa</option>
                     <option value="media">Media</option>
                     <option value="alta">Alta</option>
                   </select>
                 </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Data scadenza</label>
+
+                <div className="form-field">
+                  <label>Scadenza</label>
                   <input
                     type="date"
                     value={formData.due_date}
                     onChange={e => setFormData({ ...formData, due_date: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}
                   />
                 </div>
-                <div style={{ display: "flex", alignItems: "flex-end" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", cursor: "pointer", background: formData.flagged ? "#fef3c7" : "#fff", border: "1px solid #d1d5db", borderRadius: 6 }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.flagged}
-                      onChange={e => setFormData({ ...formData, flagged: e.target.checked })}
-                      style={{ width: 16, height: 16 }}
-                    />
-                    <FlagIcon width={16} color={formData.flagged ? "#f59e0b" : "#9ca3af"} />
+
+                <div className="form-field checkbox-field">
+                  <label onClick={() => setFormData({ ...formData, flagged: !formData.flagged })}>
+                    <FlagIconSolid className={formData.flagged ? "active" : ""} width={16} />
+                    <span>Contrassegna</span>
                   </label>
                 </div>
               </div>
-              <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Note (opzionale)</label>
+
+              <div className="form-row">
                 <textarea
                   value={formData.notes}
                   onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Aggiungi dettagli..."
+                  placeholder="Aggiungi note..."
                   rows={2}
-                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, resize: "vertical" }}
                 />
               </div>
-              <button
-                type="submit"
-                disabled={!formData.title.trim() || quickAddLoading}
-                style={{
-                  padding: "10px 16px",
-                  background: formData.title.trim() ? "#007aff" : "#d1d5db",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: formData.title.trim() ? "pointer" : "not-allowed"
-                }}
-              >
-                {quickAddLoading ? "Creazione..." : "Crea Task"}
-              </button>
+
+              <div className="form-footer">
+                <button
+                  type="submit"
+                  disabled={!formData.title.trim() || quickAddLoading}
+                  className="btn btn-primary"
+                  style={{ width: "100%" }}
+                >
+                  {quickAddLoading ? "Creazione..." : "Crea Task"}
+                </button>
+              </div>
             </form>
           )}
         </div>
