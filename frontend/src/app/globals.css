@@ -1653,15 +1653,16 @@ textarea.input {
 }
 
 .lateral-drawer {
-  width: 400px;
+  width: 440px;
   height: 100%;
-  background: #1c1c1e; /* Apple's dark grey */
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+  background: #ffffff;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.05);
   padding: 32px 24px;
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
   animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  border-left: 1px solid var(--border);
 }
 
 @keyframes fadeIn { to { opacity: 1; } }
@@ -2104,7 +2105,8 @@ textarea.input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 0 0 40px;
+  padding: 8px 12px 0 44px;
+  margin-top: 4px;
 }
 
 .toolbar-left {
@@ -2117,17 +2119,23 @@ textarea.input {
   border: none;
   color: #8e8e93;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
-  transition: all 0.15s;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.toolbar-icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
 .toolbar-icon-btn:hover {
-  background: var(--navy-light);
-  color: #000;
+  background: #f2f2f7;
+  color: #007aff;
+  transform: scale(1.05);
 }
 
 .toolbar-icon-btn.active {
