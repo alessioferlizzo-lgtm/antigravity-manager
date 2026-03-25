@@ -224,9 +224,17 @@ class StorageService:
     def save_tasks(self, tasks: List[Dict]):
         with open(TASKS_FILE, "w") as f:
             json.dump(tasks, f, indent=4)
-        _sb_run(lambda sb: sb.table("tasks").delete().neq("id", "0").execute()) # Clear all
-        for t in tasks:
-            _sb_run(lambda sb: sb.table("tasks").insert({"data": t}).execute())
+        
+        # Optimization: only one call for all tasks if possible, or use upsert
+        def _sync_all(sb):
+            try:
+                # Instead of deleting all, we use upsert to keep the DB clean and fast
+                rows = [{"id": t["id"], "data": t} for t in tasks]
+                if rows:
+                    sb.table("tasks").upsert(rows).execute()
+            except Exception as e:
+                print(f"[Supabase] Bulk task sync failed: {e}")
+        _sb_run(_sync_all)
 
     # ─── LISTS CRUD ───────────────────────────────────────────────
     def get_lists(self) -> List[Dict]:
@@ -285,7 +293,14 @@ class StorageService:
         for task in tasks:
             if task["id"] == task_id:
                 task.update(updates)
-                self.save_tasks(tasks)
+                # 1. Update local file
+                self.save_tasks(tasks) 
+                
+                # 2. Point update in Supabase (immediate)
+                def _sync_one(sb):
+                    sb.table("tasks").upsert({"id": task_id, "data": task}).execute()
+                _sb_run(_sync_one)
+                
                 return task
         raise FileNotFoundError(f"Task {task_id} not found")
 
