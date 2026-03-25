@@ -1,11 +1,12 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /*
   BRAND ANTIGRAVITY — COLOR SYSTEM
   ─────────────────────────────────
-  · #003366  → sfondo pagina (navy scuro)
-  · #ff9e1c  → bottoni CTA / primary (orange)
-  · #c7ef00  → lime: evidenze, badge positivi
+  · #042558  → sfondo pagina (navy scuro)
+  · #f2901a  → bottoni CTA / primary (orange)
+  · #a3d906  → lime: evidenze, badge positivi
   · #333333  → testo scuro su sfondi chiari
   · #f3f4f6  → sfondi intermedi/card alternative
 */
@@ -75,11 +76,29 @@ body {
 body {
   background: var(--page-bg);
   color: var(--text-body);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
+
+/* Typography - Modern Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+h1 { font-size: 32px; font-weight: 800; }
+h2 { font-size: 24px; font-weight: 700; }
+h3 { font-size: 20px; font-weight: 700; }
+h4 { font-size: 18px; font-weight: 600; }
+h5 { font-size: 16px; font-weight: 600; }
+h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
 
 /* ══════════════════════════
    LAYOUT
