@@ -18,7 +18,7 @@
 
   /* Page */
   --page-bg:     var(--navy);
-  --sidebar-w:   240px;
+  --sidebar-w:   253px;
 
   /* Text on dark (navy) */
   --text-primary:  #ffffff;
@@ -639,23 +639,23 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
    10. TASK CARDS
    ══════════════════════════════════════════════════════════════ */
 .task-card {
-  background: #ffffff;
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 10px;
+  background: rgba(10, 30, 60, 0.6);
+  border: none;
+  border-radius: 25px;
   padding: 0;
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   position: relative;
   overflow: visible;
 }
 
 .task-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transform: translateY(-1px);
+  background: rgba(10, 30, 60, 0.75);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+  transform: scale(1.005);
   z-index: 10;
-  border-color: rgba(0,0,0,0.1);
 }
 
 .task-card.done { opacity: 0.6; }
