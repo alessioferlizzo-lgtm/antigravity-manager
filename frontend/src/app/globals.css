@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   ANTIGRAVITY - EMERGENCY RESCUE CSS
-   Versione: "Apple Dark - Clean & Safe"
+   ANTIGRAVITY - ULTIMATE STABLE RECOVERY
+   Forzatura layout assoluto - Navy/Orange/Lime/Anthracite
    ═══════════════════════════════════════════════════════════════ */
 
 @layer base {
@@ -12,105 +12,75 @@
     --brand-orange: #f2901a;
     --brand-lime: #a3d906;
     --anthracite: #1c1c1e;
+    --sidebar-w: 260px;
   }
 
   html, body {
-    background: var(--brand-navy-dark);
-    color: white;
+    height: 100vh !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--brand-navy-dark) !important;
+    overflow: hidden !important;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-    margin: 0;
-    overflow: hidden;
   }
 }
 
 @layer components {
 
-/* ─── 1. FIX SIDEBAR (Look Pulito) ─── */
-.home-sidebar {
-  width: 260px !important;
-  background: #0a0a0c !important; /* Antracite puro */
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+/* ─── 1. IL MOTORE DEL LAYOUT (POSIZIONAMENTO FISSO) ─── */
+.home-layout, .app-layout {
+  position: relative !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: block !important; /* Forza l'uscita da flex se crea problemi */
 }
 
-.smart-list-card {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-radius: 12px !important;
-  padding: 12px !important;
-  margin-bottom: 8px;
-  border: 1px solid transparent !important;
-  aspect-ratio: auto !important; /* Rimuove il quadrato fisso */
-  height: auto !important;
+.home-sidebar, .sidebar {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: var(--sidebar-w) !important;
+  background: #0a0a0c !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  z-index: 999 !important;
+  overflow-y: auto !important;
 }
 
-.smart-list-card-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: 4px;
-}
-
-/* ─── 2. FIX AREA CENTRALE (Basta Sovrapposizioni) ─── */
-.home-main {
-  flex: 1;
+.home-main, .main-content {
+  position: fixed !important;
+  left: var(--sidebar-w) !important; /* SPINGE IL CONTENUTO A DESTRA */
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
   background: var(--brand-navy-dark) !important;
   overflow-y: auto !important;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.tasks-section-wrapper {
-  width: 100%;
-  max-width: 800px; /* Centra e limita il disordine */
-  padding: 40px 20px;
-}
-
-/* ─── 3. FIX QUICK ADD (Il blocco blu gigante) ─── */
-.tasks-quickadd-container {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 16px !important;
-  padding: 20px !important;
-  margin-bottom: 40px !important;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.tasks-quickadd {
+  z-index: 1 !important;
   display: flex !important;
-  align-items: center !important;
-  gap: 10px;
-}
-
-.tasks-quickadd-btn {
-  background: var(--brand-lime) !important;
-  color: var(--brand-navy) !important;
-  font-weight: 800 !important;
-  border-radius: 8px !important;
-  padding: 8px 16px !important;
-  align-self: flex-end; /* Sposta il tasto a destra */
-}
-
-/* ─── 4. FIX TASK CARDS (Niente più cerchi volanti) ─── */
-.task-card {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  margin-bottom: 8px !important;
-  padding: 16px !important;
-  transition: all 0.2s;
-  display: flex !important; /* Torna a Flex per sicurezza */
   flex-direction: column !important;
-  gap: 8px;
+  align-items: center !important;
 }
 
-.task-card:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: var(--brand-orange) !important;
+/* ─── 2. CONTENITORE TASK (ORDINATO) ─── */
+.tasks-section-wrapper {
+  width: 100% !important;
+  max-width: 800px !important;
+  padding: 40px 20px !important;
+  margin: 0 auto !important;
 }
 
-/* Allineamento interno: Checkbox e Testo sulla stessa riga */
+/* ─── 3. TASK CARDS (ANTRACITE & SHADOW) ─── */
+.task-card {
+  background: rgba(28, 28, 30, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  margin-bottom: 12px !important;
+  padding: 16px !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+}
+
+/* Allineamento interno icone-testo */
 .task-card-inner {
   display: flex !important;
   align-items: flex-start !important;
@@ -118,43 +88,64 @@
 }
 
 .task-checkbox {
-  width: 20px !important;
-  height: 20px !important;
+  width: 22px !important;
+  height: 22px !important;
+  border: 2px solid var(--brand-orange) !important;
   border-radius: 50% !important;
-  border: 2px solid rgba(255, 255, 255, 0.3) !important;
   flex-shrink: 0 !important;
-  margin-top: 2px;
 }
 
 .task-card-title {
-  font-size: 15px !important;
   color: white !important;
-  line-height: 1.4 !important;
-  text-align: left !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
 }
 
-/* ─── 5. FIX FILTRI (AltaMediaBassa uniti) ─── */
-.tasks-filters {
-  display: flex !important;
+/* ─── 4. SIDEBAR - SMART LISTS ─── */
+.smart-lists-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
   gap: 10px !important;
-  margin-bottom: 20px !important;
-  flex-wrap: wrap;
+  padding: 15px !important;
 }
 
-.tasks-filter-chip {
-  background: rgba(255, 255, 255, 0.1) !important;
-  padding: 6px 12px !important;
-  border-radius: 20px !important;
-  font-size: 13px !important;
+.smart-list-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 10px !important;
+  padding: 12px !important;
+  border: 1px solid transparent !important;
 }
 
-/* ─── 6. SIDEBAR CLIENTS (Semplici e puliti) ─── */
-.client-list-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  padding: 8px 15px !important;
-  color: rgba(255, 255, 255, 0.7) !important;
+.smart-list-card.active {
+  border-color: var(--brand-orange) !important;
 }
 
-} /* Fine layer components */
+/* ─── 5. QUICK ADD (LIME) ─── */
+.tasks-quickadd-container {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 14px !important;
+  padding: 16px !important;
+  width: 100% !important;
+  margin-bottom: 30px !important;
+}
+
+.tasks-quickadd-btn {
+  background: var(--brand-lime) !important;
+  color: var(--brand-navy) !important;
+  font-weight: 800 !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+}
+
+/* ─── 6. RESPONSIVE MOBILE ─── */
+@media (max-width: 768px) {
+  .home-sidebar {
+    transform: translateX(-100%) !important;
+  }
+  .home-main {
+    left: 0 !important;
+  }
+}
+
+} /* Fine @layer components */
