@@ -165,14 +165,14 @@
 }
 
 /* Smart Lists - Robust Single Column List */
-.smart-lists-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 12px 12px;
+.smart-lists-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 0 12px 12px !important;
 }
 
-.smart-list-card {
+.smart-list-item-new {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
@@ -184,21 +184,19 @@
   transition: all 0.2s ease !important;
 }
 
-.smart-list-card:hover {
+.smart-list-item-new:hover {
   background: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Fix for icons/counts in list style */
-.smart-list-card svg {
-  width: 20px !important;
-  height: 20px !important;
-  flex-shrink: 0 !important;
+.smart-list-item-new.active {
+  background: rgba(242, 144, 26, 0.15) !important;
+  border-color: var(--orange) !important;
 }
 
-.smart-list-card:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+.smart-list-item-new svg {
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0 !important;
 }
 
 .smart-list-card.active {

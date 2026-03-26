@@ -989,7 +989,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="smart-lists-grid">
+          <div className="smart-lists-list">
             {smartLists.map(sl => {
               // Map icon names to components
               const iconMap: Record<string, any> = {
@@ -1001,11 +1001,11 @@ export default function Dashboard() {
                 "star": FlagIconSolid,
               };
               const IconComponent = iconMap[sl.icon] || InboxIcon;
-
+              const isActive = activeSmartList === sl.id;
               return (
                 <div
                   key={sl.id}
-                  className={`smart-list-card ${activeSmartList === sl.id ? 'active' : ''}`}
+                  className={`smart-list-item-new ${isActive ? 'active' : ''}`}
                   onClick={() => {
                     setActiveSmartList(sl.id);
                     setActiveClientFilter(null);
