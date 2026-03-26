@@ -1254,33 +1254,35 @@ export default function Dashboard() {
 
           {/* ══ TASKS ══ */}
           {section === "tasks" && (
-            <div className="tasks-section-container" style={{ flex: 1, overflow: "hidden", margin: 0, display: "flex", flexDirection: "column" }}>
-              <TasksSection
-                tasks={tasks}
-                setTasks={setTasks}
-                clients={clients}
-                activeClientFilter={activeClientFilter}
-                setActiveClientFilter={setActiveClientFilter}
-                activeSmartList={activeSmartList as any}
-                setActiveSmartList={setActiveSmartList as any}
-                activeCustomListId={activeCustomListId}
-                setActiveCustomListId={setActiveCustomListId}
-                customLists={customLists}
-                onAiSort={() => {
-                  setAiSorting(true);
-                  const todoAndDoing = tasks.filter(t => t.status !== "done");
-                  fetch(`${API}/tasks/ai-sort`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ tasks: todoAndDoing })
-                  }).then(r => r.ok ? r.json() : null).then(data => {
-                    if (data?.order) setAiSortOrderIds(data.order);
-                  }).finally(() => setAiSorting(false));
-                }}
-                aiSorting={aiSorting}
-                isOffline={isOffline}
-                onRetryConnection={loadData}
-              />
+            <div className="tasks-section-container" style={{ flex: 1, display: "flex", justifyContent: "center", width: "100%" }}>
+              <div className="tasks-section-brute-force-centered" style={{ width: 900, maxWidth: "100%", display: "flex", flexDirection: "column", height: "100%" }}>
+                <TasksSection
+                  tasks={tasks}
+                  setTasks={setTasks}
+                  clients={clients}
+                  activeClientFilter={activeClientFilter}
+                  setActiveClientFilter={setActiveClientFilter}
+                  activeSmartList={activeSmartList as any}
+                  setActiveSmartList={setActiveSmartList as any}
+                  activeCustomListId={activeCustomListId}
+                  setActiveCustomListId={setActiveCustomListId}
+                  customLists={customLists}
+                  onAiSort={() => {
+                    setAiSorting(true);
+                    const todoAndDoing = tasks.filter(t => t.status !== "done");
+                    fetch(`${API}/tasks/ai-sort`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ tasks: todoAndDoing })
+                    }).then(r => r.ok ? r.json() : null).then(data => {
+                      if (data?.order) setAiSortOrderIds(data.order);
+                    }).finally(() => setAiSorting(false));
+                  }}
+                  aiSorting={aiSorting}
+                  isOffline={isOffline}
+                  onRetryConnection={loadData}
+                />
+              </div>
             </div>
           )}
 
