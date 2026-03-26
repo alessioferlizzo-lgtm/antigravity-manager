@@ -11,7 +11,7 @@ import {
   ChartBarIcon, ArrowTrendingUpIcon, ChevronDownIcon, InboxIcon, CheckCircleIcon,
   FlagIcon,
 } from "@heroicons/react/24/outline";
-import { FlagIcon as FlagIconSolid } from "@heroicons/react/24/solid";
+import { FlagIcon as FlagIconSolid, Bars3Icon } from "@heroicons/react/24/solid";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import TasksSection from "@/components/TasksSection";
@@ -91,6 +91,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [backendError, setBackendError] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 
   // Modals
@@ -932,8 +933,11 @@ export default function Dashboard() {
 
   return (
     <div className="home-layout">
+      {/* Mobile sidebar overlay */}
+      <div className={`sidebar-overlay ${mobileMenuOpen ? 'visible' : ''}`} onClick={() => setMobileMenuOpen(false)} />
+
       {/* ═══ SIDEBAR (Clienti soltanto) ═══ */}
-      <aside className="home-sidebar">
+      <aside className={`home-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="home-sidebar-header">
           <div className="home-sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <img src="/logo.png" alt="Alessio Ferlizzo" style={{ height: '26px', width: 'auto', borderRadius: '4px' }} />
@@ -1227,9 +1231,12 @@ export default function Dashboard() {
       <div className="home-main" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
 
         {/* TOP NAV */}
-        <div style={{ background: "var(--navy-card)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 32px", display: "flex", alignItems: "center", gap: 2, height: 52, flexShrink: 0 }}>
+        <div style={{ background: "var(--navy-card)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px 0 12px", display: "flex", alignItems: "center", gap: 2, height: 52, flexShrink: 0 }}>
+          <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(v => !v)}>
+            <Bars3Icon style={{ width: 20, height: 20 }} />
+          </button>
           {topNavItems.map(({ key, icon: Icon, label, badge }) => (
-            <button key={key} onClick={() => setSection(key)}
+            <button key={key} onClick={() => { setSection(key); setMobileMenuOpen(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 7, padding: "0 16px", height: "100%",
                 background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
@@ -1250,12 +1257,12 @@ export default function Dashboard() {
         </div>
 
         {/* SECTION CONTENT */}
-        <div className="home-content-scroll" style={{ flex: 1, overflow: "auto", padding: 0 }}>
+        <div className="home-content-scroll" style={{ flex: 1, overflow: "auto" }}>
 
           {/* ══ TASKS ══ */}
           {section === "tasks" && (
             <div className="tasks-section-container" style={{ flex: 1, display: "flex", justifyContent: "center", width: "100%" }}>
-              <div className="tasks-section-brute-force-centered" style={{ width: 900, maxWidth: "100%", display: "flex", flexDirection: "column", height: "100%" }}>
+              <div className="tasks-section-brute-force-centered" style={{ width: "100%", maxWidth: 1200, display: "flex", flexDirection: "column", height: "100%", padding: "0 24px" }}>
                 <TasksSection
                   tasks={tasks}
                   setTasks={setTasks}
