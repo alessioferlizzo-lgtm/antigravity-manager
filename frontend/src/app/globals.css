@@ -1,59 +1,49 @@
-@import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
    ANTIGRAVITY OPERATIVE MANAGER - APPLE STYLE UI
-   Complete CSS Rewrite - March 26, 2026
+   Consolidated Layout System - March 26, 2026
    ═══════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* Brand Colors */
     --navy: #042558;
+    --navy-dark: #001a33;
+    --navy-card: rgba(255, 255, 255, 0.04);
     --orange: #f2901a;
     --lime: #a3d906;
-
-    /* Layout */
     --sidebar-w: 240px;
-  }
-
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
   }
 
   html, body {
     height: 100%;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
-  }
-
-  body {
-    background: var(--navy) !important;
-    color: #ffffff !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-    font-size: 13px; /* Reduced from 15px */
-    line-height: 1.4;
-    font-weight: 400;
+    background: var(--navy-dark);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
-
-  h1, h2, h3, h4, h5, h6 {
-    color: #ffffff;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
-  }
-
-  h1 { font-size: 24px; font-weight: 800; } /* Reduced */
-  h2 { font-size: 20px; } /* Reduced */
-  h3 { font-size: 16px; } /* Reduced */
 }
 
 @layer components {
-/* ═══════════════════════════════════════════════════════════════
-   LAYOUT STRUCTURE
-   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── MACRO LAYOUT ─── */
+.home-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.home-sidebar {
+  width: var(--sidebar-w);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: var(--navy-dark);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 100;
+}
 
 .home-main {
   position: absolute !important;
@@ -63,49 +53,37 @@
   bottom: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  background: var(--navy) !important;
+  background: var(--navy-dark) !important;
   overflow: hidden !important;
 }
 
-.tasks-root,
+/* ─── CENTERING SYSTEM ─── */
 .home-content-scroll,
-.tasks-section-container {
+.tasks-section-container,
+.tasks-root {
   width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  align-items: center !important; /* CATEGORICAL CENTERING */
+  flex: 1;
 }
 
 .tasks-section-wrapper {
   width: 100% !important;
   max-width: 900px !important;
-  margin: 0 auto !important; /* ABSOLUTE CENTER */
+  margin: 0 auto !important;
+  padding: 0 40px; /* Internal safety padding */
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
-  position: relative;
 }
 
 .tasks-main {
-  flex: 1 !important;
   width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  overflow: hidden !important;
-  background: var(--navy) !important;
+  flex: 1;
 }
-
-.home-layout,
-.app-layout {
-  display: flex;
-  min-height: 100vh;
-  background: var(--navy) !important;
-}
-
-
-/* ═══════════════════════════════════════════════════════════════
-   SIDEBAR (Fixed Left)
-   ═══════════════════════════════════════════════════════════════ */
-
 .home-sidebar,
 .sidebar {
   position: fixed !important;
