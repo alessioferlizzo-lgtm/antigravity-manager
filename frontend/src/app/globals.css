@@ -151,6 +151,19 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   overflow: hidden;
 }
 
+/* Content scroll area — holds all sections */
+.home-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Non-task sections get padding from this */
+.home-content-scroll > div:not(.tasks-section-container) {
+  padding: 28px 36px 80px;
+  max-width: 1200px;
+}
+
 
 /* ══════════════════════════════════════════════════════════════
    5. SMART LISTS — Apple Reminders Grid
@@ -1342,15 +1355,115 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 /* ══════════════════════════════════════════════════════════════
    20. RESPONSIVE
    ══════════════════════════════════════════════════════════════ */
+
+/* Mobile menu button — hidden on desktop */
+.mobile-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.mobile-menu-btn:hover { background: rgba(255,255,255,0.15); }
+
+/* Mobile sidebar overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+  z-index: 199;
+}
+.sidebar-overlay.visible { display: block; }
+
 @media (max-width: 900px) {
   .swot-grid { grid-template-columns: 1fr; }
   .funnel-row { grid-template-columns: 1fr 1fr; }
+  .cal-grid { grid-template-columns: repeat(3, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 680px) {
+/* Tablet */
+@media (max-width: 768px) {
   :root { --sidebar-w: 0px; }
-  .home-sidebar, .sidebar, .tasks-left { display: none; }
-  .home-main, .main-content { margin-left: 0; padding: 20px 16px 60px; }
+
+  .mobile-menu-btn { display: flex; }
+
+  .home-sidebar, .sidebar, .tasks-left { 
+    transform: translateX(-100%);
+    position: fixed;
+    z-index: 200;
+    width: 280px;
+    min-width: 280px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .home-sidebar.open, .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .home-main, .main-content { 
+    margin-left: 0; 
+  }
+
+  /* Top nav: scrollable on mobile */
+  .home-main > div:first-child {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .home-main > div:first-child::-webkit-scrollbar { display: none; }
+
+  .home-content-scroll > div:not(.tasks-section-container) {
+    padding: 20px 16px 60px;
+  }
+
   .smart-lists-grid { grid-template-columns: 1fr; }
   .task-drawer, .lateral-drawer { width: 100%; }
+  .cal-grid { grid-template-columns: 1fr; min-height: auto; }
+  .cal-col { min-height: 120px; }
+  .funnel-row { grid-template-columns: 1fr; }
+  
+  .tasks-header { padding: 16px 16px 10px; }
+  .tasks-quickadd-container { padding: 10px 16px; }
+  .tasks-filters { padding: 8px 16px 10px; }
+  .tasks-list { padding: 10px 16px 40px; }
+}
+
+/* Phone */
+@media (max-width: 480px) {
+  .tasks-title { font-size: 20px; }
+  .page-title { font-size: 18px; }
+  
+  .tasks-filter-chip { padding: 5px 12px; font-size: 12px; }
+  .tasks-search-input { width: 100%; }
+  
+  .task-card-inner { padding: 10px 12px; gap: 10px; }
+  .task-badges { gap: 3px; }
+  .task-badge { font-size: 9px; padding: 1px 6px; }
+  
+  .task-drawer, .lateral-drawer { width: 100%; }
+  .task-drawer-body { padding: 16px; }
+  
+  .tasks-quickadd-input { font-size: 14px; }
+  .tasks-ai-btn { font-size: 11px; padding: 4px 8px; }
+  
+  .card { padding: 16px; border-radius: 10px; }
+  .card-sm { padding: 12px; }
+  
+  .home-content-scroll > div:not(.tasks-section-container) {
+    padding: 16px 12px 60px;
+  }
+  
+  .kpi-grid { grid-template-columns: 1fr; }
+  .format-chip { font-size: 11px; padding: 5px 10px; }
+  
+  .btn { padding: 8px 14px; font-size: 13px; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
 }
