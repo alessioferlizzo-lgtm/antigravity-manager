@@ -18,7 +18,7 @@
 
   /* Page */
   --page-bg:     var(--navy);
-  --sidebar-w:   266px;
+  --sidebar-w:   290px;
 
   /* Text on dark (navy) */
   --text-primary:  #ffffff;
@@ -392,7 +392,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .tasks-section-wrapper,
 .tasks-section-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: 700px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
