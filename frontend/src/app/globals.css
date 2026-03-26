@@ -179,7 +179,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
@@ -187,6 +187,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   gap: 6px;
   position: relative;
   min-width: 0;
+  min-height: 75px;
 }
 
 .smart-list-card:hover {
@@ -391,6 +392,8 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .tasks-section-wrapper,
 .tasks-section-container {
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
 }
