@@ -200,14 +200,14 @@
 }
 
 .smart-list-label {
-  font-size: 10px !important; /* Reduced */
+  font-size: 9px !important; /* EXTRA SMALL TO PREVENT CLIPPING */
   font-weight: 700 !important;
   color: rgba(255, 255, 255, 0.5) !important;
   text-transform: uppercase !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 75px !important; /* Hard limit to force ellipsis */
 }
 
 /* Client List */
@@ -487,6 +487,18 @@
   transition: all 0.2s;
 }
 
+.tasks-search-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 5px 12px 5px 32px !important; /* FIXED OVERLAP */
+  font-size: 13px;
+  color: #fff;
+  outline: none;
+  width: 180px;
+  transition: all 0.2s;
+}
+
 .tasks-filter-chip:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
@@ -537,25 +549,25 @@
 }
 
 .task-card-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px; /* Reduced padding */
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px;
+  padding: 6px 12px;
   position: relative;
-  min-height: 40px; /* Reduced from 52px */
+  min-height: 36px !important; /* ULTRA COMPACT */
 }
 
 .task-card-inner {
   display: flex !important;
   align-items: center !important;
-  gap: 12px;
-  padding: 0 14px;
+  gap: 10px;
+  padding: 0 12px;
   width: 100%;
 }
 
 .task-checkbox {
-  width: 20px; /* Reduced */
-  height: 20px;
+  width: 18px !important;
+  height: 18px !important;
   border-radius: 50%;
   border: 1.5px solid #d1d1d6;
   background: transparent;
