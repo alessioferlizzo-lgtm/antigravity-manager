@@ -2,13 +2,15 @@
 @import "tailwindcss";
 
 /*
-  BRAND ANTIGRAVITY — COLOR SYSTEM
+  BRAND ANTIGRAVITY — COLOR SYSTEM (Updated: 2026-03-26)
   ─────────────────────────────────
   · #042558  → sfondo pagina (navy scuro)
   · #f2901a  → bottoni CTA / primary (orange)
   · #a3d906  → lime: evidenze, badge positivi
   · #333333  → testo scuro su sfondi chiari
   · #f3f4f6  → sfondi intermedi/card alternative
+
+  FORCE VERCEL REDEPLOY
 */
 
 
