@@ -28,8 +28,8 @@
   }
 
   body {
-    background: var(--navy);
-    color: #ffffff;
+    background: var(--navy) !important;
+    color: #ffffff !important;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.5;
@@ -50,6 +50,7 @@
   h3 { font-size: 20px; }
 }
 
+@layer components {
 /* ═══════════════════════════════════════════════════════════════
    LAYOUT STRUCTURE
    ═══════════════════════════════════════════════════════════════ */
@@ -58,7 +59,7 @@
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background: var(--navy);
+  background: var(--navy) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -67,17 +68,17 @@
 
 .home-sidebar,
 .sidebar {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: var(--sidebar-w);
-  height: 100vh;
-  background: var(--navy);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 100;
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: var(--sidebar-w) !important;
+  height: 100vh !important;
+  background: var(--navy) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  z-index: 100 !important;
 }
 
 .home-sidebar-header,
@@ -172,13 +173,13 @@
 }
 
 .smart-list-card {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: left;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  text-align: left !important;
 }
 
 .smart-list-card:hover {
@@ -193,19 +194,19 @@
 }
 
 .smart-list-count {
-  font-size: 28px;
-  font-weight: 800;
-  color: #ffffff;
-  line-height: 1;
-  margin-bottom: 6px;
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  line-height: 1 !important;
+  margin-bottom: 6px !important;
 }
 
 .smart-list-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
 }
 
 /* Client List */
@@ -306,14 +307,14 @@
 
 .home-main,
 .main-content {
-  margin-left: var(--sidebar-w);
-  flex: 1;
-  min-width: 0;
-  height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: var(--navy);
-  padding: 40px 48px 80px;
+  margin-left: var(--sidebar-w) !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  height: 100vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: var(--navy) !important;
+  padding: 40px 48px 80px !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -489,13 +490,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .task-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 14px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 14px !important;
+  margin-bottom: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04) !important;
 }
 
 .task-card:hover {
@@ -760,17 +761,17 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .page-title {
-  font-size: 28px;
-  font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 8px;
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  margin-bottom: 8px !important;
 }
 
 .section-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 12px;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin-bottom: 12px !important;
 }
 
 .label {
@@ -845,3 +846,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+} /* Close @layer components */
