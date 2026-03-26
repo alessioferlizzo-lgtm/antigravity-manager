@@ -772,16 +772,6 @@ export default function TasksSection({
                   onClick={handleQuickAdd}
                   disabled={!quickAdd.trim() || quickAddLoading}
                   className="tasks-quickadd-btn"
-                  style={{
-                    backgroundColor: "#a3d906",
-                    color: "#042558",
-                    fontWeight: 800,
-                    borderRadius: "10px",
-                    border: "none",
-                    padding: "8px 18px",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(163, 217, 6, 0.2)"
-                  }}
                 >
                   {quickAddLoading ? "..." : "Aggiungi"}
                 </button>
@@ -1078,7 +1068,7 @@ function TaskCard({
       {/* Left border accent */}
       <div className="task-card-accent" />
 
-      <div className="task-card-inner" style={{ display: "flex", alignItems: "center", gap: "16px", padding: "12px 16px", width: "100%" }}>
+      <div className="task-card-inner">
         {/* Checkbox */}
         <button
           className={`task-checkbox ${isDone ? "checked" : ""} ${completing ? "completing" : ""}`}
