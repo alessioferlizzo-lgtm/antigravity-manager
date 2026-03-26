@@ -472,10 +472,11 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 
 /* Quick Add */
 .tasks-quickadd-container {
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 4px;
   background: rgba(255,255,255,0.03);
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding: 12px 20px; flex-shrink: 0;
+  padding: 10px 20px;
+  flex-shrink: 0;
 }
 
 .tasks-quickadd {
@@ -483,9 +484,9 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 }
 
 .tasks-quickadd-circle {
-  width: 28px; height: 28px; min-width: 28px;
+  width: 24px; height: 24px; min-width: 24px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.2);
+  border: 1.5px solid rgba(255,255,255,0.2);
   display: flex; align-items: center; justify-content: center;
   color: rgba(255,255,255,0.4); flex-shrink: 0;
   transition: all 0.15s;
@@ -493,10 +494,10 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 
 .tasks-quickadd-input {
   flex: 1; background: transparent; border: none;
-  font-size: 15px; color: #ffffff;
+  font-size: 14px; color: #ffffff;
   outline: none; font-family: inherit;
 }
-.tasks-quickadd-input::placeholder { color: rgba(255,255,255,0.4); }
+.tasks-quickadd-input::placeholder { color: rgba(255,255,255,0.35); }
 
 .tasks-quickadd-select,
 .tasks-quickadd-date {
@@ -518,30 +519,29 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .tasks-quickadd-toolbar {
   display: flex; align-items: center;
   justify-content: space-between;
-  padding: 8px 12px 0 44px;
-  margin-top: 4px;
+  padding: 4px 0 0 40px;
 }
 
-.toolbar-left { display: flex; gap: 12px; }
+.toolbar-left { display: flex; gap: 8px; }
 
 .toolbar-icon-btn {
   background: none; border: none;
-  color: rgba(255,255,255,0.45);
-  cursor: pointer; padding: 6px; border-radius: 8px;
+  color: rgba(255,255,255,0.35);
+  cursor: pointer; padding: 4px; border-radius: 6px;
   transition: all 0.2s;
   display: flex; align-items: center; justify-content: center;
 }
-.toolbar-icon-btn svg { width: 18px; height: 18px; }
-.toolbar-icon-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.toolbar-icon-btn svg { width: 16px; height: 16px; }
+.toolbar-icon-btn:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
 .toolbar-icon-btn.active { color: var(--orange); background: rgba(242,144,26,0.1); }
 
 /* NLP feedback badges */
-.tasks-nlp-feedback { display: flex; gap: 8px; padding-left: 40px; min-height: 20px; }
+.tasks-nlp-feedback { display: flex; gap: 6px; flex-wrap: wrap; }
 .nlp-badge {
-  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+  font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 5px;
   background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);
   border: 1px solid rgba(255,255,255,0.1);
-  display: flex; align-items: center; gap: 4px;
+  display: flex; align-items: center; gap: 3px;
   animation: fadeIn 0.2s ease-out;
 }
 .nlp-badge-client { color: var(--lime); background: rgba(163,217,6,0.1); border-color: rgba(163,217,6,0.2); }
@@ -549,7 +549,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .nlp-badge-flag { color: #ff9500; background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.2); }
 
 /* Form toggle */
-.tasks-form-toggle-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.tasks-form-toggle-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
 .tasks-form-toggle-btn {
   background: var(--navy); border: 1px solid var(--border);
   padding: 4px 12px; border-radius: 12px;
@@ -713,7 +713,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .apple-checkbox.checked svg { color: #1a2600; width: 14px; height: 14px; }
 
 /* Card content */
-.task-card-content { flex: 1; min-width: 0; cursor: pointer; }
+.task-card-content { flex: 1; min-width: 0; cursor: pointer; position: relative; padding-right: 24px; }
 
 .task-card-title-row { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 
@@ -725,6 +725,52 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .task-card-title.done { text-decoration: line-through; color: #8e8e93; }
 
 .task-recurring-badge { font-size: 13px; flex-shrink: 0; }
+
+/* Priority marker inline */
+.task-priority-marker {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+.task-priority-marker.priority-alta { color: #ff3b30; }
+.task-priority-marker.priority-media { color: #ff9500; }
+
+/* Subtask progress bar */
+.task-subtask-progress {
+  height: 3px; background: rgba(0,0,0,0.06);
+  border-radius: 2px; margin-top: 6px;
+  overflow: hidden;
+}
+.task-subtask-bar {
+  height: 100%; background: var(--lime);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Badge avatar */
+.task-badge-avatar {
+  width: 14px; height: 14px; border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 7px; font-weight: 800; color: #fff;
+  flex-shrink: 0;
+}
+
+.task-badge-date { border-color: transparent; }
+.task-badge-date.pulse { animation: pulse-badge 2s infinite; }
+@keyframes pulse-badge { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+.task-badge-time { background: rgba(0,122,255,0.08); color: #007aff; border-color: rgba(0,122,255,0.15); }
+.task-badge-subtasks { background: rgba(142,142,147,0.08); color: #8e8e93; border-color: rgba(142,142,147,0.15); }
+
+/* Grouped scheduled view header */
+.tasks-group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0 6px;
+  font-size: 13px; font-weight: 700;
+  color: rgba(255,255,255,0.6);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 8px;
+}
 
 /* Modern task row (flat list style) */
 .task-row-modern {
@@ -759,9 +805,10 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 
 /* Card actions (on hover) */
 .task-card-actions {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 4px;
   opacity: 0; transition: opacity 0.15s;
-  margin-left: auto; flex-shrink: 0;
+  flex-shrink: 0;
+  padding-left: 8px;
 }
 .task-card:hover .task-card-actions { opacity: 1; }
 
@@ -773,13 +820,39 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 }
 .task-action-btn:hover { background: #e5e5ea; color: #000; }
 .task-action-btn.danger:hover { background: rgba(255,59,48,0.1); color: #ff3b30; }
-.task-delete-yes { background: #ff3b30; color: #fff; }
-.task-delete-no { background: #f2f2f7; color: #3a3a3c; }
 
-/* Flag */
-.task-card-flag-container { position: absolute; right: 12px; top: 10px; z-index: 5; }
-.task-flag-btn { color: #c7c7cc; cursor: pointer; transition: all 0.2s; }
-.task-card:hover .task-flag-btn { color: #8e8e93; }
+/* Delete confirm inline */
+.task-delete-confirm {
+  display: flex; gap: 6px; align-items: center;
+  animation: fadeIn 0.15s ease;
+}
+.task-delete-yes {
+  background: #ff3b30; color: #fff;
+  border: none; border-radius: 8px;
+  padding: 6px 14px; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.task-delete-yes:hover { background: #e0342b; transform: scale(1.02); }
+.task-delete-no {
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  padding: 6px 14px; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.task-delete-no:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* Flag — absolute within content area, doesn't overlap with card-actions */
+.task-card-flag-container {
+  position: absolute;
+  right: 0; top: 2px;
+  z-index: 2;
+}
+.task-flag-btn { color: transparent; cursor: pointer; transition: all 0.2s; }
+.task-card:hover .task-flag-btn { color: rgba(200,200,200,0.5); }
 .task-flag-btn.active { color: #ff9500 !important; }
 .task-flag-icon { margin-left: 6px; color: #ff9500; }
 
