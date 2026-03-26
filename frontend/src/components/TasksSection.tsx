@@ -110,7 +110,7 @@ export default function TasksSection({
 
 
   /* ─── internal filters ─── */
-  const [fPriority, setFPriority] = useState("all");
+  const [fTimeRange, setFTimeRange] = useState("all");
   const [search, setSearch] = useState("");
 
   /* ─── quick add ─── */
@@ -223,7 +223,17 @@ export default function TasksSection({
   const filteredTasks = getBaseList()
     .filter(t => !activeClientFilter || t.client_id === activeClientFilter)
     .filter(t => !activeCustomListId || t.list_id === activeCustomListId)
-    .filter(t => fPriority === "all" || t.priority === fPriority)
+    .filter(t => {
+      if (fTimeRange === "all") return true;
+      if (!t.due_date) return false;
+      const today = todayStr();
+      const tomorrow = tomorrowStr();
+      const weekFromNow = formatLocalISO((() => { const d = new Date(); d.setDate(d.getDate() + 7); return d; })());
+      if (fTimeRange === "oggi") return t.due_date === today;
+      if (fTimeRange === "domani") return t.due_date === tomorrow;
+      if (fTimeRange === "settimana") return t.due_date <= weekFromNow;
+      return true;
+    })
     .filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.client_name?.toLowerCase().includes(search.toLowerCase()));
 
   const displayTasks: Task[] = (() => {
@@ -939,20 +949,24 @@ export default function TasksSection({
 
         {/* ─── Filters bar ─── */}
         <div className="tasks-filters">
-          {["alta", "media", "bassa"].map(p => (
+          {[
+            { key: "oggi", label: "Oggi", color: "#007aff" },
+            { key: "domani", label: "Domani", color: "#ff9500" },
+            { key: "settimana", label: "Questa settimana", color: "#34c759" }
+          ].map(f => (
             <button
-              key={p}
-              className={`tasks-filter-chip ${fPriority === p ? "active" : ""}`}
-              style={{ "--fc-color": p === "alta" ? "#ff3b30" : p === "media" ? "#ff9500" : "#636366" } as React.CSSProperties}
-              onClick={() => setFPriority(fPriority === p ? "all" : p)}
+              key={f.key}
+              className={`tasks-filter-chip ${fTimeRange === f.key ? "active" : ""}`}
+              style={{ "--fc-color": f.color } as React.CSSProperties}
+              onClick={() => setFTimeRange(fTimeRange === f.key ? "all" : f.key)}
             >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
+              {f.label}
             </button>
           ))}
-          {(fPriority !== "all" || search || activeClientFilter) && (
+          {(fTimeRange !== "all" || search || activeClientFilter) && (
             <button
               className="tasks-filter-clear"
-              onClick={() => { setFPriority("all"); setSearch(""); setActiveClientFilter(null); }}
+              onClick={() => { setFTimeRange("all"); setSearch(""); setActiveClientFilter(null); }}
             >
               <XMarkIcon width={12} /> Pulisci
             </button>
