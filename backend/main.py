@@ -52,6 +52,15 @@ app.add_middleware(
 ai_service = AIService()
 storage_service = StorageService()
 
+# Health check endpoint for Render
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "Antigravity Backend", "version": "1.0"}
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
 @app.on_event("startup")
 async def on_startup():
     import asyncio
