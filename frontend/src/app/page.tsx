@@ -922,6 +922,7 @@ export default function Dashboard() {
   }
 
   const topNavItems: { key: WsSection; icon: any; label: string; badge?: number }[] = [
+    { key: "tasks", icon: ClipboardDocumentListIcon, label: "Tasks" },
     { key: "angoli", icon: LightBulbIcon, label: "Angoli" },
     { key: "script", icon: DocumentTextIcon, label: "Script Video" },
     { key: "copy", icon: PencilSquareIcon, label: "Copy" },
@@ -989,9 +990,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="smart-lists-list">
+          <div className="smart-lists-grid">
             {smartLists.map(sl => {
-              // Map icon names to components
               const iconMap: Record<string, any> = {
                 "calendar": CalendarIcon,
                 "inbox": InboxIcon,
@@ -1005,7 +1005,7 @@ export default function Dashboard() {
               return (
                 <div
                   key={sl.id}
-                  className={`smart-list-item-new ${isActive ? 'active' : ''}`}
+                  className={`smart-list-card ${isActive ? 'active' : ''}`}
                   onClick={() => {
                     setActiveSmartList(sl.id);
                     setActiveClientFilter(null);
@@ -1018,9 +1018,8 @@ export default function Dashboard() {
                       openSmartListEditor(sl);
                     }
                   }}
-                  style={{ position: "relative" }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div className="smart-list-card-header">
                     <div className="smart-list-icon" style={{ backgroundColor: sl.color }}>
                       <IconComponent width={18} height={18} />
                     </div>

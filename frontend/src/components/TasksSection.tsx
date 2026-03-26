@@ -1075,7 +1075,7 @@ function TaskCard({
           onClick={e => { e.stopPropagation(); onComplete(task); }}
           aria-label="Completa task"
         >
-          {(isDone || completing) && <CheckIcon width={12} strokeWidth={3} />}
+          {(isDone || completing) && <CheckIcon width={14} strokeWidth={4} />}
         </button>
 
         {/* Content */}
