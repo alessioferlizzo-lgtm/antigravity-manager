@@ -922,7 +922,7 @@ export default function Dashboard() {
   }
 
   const topNavItems: { key: WsSection; icon: any; label: string; badge?: number }[] = [
-    { key: "tasks", icon: ClipboardDocumentListIcon, label: "Tasks" },
+    { key: "tasks", icon: ClipboardDocumentListIcon, label: "!!! TASKS !!!" },
     { key: "angoli", icon: LightBulbIcon, label: "Angoli" },
     { key: "script", icon: DocumentTextIcon, label: "Script Video" },
     { key: "copy", icon: PencilSquareIcon, label: "Copy" },
