@@ -58,24 +58,35 @@
 }
 
 /* ─── CENTERING SYSTEM ─── */
-.home-content-scroll,
-.tasks-section-container,
+.home-content-scroll {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1;
+}
+
+.tasks-section-container {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: row !important; /* ENABLE HORIZONTAL CENTERING */
+  justify-content: center !important; /* CATEGORICAL CENTERING */
+  flex: 1;
+}
+
 .tasks-root {
   width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important; /* CATEGORICAL CENTERING */
-  flex: 1;
 }
 
 .tasks-section-wrapper {
-  width: 100% !important;
-  max-width: 900px !important;
+  width: 900px !important; /* RIGID 900PX */
   margin: 0 auto !important;
-  padding: 0 40px; /* Internal safety padding */
+  padding: 0 40px;
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
+  flex-shrink: 0 !important;
 }
 
 .tasks-main {
@@ -580,7 +591,8 @@
   gap: 16px !important;
   padding: 0 20px !important;
   position: relative !important;
-  min-height: 56px !important; /* FIXED 56PX */
+  min-height: 56px !important; /* RIGID 56PX */
+  max-height: 56px !important; /* RIGID 56PX */
 }
 
 .task-card-inner {
