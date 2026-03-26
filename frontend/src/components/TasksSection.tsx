@@ -648,37 +648,37 @@ export default function TasksSection({
 
   return (
     <div className="tasks-root">
-
-      {/* ════ MAIN CONTENT ════ */}
-      <div className="tasks-main">
-        {/* Offline Banner */}
-        {isOffline && (
-          <div style={{ background: "rgba(255,149,0,0.15)", borderBottom: "1px solid rgba(255,149,0,0.3)", padding: "6px 20px", display: "flex", alignItems: "center", gap: 12, color: "#ff9500", fontSize: 11, fontWeight: 700 }}>
-            <ExclamationTriangleIcon width={14} />
-            <span style={{ flex: 1 }}>MODALITÀ OFFLINE — Il server non è raggiungibile. Attendi che si riattivi (richiede 30-60 secondi).</span>
-            {onRetryConnection && (
-              <button
-                onClick={onRetryConnection}
-                style={{
-                  background: "var(--orange)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "6px",
-                  padding: "4px 12px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px"
-                }}
-              >
-                <ArrowPathIcon width={12} />
-                RICONNETTI
-              </button>
-            )}
-          </div>
-        )}
+      <div className="tasks-section-wrapper">
+        {/* ════ MAIN CONTENT ════ */}
+        <div className="tasks-main">
+          {/* Offline Banner */}
+          {isOffline && (
+            <div style={{ background: "rgba(255,149,0,0.15)", borderBottom: "1px solid rgba(255,149,0,0.3)", padding: "6px 20px", display: "flex", alignItems: "center", gap: 12, color: "#ff9500", fontSize: 11, fontWeight: 700 }}>
+              <ExclamationTriangleIcon width={14} />
+              <span style={{ flex: 1 }}>MODALITÀ OFFLINE — Il server non è raggiungibile. Attendi che si riattivi (richiede 30-60 secondi).</span>
+              {onRetryConnection && (
+                <button
+                  onClick={onRetryConnection}
+                  style={{
+                    background: "var(--orange)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "4px 12px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <ArrowPathIcon width={12} />
+                  RICONNETTI
+                </button>
+              )}
+            </div>
+          )}
 
         {/* Header */}
 
@@ -996,6 +996,7 @@ export default function TasksSection({
             ))
           )}
         </div>
+        </div>
       </div>
 
       {/* ════ DRAWER ════ */}
@@ -1209,7 +1210,7 @@ function TaskDrawer({
   }
 
   return (
-    <>
+    <div className="task-drawer-container">
       <div className="task-drawer-backdrop" onClick={onClose} />
       <div className="task-drawer">
         {/* Header */}
@@ -1407,6 +1408,6 @@ function TaskDrawer({
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
