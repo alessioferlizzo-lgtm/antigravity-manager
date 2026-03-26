@@ -122,7 +122,17 @@ export default function TasksSection({
   const [formData, setFormData] = useState({ title: "", client_id: "", priority: "media", due_date: "", notes: "", flagged: false });
 
   /* ─── task view ─── */
-  const [view, setView] = useState<"list" | "scheduled">("list");
+  const [view, setView] = useState<"list" | "scheduled" | "calendar">("list");
+
+  /* ─── calendar state ─── */
+  const [calWeekStart, setCalWeekStart] = useState(() => {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    return d;
+  });
+  const [calDragOverDay, setCalDragOverDay] = useState<string | null>(null);
+  const calDragTaskRef = useRef<string | null>(null);
 
   /* ─── drawer ─── */
   const [drawerTask, setDrawerTask] = useState<Task | null>(null);
@@ -647,6 +657,27 @@ export default function TasksSection({
     setDragOver(null);
   }
 
+  /* ─── calendar drag & drop ─── */
+  async function calDropTaskOnDay(dateStr: string) {
+    const taskId = calDragTaskRef.current;
+    if (!taskId) return;
+    setCalDragOverDay(null);
+    calDragTaskRef.current = null;
+    try {
+      const r = await fetch(`${API}/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ due_date: dateStr })
+      });
+      if (r.ok) {
+        const updated = await r.json();
+        setTasks(p => p.map(t => t.id === taskId ? updated : t));
+      }
+    } catch (err) {
+      console.error("Calendar drop failed:", err);
+    }
+  }
+
   /* ─── smart lists config ─── */
   const smartLists = [
     { id: "oggi" as SmartListId, label: "Oggi", icon: CalendarIcon, color: "#007aff", count: todayTasks.length },
@@ -721,9 +752,9 @@ export default function TasksSection({
             </div>
             {/* View toggle */}
             <button
-              className={`tasks-view-btn ${view === "scheduled" ? "active" : ""}`}
-              onClick={() => setView(v => v === "list" ? "scheduled" : "list")}
-              title="Vista per data"
+              className={`tasks-view-btn ${view !== "list" ? "active" : ""}`}
+              onClick={() => setView(v => v === "list" ? "calendar" : v === "calendar" ? "scheduled" : "list")}
+              title={view === "list" ? "Vista calendario" : view === "calendar" ? "Vista raggruppata" : "Vista lista"}
             >
               <CalendarIcon width={15} />
             </button>
@@ -947,14 +978,25 @@ export default function TasksSection({
 
         {/* ─── Task list ─── */}
         <div className="tasks-list">
-          {displayTasks.length === 0 && (
+          {displayTasks.length === 0 && view !== "calendar" && (
             <div className="tasks-empty">
               <CheckCircleSolid width={48} style={{ color: "#2c2c2e", margin: "0 auto 12px" }} />
               <p>Nessuna task in questa lista 🎉</p>
             </div>
           )}
 
-          {view === "scheduled" && groupedScheduled ? (
+          {view === "calendar" ? (
+            <CalendarView
+              tasks={tasks}
+              calWeekStart={calWeekStart}
+              setCalWeekStart={setCalWeekStart}
+              calDragOverDay={calDragOverDay}
+              setCalDragOverDay={setCalDragOverDay}
+              calDragTaskRef={calDragTaskRef}
+              onDropTaskOnDay={calDropTaskOnDay}
+              onTaskClick={openDrawer}
+            />
+          ) : view === "scheduled" && groupedScheduled ? (
             groupedScheduled.map(([dateKey, groupTasks]) => (
               <div key={dateKey}>
                 <div className="tasks-group-header">
@@ -1426,6 +1468,159 @@ function TaskDrawer({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CALENDAR VIEW
+════════════════════════════════════════════════════════════════ */
+interface CalendarViewProps {
+  tasks: Task[];
+  calWeekStart: Date;
+  setCalWeekStart: (d: Date) => void;
+  calDragOverDay: string | null;
+  setCalDragOverDay: (d: string | null) => void;
+  calDragTaskRef: React.MutableRefObject<string | null>;
+  onDropTaskOnDay: (dateStr: string) => void;
+  onTaskClick: (t: Task) => void;
+}
+
+function CalendarView({
+  tasks,
+  calWeekStart,
+  setCalWeekStart,
+  calDragOverDay,
+  setCalDragOverDay,
+  calDragTaskRef,
+  onDropTaskOnDay,
+  onTaskClick
+}: CalendarViewProps) {
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(calWeekStart);
+    d.setDate(d.getDate() + i);
+    weekDays.push(d);
+  }
+
+  const tasksByDay: Record<string, Task[]> = {};
+  const unscheduled: Task[] = [];
+
+  tasks.forEach(t => {
+    if (t.status === "done") return;
+    if (!t.due_date) {
+      unscheduled.push(t);
+    } else {
+      if (!tasksByDay[t.due_date]) tasksByDay[t.due_date] = [];
+      tasksByDay[t.due_date].push(t);
+    }
+  });
+
+  const todayStr = formatLocalISO(new Date());
+
+  function prevWeek() {
+    const d = new Date(calWeekStart);
+    d.setDate(d.getDate() - 7);
+    setCalWeekStart(d);
+  }
+
+  function nextWeek() {
+    const d = new Date(calWeekStart);
+    d.setDate(d.getDate() + 7);
+    setCalWeekStart(d);
+  }
+
+  return (
+    <div>
+      {/* Week Navigation */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <button onClick={prevWeek} className="btn" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "6px 12px", borderRadius: 8, cursor: "pointer" }}>
+          ← Settimana precedente
+        </button>
+        <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 600 }}>
+          {calWeekStart.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}
+        </span>
+        <button onClick={nextWeek} className="btn" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "6px 12px", borderRadius: 8, cursor: "pointer" }}>
+          Prossima settimana →
+        </button>
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="cal-grid">
+        {weekDays.map((day, idx) => {
+          const dateStr = formatLocalISO(day);
+          const dayTasks = tasksByDay[dateStr] || [];
+          const isToday = dateStr === todayStr;
+          const isDragOver = calDragOverDay === dateStr;
+
+          return (
+            <div
+              key={idx}
+              className={`cal-col ${isToday ? "cal-today" : ""} ${isDragOver ? "cal-drop-over" : ""}`}
+              onDragOver={e => {
+                e.preventDefault();
+                setCalDragOverDay(dateStr);
+              }}
+              onDragLeave={() => setCalDragOverDay(null)}
+              onDrop={() => {
+                onDropTaskOnDay(dateStr);
+              }}
+            >
+              <div className="cal-col-header">
+                <div className="cal-day-name">{day.toLocaleDateString("it-IT", { weekday: "short" })}</div>
+                <div className="cal-day-num">{day.getDate()}</div>
+              </div>
+              <div className="cal-col-body">
+                {dayTasks.map(task => (
+                  <div
+                    key={task.id}
+                    className={`cal-task ${task.status === "doing" ? "cal-task-doing" : ""} ${task.status === "done" ? "cal-task-done" : ""}`}
+                    draggable
+                    onDragStart={() => {
+                      calDragTaskRef.current = task.id;
+                    }}
+                    onClick={() => onTaskClick(task)}
+                  >
+                    <div className="cal-task-title">{task.title}</div>
+                    {task.client_name && (
+                      <div className="cal-task-meta">
+                        <span className="cal-task-client">{task.client_name}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Unscheduled Tasks */}
+      {unscheduled.length > 0 && (
+        <div className="cal-unscheduled">
+          <div className="cal-unscheduled-header">📋 Task senza data ({unscheduled.length})</div>
+          <div className="cal-unscheduled-grid">
+            {unscheduled.map(task => (
+              <div
+                key={task.id}
+                className="cal-task"
+                draggable
+                onDragStart={() => {
+                  calDragTaskRef.current = task.id;
+                }}
+                onClick={() => onTaskClick(task)}
+              >
+                <div className="cal-task-title">{task.title}</div>
+                {task.client_name && (
+                  <div className="cal-task-meta">
+                    <span className="cal-task-client">{task.client_name}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
