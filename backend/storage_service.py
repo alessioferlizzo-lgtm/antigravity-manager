@@ -309,7 +309,13 @@ class StorageService:
         new_tasks = [t for t in tasks if t["id"] != task_id]
         if len(new_tasks) == len(tasks):
             raise FileNotFoundError(f"Task {task_id} not found")
+        # 1. Delete from local file
         self.save_tasks(new_tasks)
+
+        # 2. Delete from Supabase (immediate)
+        def _delete_from_supabase(sb):
+            sb.table("tasks").delete().eq("id", task_id).execute()
+        _sb_run(_delete_from_supabase)
 
     # ─── REPORTS ──────────────────────────────────────────────────
     def get_reports(self, client_id: str) -> List[Dict[str, Any]]:
