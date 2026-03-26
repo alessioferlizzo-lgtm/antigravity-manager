@@ -56,12 +56,42 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .home-main {
-  flex: 1;
-  margin-left: var(--sidebar-w); /* ACCOUNT FOR FIXED SIDEBAR */
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--navy);
+  position: absolute !important;
+  left: var(--sidebar-w) !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--navy) !important;
+  overflow: hidden !important;
+}
+
+.tasks-root {
+  flex: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important; /* HORIZONTAL CENTER */
+}
+
+.tasks-section-wrapper {
+  width: 100% !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+.tasks-main {
+  flex: 1 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--navy) !important;
 }
 
 .home-layout,
@@ -71,11 +101,6 @@
   background: var(--navy) !important;
 }
 
-.tasks-section-wrapper {
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
-}
 
 /* ═══════════════════════════════════════════════════════════════
    SIDEBAR (Fixed Left)
