@@ -87,6 +87,7 @@ interface TasksSectionProps {
   onAiSort: () => void;
   aiSorting: boolean;
   isOffline?: boolean;
+  onRetryConnection?: () => void;
 }
 
 
@@ -98,12 +99,13 @@ const PRIORITY_ORDER: Record<string, number> = { alta: 0, media: 1, bassa: 2 };
    TASKS SECTION COMPONENT
 ════════════════════════════════════════════════════════════════ */
 export default function TasksSection({
-  tasks, setTasks, clients, 
-  activeClientFilter, setActiveClientFilter, 
+  tasks, setTasks, clients,
+  activeClientFilter, setActiveClientFilter,
   activeSmartList, setActiveSmartList,
   activeCustomListId, setActiveCustomListId,
   customLists,
-  onAiSort, aiSorting, isOffline
+  onAiSort, aiSorting, isOffline,
+  onRetryConnection
 }: TasksSectionProps) {
 
 
@@ -651,9 +653,30 @@ export default function TasksSection({
       <div className="tasks-main">
         {/* Offline Banner */}
         {isOffline && (
-          <div style={{ background: "rgba(255,149,0,0.15)", borderBottom: "1px solid rgba(255,149,0,0.3)", padding: "6px 20px", display: "flex", alignItems: "center", gap: 8, color: "#ff9500", fontSize: 11, fontWeight: 700 }}>
+          <div style={{ background: "rgba(255,149,0,0.15)", borderBottom: "1px solid rgba(255,149,0,0.3)", padding: "6px 20px", display: "flex", alignItems: "center", gap: 12, color: "#ff9500", fontSize: 11, fontWeight: 700 }}>
             <ExclamationTriangleIcon width={14} />
-            <span>MODALITÀ OFFLINE — Il server non è raggiungibile. Le modifiche sono solo locali.</span>
+            <span style={{ flex: 1 }}>MODALITÀ OFFLINE — Il server non è raggiungibile. Attendi che si riattivi (richiede 30-60 secondi).</span>
+            {onRetryConnection && (
+              <button
+                onClick={onRetryConnection}
+                style={{
+                  background: "var(--orange)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "4px 12px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+              >
+                <ArrowPathIcon width={12} />
+                RICONNETTI
+              </button>
+            )}
           </div>
         )}
 

@@ -215,10 +215,12 @@ export default function Dashboard() {
   const [vaultData, setVaultData] = useState({ title: "", text: "", type: "copy", funnel_stage: "", format: "", img_link: "", client_id: "", sector: "" });
   const [vaultSaving, setVaultSaving] = useState(false);
 
-  useEffect(() => {
+  // Function to load data from backend
+  const loadData = useCallback(() => {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout for offline detection
+    const timeout = setTimeout(() => controller.abort(), 45000); // 45s timeout - Render free tier needs time to wake up from sleep
 
+    setLoading(true);
     Promise.all([
       fetch(`${API}/clients`, { signal: controller.signal }).then(r => r.ok ? r.json() : Promise.reject("Clients failed")),
       fetch(`${API}/tasks`, { signal: controller.signal }).then(r => r.ok ? r.json() : (r.status === 404 ? [] : Promise.reject("Tasks failed"))),
@@ -249,7 +251,7 @@ export default function Dashboard() {
     }).catch(err => {
       clearTimeout(timeout);
       console.warn("Backend not reachable, loading from cache...", err);
-      
+
       // Try to load from localStorage cache
       const cachedClients = JSON.parse(localStorage.getItem("ag_clients_cache") || "[]");
       const cachedTasks = JSON.parse(localStorage.getItem("ag_tasks_cache") || "[]");
@@ -265,6 +267,10 @@ export default function Dashboard() {
       setBackendError(true);
     });
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
 
   function saveOrder(list: Client[]) {
@@ -1274,6 +1280,7 @@ export default function Dashboard() {
                 }}
                 aiSorting={aiSorting}
                 isOffline={isOffline}
+                onRetryConnection={loadData}
               />
             </div>
           )}
