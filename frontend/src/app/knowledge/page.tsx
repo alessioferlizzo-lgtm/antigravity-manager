@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
+const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? 'https://antigravity-backend-d72s.onrender.com' : 'http://127.0.0.1:8001');
 
 export default function KnowledgeBasePage() {
   const [form, setForm] = useState({

@@ -14,7 +14,7 @@ import DatePicker from "react-datepicker";
 import { Client, Subtask, Task } from "@/types";
 
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
+const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? 'https://antigravity-backend-d72s.onrender.com' : 'http://127.0.0.1:8001');
 
 /* ─── helpers ─── */
 const AVATAR_COLORS = [
