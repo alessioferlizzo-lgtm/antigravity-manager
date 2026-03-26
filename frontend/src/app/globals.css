@@ -392,8 +392,8 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .tasks-section-wrapper,
 .tasks-section-container {
   width: 100%;
-  max-width: 700px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   display: flex;
   flex-direction: column;
 }
@@ -474,34 +474,35 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .tasks-ai-btn:hover { background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(0,122,255,0.3)); }
 .tasks-ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Quick Add */
+/* Quick Add — INLINE MINIMAL APPLE STYLE */
 .tasks-quickadd-container {
-  display: flex; flex-direction: column; gap: 4px;
-  background: rgba(255,255,255,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding: 10px 20px;
+  display: flex; flex-direction: column; gap: 0;
+  background: transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 0;
   flex-shrink: 0;
 }
 
 .tasks-quickadd {
   display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 20px;
 }
 
 .tasks-quickadd-circle {
-  width: 24px; height: 24px; min-width: 24px;
+  width: 20px; height: 20px; min-width: 20px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.2);
+  border: 1.5px solid rgba(255,255,255,0.25);
   display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,0.4); flex-shrink: 0;
+  color: transparent; flex-shrink: 0;
   transition: all 0.15s;
 }
 
 .tasks-quickadd-input {
   flex: 1; background: transparent; border: none;
-  font-size: 14px; color: #ffffff;
+  font-size: 15px; color: #ffffff;
   outline: none; font-family: inherit;
 }
-.tasks-quickadd-input::placeholder { color: rgba(255,255,255,0.35); }
+.tasks-quickadd-input::placeholder { color: rgba(255,255,255,0.4); }
 
 .tasks-quickadd-select,
 .tasks-quickadd-date {
@@ -511,56 +512,26 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .tasks-quickadd-select option { background: #1c1c1e; color: #fff; }
 
 .tasks-quickadd-btn {
-  padding: 6px 14px; border-radius: 8px;
-  background: var(--lime); color: #1a2600;
-  font-size: 12px; font-weight: 700;
-  border: none; cursor: pointer;
-  font-family: inherit; transition: all 0.15s;
+  display: none;
 }
-.tasks-quickadd-btn:hover { background: var(--lime-dark); transform: translateY(-1px); }
-.tasks-quickadd-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 .tasks-quickadd-toolbar {
-  display: flex; align-items: center;
-  justify-content: space-between;
-  padding: 4px 0 0 40px;
+  display: none;
 }
 
-.toolbar-left { display: flex; gap: 8px; }
+.toolbar-left { display: none; }
 
 .toolbar-icon-btn {
-  background: none; border: none;
-  color: rgba(255,255,255,0.35);
-  cursor: pointer; padding: 4px; border-radius: 6px;
-  transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center;
+  display: none;
 }
-.toolbar-icon-btn svg { width: 16px; height: 16px; }
-.toolbar-icon-btn:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
-.toolbar-icon-btn.active { color: var(--orange); background: rgba(242,144,26,0.1); }
 
-/* NLP feedback badges */
-.tasks-nlp-feedback { display: flex; gap: 6px; flex-wrap: wrap; }
-.nlp-badge {
-  font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 5px;
-  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);
-  border: 1px solid rgba(255,255,255,0.1);
-  display: flex; align-items: center; gap: 3px;
-  animation: fadeIn 0.2s ease-out;
-}
-.nlp-badge-client { color: var(--lime); background: rgba(163,217,6,0.1); border-color: rgba(163,217,6,0.2); }
-.nlp-badge-date { color: #007aff; background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.2); }
-.nlp-badge-flag { color: #ff9500; background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.2); }
+/* NLP feedback badges — HIDDEN for Apple minimal */
+.tasks-nlp-feedback { display: none; }
+.nlp-badge { display: none; }
 
-/* Form toggle */
-.tasks-form-toggle-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
-.tasks-form-toggle-btn {
-  background: var(--navy); border: 1px solid var(--border);
-  padding: 4px 12px; border-radius: 12px;
-  font-size: 11px; font-weight: 600; color: var(--orange);
-  cursor: pointer; transition: all 0.2s;
-}
-.tasks-form-toggle-btn:hover { background: var(--navy-light); }
+/* Form toggle — HIDDEN for Apple minimal */
+.tasks-form-toggle-row { display: none; }
+.tasks-form-toggle-btn { display: none; }
 
 /* Full form */
 .tasks-full-form {
@@ -640,30 +611,27 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 
 
 /* ══════════════════════════════════════════════════════════════
-   10. TASK CARDS
+   10. TASK CARDS — APPLE SIMPLE ROWS
    ══════════════════════════════════════════════════════════════ */
 .task-card {
-  background: rgba(10, 30, 60, 0.6);
+  background: transparent;
   border: none;
-  border-radius: 25px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-radius: 0;
   padding: 0;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: background 0.15s;
   position: relative;
   overflow: visible;
 }
 
 .task-card:hover {
-  background: rgba(10, 30, 60, 0.75);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.12);
-  transform: scale(1.005);
-  z-index: 10;
+  background: rgba(255,255,255,0.03);
 }
 
-.task-card.done { opacity: 0.6; }
-.task-card.drag-over { background: rgba(0,122,255,0.05); border-bottom: 2px solid var(--orange); }
+.task-card.done { opacity: 0.5; }
+.task-card.drag-over { background: rgba(0,122,255,0.05); border-left: 3px solid var(--orange); }
 
 /* Completion animation */
 .task-card.completing .task-card-title { text-decoration: line-through; color: #8e8e93; }
@@ -675,16 +643,14 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   100% { transform: scale(1); opacity: 0; }
 }
 
-/* Left color accent */
+/* Left color accent — REMOVED for Apple simplicity */
 .task-card-accent {
-  position: absolute; left: 0; top: 0; bottom: 0;
-  width: 3px; background: var(--task-type-color, transparent);
-  border-radius: 3px 0 0 3px;
+  display: none;
 }
 
 .task-card-inner {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 12px 16px; position: relative;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px; position: relative;
 }
 
 /* Checkbox */
@@ -794,18 +760,21 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   color: rgba(255,255,255,0.3); text-decoration: line-through;
 }
 
-/* Badges */
-.task-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+/* Badges — MINIMAL APPLE STYLE */
+.task-badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .task-badge {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: 10px; font-weight: 600;
-  padding: 2px 7px; border-radius: 20px;
-  border: 1px solid transparent; white-space: nowrap;
+  font-size: 11px; font-weight: 400;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  white-space: nowrap;
+  color: rgba(255,255,255,0.5);
 }
-.task-badge-client { background: rgba(255, 255, 255, 0.15); color: #ffffff; border-color: rgba(255, 255, 255, 0.2); }
-.priority-alta { background: rgba(255,59,48,0.1); color: #ff3b30; border-color: rgba(255,59,48,0.2); }
-.priority-media { background: rgba(255,149,0,0.1); color: #ff9500; border-color: rgba(255,149,0,0.2); }
-.priority-bassa { background: rgba(142,142,147,0.1); color: #8e8e93; border-color: rgba(142,142,147,0.2); }
+.task-badge-client { background: none; color: rgba(255,255,255,0.6); border: none; }
+.priority-alta { background: none; color: #ff3b30; border: none; }
+.priority-media { background: none; color: #ff9500; border: none; }
+.priority-bassa { background: none; color: rgba(255,255,255,0.4); border: none; }
 
 /* Card actions (on hover) */
 .task-card-actions {
