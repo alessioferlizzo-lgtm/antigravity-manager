@@ -55,6 +55,15 @@
    LAYOUT STRUCTURE
    ═══════════════════════════════════════════════════════════════ */
 
+.home-main {
+  flex: 1;
+  margin-left: var(--sidebar-w); /* ACCOUNT FOR FIXED SIDEBAR */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--navy);
+}
+
 .home-layout,
 .app-layout {
   display: flex;
