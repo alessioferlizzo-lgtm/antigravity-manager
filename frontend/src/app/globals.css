@@ -426,32 +426,39 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-.tasks-quickadd-button {
+.tasks-quickadd-button,
+.tasks-quickadd-btn {
   background: #a3d906 !important; /* PRECISE BRAND LIME */
-  color: #042558 !important; 
-  border: none;
-  font-size: 13px;
-  font-weight: 800; /* Extra bold for premium feel */
-  padding: 8px 18px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(163, 217, 6, 0.2);
+  color: #042558 !important; /* DARK NAVY FOR CONTRAST */
+  border: none !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  padding: 8px 18px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 12px rgba(163, 217, 6, 0.2) !important;
 }
 
-.tasks-quickadd-button:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 15px rgba(163, 217, 6, 0.3);
+.tasks-quickadd-button:hover,
+.tasks-quickadd-btn:hover:not(:disabled) {
+  filter: brightness(1.05) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 15px rgba(163, 217, 6, 0.3) !important;
 }
 
 .tasks-quickadd-toolbar {
   display: flex !important;
+  flex-direction: row !important; /* ENFORCE HORIZONTAL */
   align-items: center !important;
-  gap: 16px !important; /* Increased from small gap */
+  gap: 16px !important;
   margin-top: 12px !important;
-  padding: 8px 12px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.toolbar-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
 }
 
 .toolbar-icon-btn {
@@ -563,19 +570,27 @@
   min-height: 52px; /* Uniform height for cleaner look */
 }
 
+.task-card-inner {
+  display: flex !important;
+  align-items: center !important; /* PERFECT VERTICAL CENTERING */
+  gap: 16px;
+  padding: 12px 16px;
+  width: 100%;
+}
+
 .task-checkbox {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid #d1d1d6;
+  border: 1.5px solid #d1d1d6;
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 2px;
   transition: all 0.2s;
+  /* margin-top: 2px; REMOVED FOR CENTERING */
 }
 
 .task-checkbox:hover {
