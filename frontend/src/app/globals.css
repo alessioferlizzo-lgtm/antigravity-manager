@@ -168,17 +168,17 @@
 .smart-lists-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 16px 12px;
+  gap: 8px; /* Reduced from 12px to prevent clipping */
+  padding: 0 12px 12px; /* Reduced from 16px */
 }
 
 .smart-list-card {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 12px !important; /* Compact padding to avoid deformation */
   cursor: pointer !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.2s ease !important;
   text-align: left !important;
 }
 
@@ -194,11 +194,11 @@
 }
 
 .smart-list-count {
-  font-size: 28px !important;
+  font-size: 24px !important; /* Smaller text fits better */
   font-weight: 800 !important;
   color: #ffffff !important;
   line-height: 1 !important;
-  margin-bottom: 6px !important;
+  margin-bottom: 4px !important;
 }
 
 .smart-list-label {
@@ -324,22 +324,12 @@
 .tasks-root {
   display: flex;
   height: 100vh;
-  margin-left: var(--sidebar-w);
+  /* margin-left: var(--sidebar-w); REMOVED: Parent handles this */
   background: var(--navy);
+  width: 100%;
 }
 
-.tasks-left {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: var(--sidebar-w);
-  height: 100vh;
-  background: var(--navy);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  overflow-y: auto;
-  z-index: 100;
-  padding: 12px 0;
-}
+/* .tasks-left REMOVED: Overlaps with main sidebar */
 
 .tasks-main {
   flex: 1;
@@ -351,7 +341,7 @@
 }
 
 .tasks-header {
-  padding: 24px 32px 16px;
+  padding: 20px 32px 12px; /* Slightly tighter */
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
   display: flex;
