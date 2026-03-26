@@ -1256,6 +1256,10 @@ export default function Dashboard() {
           {section === "tasks" && (
             <div className="tasks-section-container" style={{ flex: 1, display: "flex", justifyContent: "center", width: "100%" }}>
               <div className="tasks-section-brute-force-centered" style={{ width: 900, maxWidth: "100%", display: "flex", flexDirection: "column", height: "100%" }}>
+                {/* BUILD VERIFIER */}
+                <div style={{ background: "#a3d906", color: "#001a33", padding: "4px 12px", fontSize: 10, fontWeight: 800, textAlign: "center", borderRadius: "0 0 8px 8px", alignSelf: "center", marginBottom: 20 }}>
+                  PRODUCTION BUILD: 2026-03-26 v1.0.1 (900px Centered)
+                </div>
                 <TasksSection
                   tasks={tasks}
                   setTasks={setTasks}
