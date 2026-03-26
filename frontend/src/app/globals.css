@@ -57,13 +57,13 @@ body {
 body {
   background: var(--page-bg);
   color: var(--text-body);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.47;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.009em;
 }
 
 /* Typography - Modern Headings on Navy background */
@@ -1931,8 +1931,9 @@ textarea.input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px 10px;
+  padding: 20px 20px 12px;
   flex-shrink: 0;
+  gap: 16px;
 }
 
 .tasks-title {
@@ -2032,16 +2033,18 @@ textarea.input {
 .tasks-quickadd-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.025);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 10px 20px;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 20px;
+  flex-shrink: 0;
 }
 
 .tasks-quickadd {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 .tasks-nlp-feedback {
@@ -2276,11 +2279,11 @@ textarea.input {
   height: 28px;
   min-width: 28px;
   border-radius: 50%;
-  border: 2px solid var(--border-mid);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #c7c7cc;
+  color: rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
   transition: all 0.15s;
 }
@@ -2290,13 +2293,13 @@ textarea.input {
   background: transparent;
   border: none;
   font-size: 16px;
-  color: #000;
+  color: #ffffff;
   outline: none;
   font-family: inherit;
 }
 
 .tasks-quickadd-input::placeholder {
-  color: #8e8e93;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .tasks-quickadd-select,
@@ -2340,10 +2343,11 @@ textarea.input {
 .tasks-filters {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 20px;
+  gap: 8px;
+  padding: 10px 20px 12px;
   flex-shrink: 0;
   flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .tasks-filter-chip {
@@ -2397,7 +2401,8 @@ textarea.input {
 .tasks-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 16px 24px;
+  overflow-x: hidden;
+  padding: 12px 20px 40px;
 }
 
 .tasks-empty {
@@ -2426,23 +2431,23 @@ textarea.input {
 /* ─── TASK ROW (formerly card) ─── */
 .task-card {
   background: #ffffff;
-  border: 1px solid #e5e5e7;
-  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
   padding: 0;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .task-card:hover {
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
   z-index: 10;
-  border-color: #d1d1d6;
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .task-card.done {
@@ -2496,7 +2501,8 @@ textarea.input {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px 4px;
+  padding: 12px 16px;
+  position: relative;
 }
 
 /* Checkbox - Pure Apple Style */
@@ -2545,10 +2551,11 @@ textarea.input {
 .task-card-title {
   font-size: 15px;
   font-weight: 400;
-  color: #000;
+  color: #1d1d1f;
   line-height: 1.4;
   word-break: break-word;
   transition: color 0.2s;
+  letter-spacing: -0.01em;
 }
 
 .task-card-title.done {
@@ -2611,9 +2618,11 @@ textarea.input {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   opacity: 0;
   transition: opacity 0.15s;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .task-card:hover .task-card-actions {
