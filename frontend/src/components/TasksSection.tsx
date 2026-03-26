@@ -789,21 +789,22 @@ export default function TasksSection({
 
               <div className="tasks-quickadd-toolbar" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "16px", marginTop: "12px" }}>
                 <div className="toolbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <button className="toolbar-icon-btn" title="Aggiungi data">
-                    <CalendarIcon width={16} />
-                  </button>
                   <button
-                    className={`toolbar-icon-btn ${nlpData.priority !== "media" ? "active" : ""}`}
-                    title="Imposta priorità"
+                    className="toolbar-icon-btn"
+                    title="Aggiungi data (oggi/domani)"
                     onClick={() => {
-                      const nextP = nlpData.priority === "bassa" ? "alta" : nlpData.priority === "alta" ? "media" : "bassa";
-                      setQuickAdd(prev => {
-                        const clean = prev.replace(/!(alta|media|bassa|[1-3])/, "").trim();
-                        return `${clean} !${nextP}`;
-                      });
+                      const hasOggi = quickAdd.includes("oggi");
+                      const hasDomani = quickAdd.includes("domani");
+                      if (!hasOggi && !hasDomani) {
+                        setQuickAdd(prev => `${prev} oggi`.trim());
+                      } else if (hasOggi) {
+                        setQuickAdd(prev => prev.replace("oggi", "domani").trim());
+                      } else {
+                        setQuickAdd(prev => prev.replace("domani", "").trim());
+                      }
                     }}
                   >
-                    <ExclamationTriangleIcon width={16} />
+                    <CalendarIcon width={16} />
                   </button>
                   <button
                     className="toolbar-icon-btn"
@@ -813,9 +814,6 @@ export default function TasksSection({
                     }}
                   >
                     <FlagIcon width={16} />
-                  </button>
-                  <button className="toolbar-icon-btn" title="Assegna cliente">
-                    <ClipboardDocumentListIcon width={16} />
                   </button>
                 </div>
 
@@ -1127,7 +1125,7 @@ function TaskCard({
                 className={`task-badge task-badge-date ${dateBadge.pulse ? "pulse" : ""}`}
                 style={{ color: dateBadge.color }}
               >
-                {dateBadge.label}
+                {dateBadge.label}{task.due_time && ` • ${task.due_time}`}
               </span>
             )}
             {task.estimated_time && (
@@ -1327,6 +1325,12 @@ function TaskDrawer({
             <div className="task-drawer-field">
               <label>Scadenza</label>
               <input type="date" value={form.due_date || ""} onChange={e => set("due_date", e.target.value)} />
+            </div>
+
+            {/* Ora */}
+            <div className="task-drawer-field">
+              <label>Ora</label>
+              <input type="time" value={form.due_time || ""} onChange={e => set("due_time", e.target.value)} />
             </div>
 
             {/* Tempo stimato */}

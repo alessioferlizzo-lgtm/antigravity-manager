@@ -23,6 +23,7 @@ export interface Task {
   priority: string;
   status: string;
   due_date: string;
+  due_time?: string;
   notes: string;
   estimated_time?: string;
   parent_id?: string | null;
