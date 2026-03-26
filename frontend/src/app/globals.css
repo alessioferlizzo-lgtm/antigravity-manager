@@ -51,6 +51,7 @@
   right: 0 !important;
   top: 0 !important;
   bottom: 0 !important;
+  margin-left: 0 !important; /* FIXED DOUBLE OFFSET */
   display: flex !important;
   flex-direction: column !important;
   background: var(--navy-dark) !important;
@@ -58,21 +59,8 @@
 }
 
 /* ─── CENTERING SYSTEM ─── */
-.home-content-scroll {
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1;
-}
-
-.tasks-section-container {
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: row !important; /* ENABLE HORIZONTAL CENTERING */
-  justify-content: center !important; /* CATEGORICAL CENTERING */
-  flex: 1;
-}
-
+.home-content-scroll,
+.tasks-section-container,
 .tasks-root {
   width: 100% !important;
   display: flex !important;
@@ -80,9 +68,10 @@
 }
 
 .tasks-section-wrapper {
-  width: 900px !important; /* RIGID 900PX */
+  width: 900px !important; 
+  max-width: 900px !important;
   margin: 0 auto !important;
-  padding: 0 40px;
+  padding: 0 20px; /* Reduced for better breadth */
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
