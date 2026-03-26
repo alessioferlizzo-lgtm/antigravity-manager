@@ -1250,11 +1250,11 @@ export default function Dashboard() {
         </div>
 
         {/* SECTION CONTENT */}
-        <div style={{ flex: 1, overflow: "auto", padding: "32px 44px 80px" }}>
+        <div className="home-content-scroll" style={{ flex: 1, overflow: "auto", padding: "32px 44px 80px" }}>
 
           {/* ══ TASKS ══ */}
           {section === "tasks" && (
-            <div style={{ flex: 1, overflow: "hidden", margin: "-32px -44px -80px", display: "flex", flexDirection: "column" }}>
+            <div className="tasks-section-container" style={{ flex: 1, overflow: "hidden", margin: "-32px -44px -80px", display: "flex", flexDirection: "column" }}>
               <TasksSection
                 tasks={tasks}
                 setTasks={setTasks}

@@ -67,22 +67,22 @@
   overflow: hidden !important;
 }
 
-.tasks-root {
-  flex: 1 !important;
+.tasks-root,
+.home-content-scroll,
+.tasks-section-container {
   width: 100% !important;
-  height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important; /* HORIZONTAL CENTER */
 }
 
 .tasks-section-wrapper {
   width: 100% !important;
   max-width: 900px !important;
-  margin: 0 auto !important;
+  margin: 0 auto !important; /* ABSOLUTE CENTER */
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
+  position: relative;
 }
 
 .tasks-main {
