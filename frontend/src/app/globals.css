@@ -1,926 +1,232 @@
+@import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   ANTIGRAVITY OPERATIVE MANAGER - APPLE STYLE UI
-   Consolidated Layout System - March 26, 2026
+   ANTIGRAVITY OPERATIVE MANAGER - COMPLETE BRAND SYSTEM
+   Navy: #042558 | Orange: #f2901a | Lime: #a3d906
+   Anthracite: #1c1c1e | White: #ffffff
    ═══════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    --navy: #042558;
-    --navy-dark: #001a33;
-    --navy-card: rgba(255, 255, 255, 0.04);
-    --orange: #f2901a;
-    --lime: #a3d906;
-    --sidebar-w: 240px;
+    --brand-navy: #042558;
+    --brand-navy-dark: #02132d;
+    --brand-orange: #f2901a;
+    --brand-lime: #a3d906;
+    --anthracite: #1c1c1e;
+    --sidebar-w: 260px;
   }
 
   html, body {
     height: 100%;
     margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: var(--navy-dark);
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: var(--brand-navy-dark);
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    overflow: hidden; /* Blocca lo scroll del body, lo gestiamo nei container */
   }
 }
 
 @layer components {
 
-/* ─── MACRO LAYOUT ─── */
+/* ─── 1. LAYOUT PRINCIPALE ─── */
 .home-layout {
   display: flex;
-  width: 100vw;
   height: 100vh;
+  width: 100vw;
 }
 
 .home-sidebar {
   width: var(--sidebar-w);
   height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  background: var(--navy-dark);
+  background: rgba(10, 10, 12, 0.9); /* Antracite profondo */
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
   z-index: 100;
+  transition: transform 0.3s ease;
 }
 
 .home-main {
-  position: absolute !important;
-  left: var(--sidebar-w) !important;
-  right: 0 !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  margin-left: 0 !important; /* FIXED DOUBLE OFFSET */
-  display: flex !important;
-  flex-direction: column !important;
-  background: var(--navy-dark) !important;
-  overflow: hidden !important;
-}
-
-/* ─── CENTERING SYSTEM ─── */
-.home-content-scroll,
-.tasks-section-container,
-.tasks-root {
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.tasks-section-wrapper {
-  width: 900px !important; 
-  max-width: 900px !important;
-  margin: 0 auto !important;
-  padding: 0 20px; /* Reduced for better breadth */
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
-  flex-shrink: 0 !important;
-}
-
-.tasks-main {
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
   flex: 1;
-}
-.home-sidebar,
-.sidebar {
-  position: fixed !important;
-  left: 0 !important;
-  top: 0 !important;
-  width: var(--sidebar-w) !important;
-  height: 100vh !important;
-  background: var(--navy) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  z-index: 100 !important;
-}
-
-.home-sidebar-header,
-.sidebar-header {
-  padding: 20px 16px 16px; /* Reduced */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
-}
-
-.home-sidebar-logo,
-.sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.home-sidebar-logo img,
-.sidebar-logo img {
-  width: 28px; /* Reduced */
-  height: 28px;
-  border-radius: 6px;
-  object-fit: cover;
-}
-
-.home-sidebar-logo div,
-.sidebar-logo div {
-  font-size: 16px; /* Reduced */
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.home-sidebar-sub,
-.sidebar-client {
-  font-size: 10px; /* Reduced */
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.sidebar-back {
-  font-size: 12px; /* Reduced */
-  margin-bottom: 8px;
-  padding: 4px 0;
-}
-
-.sidebar-back:hover {
-  color: #ffffff;
-}
-
-.home-sidebar-scroll,
-.sidebar-nav {
-  flex: 1;
+  height: 100vh;
   overflow-y: auto;
-  padding: 8px 0;
+  background: linear-gradient(180deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
+  position: relative;
 }
 
-.home-section-label,
-.sidebar-section-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.4);
-  padding: 16px 20px 8px;
+/* ─── 2. CONTENITORE TASK (CENTRATURA APPLE) ─── */
+.tasks-section-wrapper {
+  width: 100%;
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 60px 20px;
 }
 
-/* Smart Lists Grid - Original Square Style Refined */
+/* ─── 3. SMART LISTS (RETTANGOLI ORDINATI) ─── */
 .smart-lists-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px; /* Tightened */
-  padding: 0 10px 10px; /* Reduced from 12px */
+  gap: 12px;
+  padding: 16px;
 }
 
 .smart-list-card {
   background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  padding: 12px 16px !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 14px !important;
+  padding: 14px !important;
+  min-height: 85px;
   display: flex !important;
   flex-direction: column !important;
-  gap: 8px !important;
-  /* Removed aspect-ratio for natural rectangle height */
-}
-
-.smart-list-card:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  justify-content: space-between !important;
+  transition: all 0.2s;
 }
 
 .smart-list-card.active {
-  background: rgba(163, 217, 6, 0.1) !important;
-  border-color: var(--lime) !important;
-}
-
-.smart-list-card-header {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-}
-
-.smart-list-icon {
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 50% !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
+  background: rgba(242, 144, 26, 0.15) !important;
+  border-color: var(--brand-orange) !important;
 }
 
 .smart-list-count {
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-  line-height: 1 !important;
+  font-size: 26px !important;
+  font-weight: 700;
+  text-align: right;
 }
 
 .smart-list-label {
-  font-size: 13px !important; /* Larger label */
-  font-weight: 600 !important;
-  color: rgba(255, 255, 255, 0.6) !important;
-  text-transform: none !important; /* Apple style: sentence case */
-  white-space: nowrap !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 82px !important; /* Optimized for 109px card */
-}
-
-/* Client List */
-.client-list-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 20px;
-  cursor: pointer;
-  border-left: 3px solid transparent;
-  transition: all 0.2s;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.client-list-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
-}
-
-.client-list-item.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-left-color: var(--orange);
-  color: #ffffff;
-}
-
-.client-list-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-.client-list-name {
-  font-size: 14px;
-  font-weight: 500;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.client-list-item.active .client-list-name {
-  font-weight: 600;
-}
-
-/* Sidebar Links */
-.sidebar-link,
-.workspace-nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  margin: 2px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-  width: calc(100% - 24px);
-}
-
-.sidebar-link:hover,
-.workspace-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-.sidebar-link.active,
-.workspace-nav-btn.active {
-  background: rgba(242, 144, 26, 0.2);
-  color: var(--orange);
-  font-weight: 600;
-}
-
-.sidebar-link svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.sidebar-link.active svg {
-  color: var(--orange);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   MAIN CONTENT AREA
-   ═══════════════════════════════════════════════════════════════ */
-
-.home-main,
-.main-content {
-  margin-left: var(--sidebar-w) !important;
-  flex: 1 !important;
-  min-width: 0 !important;
-  height: 100vh !important;
-  overflow: hidden !important; /* Was overflow-y: auto, causing double scrollbars */
-  background: var(--navy) !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   TASKS SECTION
-   ═══════════════════════════════════════════════════════════════ */
-
-.tasks-root {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  background: transparent; /* Parent handles background */
-  margin: 0;
-  padding: 0;
-}
-
-/* .tasks-left REMOVED: Overlaps with main sidebar */
-
-.tasks-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-  background: var(--navy);
-}
-
-.tasks-header {
-  padding: 32px 48px 16px; /* Align with top nav */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.tasks-title {
-  font-size: 32px;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: -0.03em;
-}
-
-/* Quick Add */
-.tasks-quickadd-container {
-  background: rgba(255, 255, 255, 0.05) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
-  margin-top: auto !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
-  flex-shrink: 0;
-}
-
-.tasks-quickadd {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: transparent; /* Moved to container */
-  border: none; /* Moved to container */
-  border-radius: 12px; /* Moved to container */
-  padding: 0; /* Moved to container */
-  transition: all 0.2s;
-}
-
-.tasks-quickadd:focus-within {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--orange);
-}
-
-.tasks-quickadd-circle {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.tasks-quickadd-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 14px; /* Reduced from 16px */
-  color: #ffffff;
-  padding-left: 36px !important; /* FIXED OVERLAP - accommodate icon */
-}
-
-.tasks-quickadd-button,
-.tasks-quickadd-btn {
-  background: #a3d906 !important; /* PRECISE BRAND LIME */
-  color: #042558 !important; /* DARK NAVY FOR CONTRAST */
-  border: none !important;
   font-size: 13px !important;
-  font-weight: 800 !important;
-  padding: 8px 18px !important;
-  border-radius: 10px !important;
-  cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 4px 12px rgba(163, 217, 6, 0.2) !important;
-}
-
-.tasks-quickadd-button:hover,
-.tasks-quickadd-btn:hover:not(:disabled) {
-  filter: brightness(1.05) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 6px 15px rgba(163, 217, 6, 0.3) !important;
-}
-
-.tasks-quickadd-toolbar {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  margin-top: 12px !important;
-}
-
-.toolbar-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-}
-
-.toolbar-icon-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.45);
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toolbar-icon-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.toolbar-icon-btn.active {
-  color: var(--orange);
-  background: rgba(255, 158, 28, 0.1);
-}
-
-.tasks-quickadd-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Filters */
-.tasks-filters {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 32px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  flex-wrap: wrap;
-}
-
-.tasks-filter-chip {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  font-size: 14px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tasks-search-input {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 5px 12px 5px 32px !important; /* FIXED OVERLAP */
-  font-size: 13px;
-  color: #fff;
-  outline: none;
-  width: 180px;
-  transition: all 0.2s;
-}
-
-.tasks-filter-chip:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-}
-
-.tasks-filter-chip.active {
-  background: var(--orange);
-  border-color: var(--orange);
-  color: #ffffff;
-}
-
-/* Task List */
-.tasks-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 32px 40px;
-}
-
-.tasks-empty {
-  text-align: center;
-  padding: 80px 20px;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 16px;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   TASK CARDS (White on Navy)
-   ═══════════════════════════════════════════════════════════════ */
-
+/* ─── 4. TASK CARDS (ANTRACITE + NO SOVRAPPOSIZIONI) ─── */
 .task-card {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: none !important; /* NO BORDER */
-  border-radius: 12px !important;
-  margin-bottom: 8px !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important; /* LIGHT SHADOW */
+  background: rgba(28, 28, 30, 0.6) !important; /* Antracite traslucido */
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 14px !important;
+  margin-bottom: 10px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+  transition: transform 0.2s, background 0.2s;
 }
 
 .task-card:hover {
-  background: rgba(255, 255, 255, 0.07) !important;
-  transform: scale(1.005);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
-  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(28, 28, 30, 0.8) !important;
+  transform: scale(1.01);
+  border-color: var(--brand-orange) !important;
 }
 
-.task-card.done {
-  opacity: 0.6;
-}
-
+/* Griglia fissa per allineare Checkbox e Testo */
 .task-card-content {
-  display: flex !important;
+  display: grid !important;
+  grid-template-columns: 44px 1fr auto !important;
   align-items: center !important;
-  gap: 16px !important;
-  padding: 0 20px !important;
-  position: relative !important;
-  min-height: 56px !important; /* RIGID 56PX */
-  max-height: 56px !important; /* RIGID 56PX */
-}
-
-.task-card-inner {
-  display: flex !important;
-  align-items: center !important;
-  gap: 16px !important;
-  padding: 0 10px;
-  width: 100% !important;
-  height: 100% !important;
+  padding: 14px 18px !important;
+  min-height: 60px;
 }
 
 .task-checkbox {
-  width: 22px !important;
-  height: 22px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: 50% !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
-  background: transparent !important;
-  cursor: pointer !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-  transition: all 0.2s ease !important;
-}
-
-.task-checkbox:hover {
-  border-color: var(--orange);
-  background: rgba(242, 144, 26, 0.08);
+  cursor: pointer;
 }
 
 .task-checkbox.checked {
-  background: var(--orange);
-  border-color: var(--orange);
-  color: #ffffff;
-}
-
-.task-card-content {
-  flex: 1;
-  min-width: 0;
+  background: var(--brand-orange) !important;
+  border-color: var(--brand-orange) !important;
 }
 
 .task-card-title {
-  font-size: 15px !important; /* APPLE STANDARD */
-  font-weight: 500 !important;
+  font-size: 15px !important;
+  font-weight: 500;
   color: #ffffff !important;
-  line-height: 1.4 !important;
-  margin-bottom: 6px;
-  letter-spacing: -0.01em;
+  padding-left: 10px;
 }
 
-.task-card-title.done {
-  text-decoration: line-through;
-  color: #8e8e93;
-}
-
-.task-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.task-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 12px;
-}
-
-.task-badge-client {
-  background: #f2f2f7;
-  color: #3a3a3c;
-}
-
-.priority-alta {
-  background: rgba(255, 59, 48, 0.12);
-  color: #ff3b30;
-}
-
-.priority-media {
-  background: rgba(255, 149, 0, 0.12);
-  color: #ff9500;
-}
-
-.priority-bassa {
-  background: rgba(142, 142, 147, 0.12);
-  color: #8e8e93;
-}
-
-.task-card-actions {
-  display: flex;
-  gap: 8px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  margin-left: auto;
-}
-
-.task-card:hover .task-card-actions {
-  opacity: 1;
-}
-
-.task-action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #f2f2f7;
-  border: none;
+/* ─── 5. SIDEBAR LINKS & CLIENTS ─── */
+.sidebar-link, .client-list-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #8e8e93;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.task-action-btn:hover {
-  background: #e5e5ea;
-  color: #1d1d1f;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   BUTTONS & INPUTS
-   ═══════════════════════════════════════════════════════════════ */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 12px;
+  padding: 10px 16px;
+  margin: 2px 12px;
   border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
   transition: all 0.2s;
-  border: none;
-  font-family: inherit;
+  cursor: pointer;
 }
 
-.btn-primary,
-.btn-orange {
-  background: var(--orange);
-  color: #ffffff;
+.sidebar-link:hover, .client-list-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
-.btn-primary:hover,
-.btn-orange:hover {
-  background: #e08416;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(242, 144, 26, 0.3);
+.sidebar-link.active {
+  background: rgba(242, 144, 26, 0.2);
+  color: var(--brand-orange);
 }
 
-.btn-lime {
-  background: var(--lime);
-  color: #1a2600;
+.client-list-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--brand-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.btn-lime:hover {
-  background: #92c105;
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 13px;
-}
-
-.input {
-  width: 100%;
-  background: #ffffff;
-  border: 1.5px solid #d1d5db;
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-size: 15px;
-  color: #000000;
-  outline: none;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.input::placeholder {
-  color: #8e8e93;
-}
-
-.input:focus {
-  border-color: var(--orange);
-  box-shadow: 0 0 0 4px rgba(242, 144, 26, 0.15);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   CARDS (White containers on Navy)
-   ═══════════════════════════════════════════════════════════════ */
-
-.card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+/* ─── 6. QUICK ADD (LIME BUTTON) ─── */
+.tasks-quickadd-container {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.25s;
-}
-
-.card:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-}
-
-.card .page-title,
-.card .section-title,
-.card h1,
-.card h2,
-.card h3 {
-  color: #1d1d1f;
-}
-
-.card .label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #8e8e93;
-}
-
-.card-sm {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.inset {
-  background: #f2f2f7;
-  border: 1px solid #e5e5ea;
-  border-radius: 10px;
   padding: 16px;
-  color: #1d1d1f;
+  margin-bottom: 30px;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   UTILITIES
-   ═══════════════════════════════════════════════════════════════ */
-
-.page-title {
-  font-size: 28px !important;
+.tasks-quickadd-btn {
+  background: var(--brand-lime) !important;
+  color: var(--brand-navy) !important;
   font-weight: 800 !important;
-  color: #ffffff !important;
-  margin-bottom: 8px !important;
+  border-radius: 10px !important;
+  padding: 10px 20px !important;
+  box-shadow: 0 4px 15px rgba(163, 217, 6, 0.3) !important;
 }
 
-.section-title {
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-  margin-bottom: 12px !important;
-}
-
-.label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.divider {
-  border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 24px 0;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════════════════════════════════════ */
-
+/* ─── 7. RESPONSIVE (MOBILE) ─── */
 @media (max-width: 768px) {
-  :root {
-    --sidebar-w: 0px;
+  .home-sidebar {
+    position: fixed;
+    transform: translateX(-100%); /* Nasconde sidebar su mobile */
   }
 
-  .home-sidebar,
-  .sidebar,
-  .tasks-left {
-    transform: translateX(-100%);
+  .home-main {
+    margin-left: 0 !important;
   }
 
-  .home-main,
-  .main-content,
-  .tasks-root {
-    margin-left: 0;
-    padding: 20px 16px 60px;
+  .tasks-section-wrapper {
+    padding: 20px 16px;
   }
 
   .smart-lists-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Lista singola su mobile */
+  }
+
+  .task-card-content {
+    grid-template-columns: 40px 1fr; /* Rimuove colonna azioni extra se serve spazio */
   }
 }
 
-} /* Close @layer components */
+/* Scrollbar minimale stile Mac */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+} /* Fine @layer components */
