@@ -149,8 +149,8 @@
 .smart-lists-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 0 12px 12px; /* Reduced padding to fit labels */
+  gap: 6px; /* Tightened */
+  padding: 0 10px 10px; /* Reduced from 12px */
 }
 
 .smart-list-card {
@@ -200,14 +200,14 @@
 }
 
 .smart-list-label {
-  font-size: 9px !important; /* EXTRA SMALL TO PREVENT CLIPPING */
-  font-weight: 700 !important;
-  color: rgba(255, 255, 255, 0.5) !important;
+  font-size: 8.5px !important; /* ULTRA COMPACT */
+  font-weight: 800 !important;
+  color: rgba(255, 255, 255, 0.6) !important;
   text-transform: uppercase !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  max-width: 75px !important; /* Hard limit to force ellipsis */
+  max-width: 82px !important; /* Optimized for 109px card */
 }
 
 /* Client List */
@@ -551,17 +551,17 @@
 .task-card-content {
   display: flex !important;
   align-items: center !important;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: 8px; /* Tighter */
+  padding: 4px 12px; /* Reduced vertical padding */
   position: relative;
-  min-height: 36px !important; /* ULTRA COMPACT */
+  min-height: 34px !important; /* Target 34-38px */
 }
 
 .task-card-inner {
   display: flex !important;
   align-items: center !important;
-  gap: 10px;
-  padding: 0 12px;
+  gap: 8px;
+  padding: 0 10px;
   width: 100%;
 }
 
