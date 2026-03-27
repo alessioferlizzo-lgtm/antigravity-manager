@@ -537,26 +537,66 @@ export default function TasksSection({
   async function saveDrawer() {
     if (!drawerTask) return;
     setDrawerSaving(true);
-    
-    // Optimistic cache
-    const updatedLocally = { ...drawerTask, ...drawerForm } as Task;
-    setTasks(p => p.map(t => t.id === drawerTask.id ? updatedLocally : t));
-    setDrawerTask(updatedLocally);
 
-    try {
-      const r = await fetch(`${API}/tasks/${drawerTask.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(drawerForm)
-      });
-      if (r.ok) {
-        const updated = await r.json();
-        setTasks(p => p.map(t => t.id === drawerTask.id ? updated : t));
-        setDrawerTask(updated);
-        setDrawerForm({ ...updated });
-      } else throw new Error("Server error");
-    } catch (err) {
-      console.warn("Offline save, kept local changes");
+    // Check if this is a temporary task (pre-creation)
+    const isTemp = drawerTask.id.startsWith("temp-");
+
+    if (isTemp) {
+      // Create new task from drawer form
+      const selectedClient = clients.find(c => c.id === drawerForm.client_id);
+      const payload = {
+        title: drawerForm.title || "Nuova task",
+        client_id: drawerForm.client_id || "",
+        client_name: selectedClient?.name || "",
+        priority: drawerForm.priority || "media",
+        due_date: drawerForm.due_date || "",
+        due_time: drawerForm.due_time || "",
+        notes: drawerForm.notes || "",
+        estimated_time: drawerForm.estimated_time || "",
+        list_id: drawerForm.list_id || activeCustomListId || "",
+        flagged: drawerForm.flagged || false,
+        recurring: drawerForm.recurring || false,
+        recurring_frequency: drawerForm.recurring_frequency || "",
+        reminder_at: drawerForm.reminder_at || ""
+      };
+
+      try {
+        const r = await fetch(`${API}/tasks`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (r.ok) {
+          const newTask = await r.json();
+          setTasks(p => [newTask, ...p]);
+          setDrawerTask(null); // Close drawer
+          setQuickAdd(""); // Clear quick add input
+        } else throw new Error("Server error");
+      } catch (err) {
+        console.error("Task creation failed:", err);
+        alert("❌ Errore: Impossibile salvare la task online.");
+      }
+    } else {
+      // Update existing task
+      const updatedLocally = { ...drawerTask, ...drawerForm } as Task;
+      setTasks(p => p.map(t => t.id === drawerTask.id ? updatedLocally : t));
+      setDrawerTask(updatedLocally);
+
+      try {
+        const r = await fetch(`${API}/tasks/${drawerTask.id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(drawerForm)
+        });
+        if (r.ok) {
+          const updated = await r.json();
+          setTasks(p => p.map(t => t.id === drawerTask.id ? updated : t));
+          setDrawerTask(updated);
+          setDrawerForm({ ...updated });
+        } else throw new Error("Server error");
+      } catch (err) {
+        console.warn("Offline save, kept local changes");
+      }
     }
+
     setDrawerSaving(false);
   }
 
@@ -809,6 +849,55 @@ export default function TasksSection({
                   placeholder='Nuova task... (es: Draft @Cliente !alta domani)'
                   className="tasks-quickadd-input"
                 />
+                {/* Apple-style Info Icon */}
+                <button
+                  onClick={() => {
+                    // Open drawer with temporary task for pre-creation editing
+                    const tempTask: Task = {
+                      id: "temp-" + Date.now(),
+                      title: quickAdd.trim() || "",
+                      client_id: "",
+                      client_name: "",
+                      priority: "media",
+                      status: "todo",
+                      due_date: "",
+                      notes: "",
+                      estimated_time: "",
+                      created_at: new Date().toISOString(),
+                      task_type: "",
+                      flagged: false,
+                      subtasks: [],
+                      recurring: false,
+                      recurring_frequency: "",
+                      reminder_at: "",
+                      list_id: ""
+                    };
+                    setDrawerTask(tempTask);
+                    setDrawerForm({ ...tempTask });
+                  }}
+                  className="tasks-info-btn"
+                  title="Aggiungi dettagli"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#007aff",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    transition: "background 0.15s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,122,255,0.1)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                    <text x="8" y="12" fontSize="11" fontWeight="600" textAnchor="middle" fill="currentColor">i</text>
+                  </svg>
+                </button>
                 <button
                   onClick={handleQuickAdd}
                   disabled={!quickAdd.trim() || quickAddLoading}
