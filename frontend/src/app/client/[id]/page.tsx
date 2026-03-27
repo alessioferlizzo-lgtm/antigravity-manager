@@ -843,8 +843,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                     const typeColor = LINK_TYPE_COLORS[linkType] || LINK_TYPE_COLORS.other;
                                     const typeLabel = LINK_TYPES.find(t => t.value === linkType)?.label ?? linkType;
                                     return (
-                                        <div key={i} className="link-item" style={{ border: "1px solid var(--border)", padding: "10px 12px", overflow: "hidden" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", overflow: "hidden" }}>
+                                        <div key={i} className="link-item" style={{ border: "1px solid var(--border)", padding: "10px 12px" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 12 }}>
                                                 <div style={{ overflow: "hidden", minWidth: 0, flex: 1 }}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                                                         <span style={{ fontSize: 10, fontWeight: 700, color: typeColor, background: `${typeColor}18`, padding: "2px 7px", borderRadius: 99, whiteSpace: "nowrap", border: `1px solid ${typeColor}40` }}>
@@ -853,7 +853,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                                     </div>
                                                     <a href={url} target="_blank" rel="noreferrer" className="link-url" style={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{url}</a>
                                                 </div>
-                                                <button className="icon-btn" onClick={() => removeLink(i)}><TrashIcon style={{ width: 14, height: 14 }} /></button>
+                                                <button className="icon-btn" onClick={() => removeLink(i)} style={{ flexShrink: 0 }}><TrashIcon style={{ width: 14, height: 14 }} /></button>
                                             </div>
                                         </div>
                                     );
