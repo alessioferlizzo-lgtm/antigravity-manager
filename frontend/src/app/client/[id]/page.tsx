@@ -853,7 +853,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                                     </div>
                                                     <a href={url} target="_blank" rel="noreferrer" className="link-url" style={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{url}</a>
                                                 </div>
-                                                <button className="icon-btn" onClick={() => removeLink(i)} style={{ flexShrink: 0 }}><TrashIcon style={{ width: 14, height: 14 }} /></button>
+                                                <button className="icon-btn" onClick={() => removeLink(i)} style={{ flexShrink: 0, color: "rgba(255, 255, 255, 0.7)" }}><TrashIcon style={{ width: 14, height: 14 }} /></button>
                                             </div>
                                         </div>
                                     );
