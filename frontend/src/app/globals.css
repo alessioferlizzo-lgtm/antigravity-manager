@@ -285,8 +285,21 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   flex-shrink: 0;
 }
 
-.list-delete-btn { opacity: 0; transition: opacity 0.15s; }
-.custom-list-item:hover .list-delete-btn { opacity: 1; }
+.list-delete-btn {
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: none;
+  border: none;
+  color: rgba(255,80,80,0.8);
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1;
+}
+.custom-list-item:hover .list-delete-btn {
+  opacity: 1;
+}
 
 
 /* ══════════════════════════════════════════════════════════════
@@ -529,9 +542,50 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .tasks-nlp-feedback { display: none; }
 .nlp-badge { display: none; }
 
-/* Form toggle — HIDDEN for Apple minimal */
+/* Form toggle — kept hidden */
 .tasks-form-toggle-row { display: none; }
 .tasks-form-toggle-btn { display: none; }
+
+/* Apple compact quick-add toolbar */
+.tasks-apple-toolbar { background: transparent; }
+
+.apple-toolbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.apple-toolbar-pill:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
+  border-color: rgba(255,255,255,0.25);
+}
+.apple-toolbar-pill.active {
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+.apple-toolbar-pill.date-active {
+  background: rgba(0,122,255,0.25);
+  border-color: rgba(0,122,255,0.5);
+  color: #5ab3ff;
+}
+.priority-pill { letter-spacing: -0.02em; }
+.apple-toolbar-pill.priority-alta { background: rgba(255,59,48,0.2); border-color: rgba(255,59,48,0.5); color: #ff6b6b; }
+.apple-toolbar-pill.priority-media { background: rgba(255,149,0,0.2); border-color: rgba(255,149,0,0.5); color: #ffb340; }
+.apple-toolbar-pill.priority-bassa { background: rgba(52,199,89,0.2); border-color: rgba(52,199,89,0.5); color: #30d158; }
+.apple-toolbar-pill.flag-active { background: rgba(255,149,0,0.2); border-color: rgba(255,149,0,0.5); color: #ffb340; }
 
 /* Full form */
 .tasks-full-form {

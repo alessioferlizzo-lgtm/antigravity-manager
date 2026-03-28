@@ -118,8 +118,12 @@ export default function TasksSection({
   const [quickAddDate, setQuickAddDate] = useState("");
   const [quickAddLoading, setQuickAddLoading] = useState(false);
   const quickAddRef = useRef<HTMLInputElement>(null);
-  const [useFormMode, setUseFormMode] = useState(false); // Toggle between quick add and form
-  const [formData, setFormData] = useState({ title: "", client_id: "", priority: "media", due_date: "", notes: "", flagged: false });
+  const [useFormMode, setUseFormMode] = useState(false);
+  const [formData, setFormData] = useState({ title: "", client_id: "", priority: "", due_date: "", notes: "", flagged: false });
+  const [quickAddFocused, setQuickAddFocused] = useState(false);
+  const [quickAddFlag, setQuickAddFlag] = useState(false);
+  const [quickAddPriority, setQuickAddPriority] = useState("");
+  const [quickAddDateTag, setQuickAddDateTag] = useState("");
 
   /* ─── task view ─── */
   const [view, setView] = useState<"list" | "scheduled" | "calendar">("list");
@@ -373,18 +377,27 @@ export default function TasksSection({
     if (!quickAdd.trim()) return;
     setQuickAddLoading(true);
 
-    const { title, clientId, clientName, priority, dueDate, flagged } = nlpData;
+    const { title, clientId, clientName, priority: nlpPriority, dueDate: nlpDueDate, flagged: nlpFlagged } = nlpData;
+
+    // Toolbar-set values override NLP parsing
+    const finalPriority = quickAddPriority || nlpPriority || "";
+    const finalDueDate = quickAddDateTag === "oggi"
+      ? new Date().toISOString().split("T")[0]
+      : quickAddDateTag === "domani"
+        ? (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })()
+        : nlpDueDate || "";
+    const finalFlagged = quickAddFlag || nlpFlagged;
 
     const payload = {
       title,
       client_id: clientId || activeClientFilter || "",
       client_name: clientName || (activeClientFilter ? (clients.find(c => c.id === activeClientFilter)?.name || "") : ""),
-      priority,
-      due_date: dueDate,
+      priority: finalPriority,
+      due_date: finalDueDate,
       notes: "",
       estimated_time: "",
       list_id: activeCustomListId || "",
-      flagged: flagged
+      flagged: finalFlagged
     };
 
     try {
@@ -402,8 +415,12 @@ export default function TasksSection({
     }
     setQuickAdd("");
     setQuickAddDate("");
+    setQuickAddPriority("");
+    setQuickAddDateTag("");
+    setQuickAddFlag(false);
     setQuickAddLoading(false);
   }
+
 
   /* ─── form add ─── */
   async function handleFormAdd(e: React.FormEvent) {
@@ -548,7 +565,7 @@ export default function TasksSection({
         title: drawerForm.title || "Nuova task",
         client_id: drawerForm.client_id || "",
         client_name: selectedClient?.name || "",
-        priority: drawerForm.priority || "media",
+        priority: drawerForm.priority !== undefined ? drawerForm.priority : "",
         due_date: drawerForm.due_date || "",
         due_time: drawerForm.due_time || "",
         notes: drawerForm.notes || "",
@@ -835,143 +852,156 @@ export default function TasksSection({
           </div>
         </div>
 
-        {/* ─── Add Task Section ─── */}
+        {/* Quick Add — Apple Reminders style */}
         <div className="tasks-quickadd-container">
-          {/* Toggle Button */}
-          <div className="tasks-form-toggle-row">
+          <div className="tasks-quickadd">
+            <div className="tasks-quickadd-circle">
+              <PlusIcon width={14} />
+            </div>
+            <input
+              ref={quickAddRef}
+              value={quickAdd}
+              onChange={e => setQuickAdd(e.target.value)}
+              onFocus={() => setQuickAddFocused(true)}
+              onBlur={() => setTimeout(() => setQuickAddFocused(false), 200)}
+              onKeyDown={e => {
+                if (e.key === "Enter") handleQuickAdd();
+                if (e.key === "Escape") { setQuickAdd(""); quickAddRef.current?.blur(); }
+              }}
+              placeholder="Nuova task..."
+              className="tasks-quickadd-input"
+            />
+            {/* Info icon — open drawer */}
             <button
-              onClick={() => setUseFormMode(!useFormMode)}
-              className="tasks-form-toggle-btn"
+              onClick={() => {
+                const dueDate = quickAddDateTag === "oggi"
+                  ? new Date().toISOString().split("T")[0]
+                  : quickAddDateTag === "domani"
+                    ? (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })()
+                    : "";
+                const tempTask: Task = {
+                  id: "temp-" + Date.now(),
+                  title: quickAdd.trim() || "",
+                  client_id: "", client_name: "",
+                  priority: quickAddPriority,
+                  status: "todo",
+                  due_date: dueDate,
+                  notes: "", estimated_time: "",
+                  created_at: new Date().toISOString(),
+                  task_type: "",
+                  flagged: quickAddFlag,
+                  subtasks: [], recurring: false, recurring_frequency: "", reminder_at: "", list_id: ""
+                };
+                setDrawerTask(tempTask);
+                setDrawerForm({ ...tempTask });
+              }}
+              className="tasks-info-btn"
+              title="Aggiungi dettagli"
+              style={{ background: "none", border: "none", color: "#007aff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", borderRadius: "50%", flexShrink: 0 }}
             >
-              {useFormMode ? "← Quick Add" : "Dettagli →"}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                <text x="8" y="12" fontSize="11" fontWeight="600" textAnchor="middle" fill="currentColor">i</text>
+              </svg>
             </button>
           </div>
 
-          {!useFormMode ? (
-            /* Quick Add Mode */
-            <>
-              <div className="tasks-quickadd">
-                <div className="tasks-quickadd-circle">
-                  <PlusIcon width={14} />
-                </div>
-                <input
-                  ref={quickAddRef}
-                  value={quickAdd}
-                  onChange={e => setQuickAdd(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") handleQuickAdd(); }}
-                  placeholder='Nuova task... (es: Draft @Cliente !alta domani)'
-                  className="tasks-quickadd-input"
-                />
-                {/* Apple-style Info Icon */}
-                <button
-                  onClick={() => {
-                    // Open drawer with temporary task for pre-creation editing
-                    const tempTask: Task = {
-                      id: "temp-" + Date.now(),
-                      title: quickAdd.trim() || "",
-                      client_id: "",
-                      client_name: "",
-                      priority: "media",
-                      status: "todo",
-                      due_date: "",
-                      notes: "",
-                      estimated_time: "",
-                      created_at: new Date().toISOString(),
-                      task_type: "",
-                      flagged: false,
-                      subtasks: [],
-                      recurring: false,
-                      recurring_frequency: "",
-                      reminder_at: "",
-                      list_id: ""
-                    };
-                    setDrawerTask(tempTask);
-                    setDrawerForm({ ...tempTask });
-                  }}
-                  className="tasks-info-btn"
-                  title="Aggiungi dettagli"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#007aff",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "50%",
-                    transition: "background 0.15s"
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,122,255,0.1)"}
-                  onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                    <text x="8" y="12" fontSize="11" fontWeight="600" textAnchor="middle" fill="currentColor">i</text>
-                  </svg>
-                </button>
-                <button
-                  onClick={handleQuickAdd}
-                  disabled={!quickAdd.trim() || quickAddLoading}
-                  className="tasks-quickadd-btn"
-                >
-                  {quickAddLoading ? "..." : "Aggiungi"}
-                </button>
-              </div>
+          {/* Apple-style compact toolbar — slides in on focus */}
+          <div
+            className="tasks-apple-toolbar"
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: quickAddFocused ? "6px 10px" : "0 10px",
+              overflow: "hidden",
+              maxHeight: quickAddFocused ? "48px" : "0px",
+              opacity: quickAddFocused ? 1 : 0,
+              transition: "max-height 0.22s ease, opacity 0.15s ease, padding 0.15s ease",
+              borderTop: "1px solid rgba(255,255,255,0.06)"
+            }}
+          >
+            <button
+              className={`apple-toolbar-pill${quickAddDateTag === "oggi" ? " active date-active" : ""}`}
+              onMouseDown={e => { e.preventDefault(); setQuickAddDateTag(quickAddDateTag === "oggi" ? "" : "oggi"); }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Oggi
+            </button>
+            <button
+              className={`apple-toolbar-pill${quickAddDateTag === "domani" ? " active date-active" : ""}`}
+              onMouseDown={e => { e.preventDefault(); setQuickAddDateTag(quickAddDateTag === "domani" ? "" : "domani"); }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Domani
+            </button>
 
-              <div className="tasks-quickadd-toolbar" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "16px", marginTop: "12px" }}>
-                <div className="toolbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <button
-                    className="toolbar-icon-btn"
-                    title="Aggiungi data (oggi/domani)"
-                    onClick={() => {
-                      const hasOggi = quickAdd.includes("oggi");
-                      const hasDomani = quickAdd.includes("domani");
-                      if (!hasOggi && !hasDomani) {
-                        setQuickAdd(prev => `${prev} oggi`.trim());
-                      } else if (hasOggi) {
-                        setQuickAdd(prev => prev.replace("oggi", "domani").trim());
-                      } else {
-                        setQuickAdd(prev => prev.replace("domani", "").trim());
-                      }
-                    }}
-                  >
-                    <CalendarIcon width={16} />
-                  </button>
-                  <button
-                    className="toolbar-icon-btn"
-                    title="Contrassegna"
-                    onClick={() => {
-                      setQuickAdd(prev => prev.includes("#flag") ? prev.replace("#flag", "").trim() : `${prev} #flag`);
-                    }}
-                  >
-                    <FlagIcon width={16} />
-                  </button>
-                </div>
+            <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.12)", flexShrink: 0, margin: "0 2px" }} />
 
-                {/* NLP Feedback Badges */}
-                {quickAdd.trim() && (
-                  <div className="tasks-nlp-feedback">
-                    {nlpData.clientName && (
-                      <span className="nlp-badge nlp-badge-client">@ {nlpData.clientName}</span>
-                    )}
-                    {nlpData.dueDate && (
-                      <span className="nlp-badge nlp-badge-date">📅 {nlpData.dueDate}</span>
-                    )}
-                    <span className={`nlp-badge nlp-badge-priority priority-${nlpData.priority}`}>
-                      {nlpData.priority === "alta" ? "!!!" : nlpData.priority === "media" ? "!!" : "!"} {nlpData.priority}
-                    </span>
-                    {quickAdd.includes("#flag") && (
-                      <span className="nlp-badge nlp-badge-flag">🚩 Contrassegnata</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            /* Form Mode */
-            /* Form Mode (Full Apple Style) */
+            <button
+              className={`apple-toolbar-pill priority-pill${quickAddPriority === "alta" ? " active priority-alta" : ""}`}
+              title="Alta"
+              onMouseDown={e => { e.preventDefault(); setQuickAddPriority(quickAddPriority === "alta" ? "" : "alta"); }}
+            >!!!
+            </button>
+            <button
+              className={`apple-toolbar-pill priority-pill${quickAddPriority === "media" ? " active priority-media" : ""}`}
+              title="Media"
+              onMouseDown={e => { e.preventDefault(); setQuickAddPriority(quickAddPriority === "media" ? "" : "media"); }}
+            >!!
+            </button>
+            <button
+              className={`apple-toolbar-pill priority-pill${quickAddPriority === "bassa" ? " active priority-bassa" : ""}`}
+              title="Bassa"
+              onMouseDown={e => { e.preventDefault(); setQuickAddPriority(quickAddPriority === "bassa" ? "" : "bassa"); }}
+            >!
+            </button>
+
+            <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.12)", flexShrink: 0, margin: "0 2px" }} />
+
+            <button
+              className={`apple-toolbar-pill flag-pill${quickAddFlag ? " active flag-active" : ""}`}
+              title="Contrassegna"
+              onMouseDown={e => { e.preventDefault(); setQuickAddFlag(!quickAddFlag); }}
+            >
+              <svg width="12" height="12" viewBox="0 0 20 20" fill={quickAddFlag ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 1v18M4 13V1l12 6-12 6z"/>
+              </svg>
+            </button>
+
+            <div style={{ flex: 1 }} />
+
+            {quickAdd.trim() && (
+              <button
+                onMouseDown={e => { e.preventDefault(); handleQuickAdd(); }}
+                disabled={quickAddLoading}
+                style={{ background: "#007aff", border: "none", color: "#fff", borderRadius: 7, padding: "3px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+              >
+                {quickAddLoading ? "..." : "↵"}
+              </button>
+            )}
+          </div>
+
+          {/* NLP / active-tag feedback */}
+          {(quickAdd.trim() || quickAddDateTag || quickAddPriority || quickAddFlag) && quickAddFocused && (
+            <div className="tasks-nlp-feedback">
+              {(quickAddDateTag || nlpData.dueDate) && (
+                <span className="nlp-badge nlp-badge-date">📅 {quickAddDateTag || nlpData.dueDate}</span>
+              )}
+              {quickAddPriority && (
+                <span className={`nlp-badge nlp-badge-priority priority-${quickAddPriority}`}>
+                  {quickAddPriority === "alta" ? "!!!" : quickAddPriority === "media" ? "!!" : "!"} {quickAddPriority}
+                </span>
+              )}
+              {nlpData.clientName && (
+                <span className="nlp-badge nlp-badge-client">@ {nlpData.clientName}</span>
+              )}
+              {quickAddFlag && (
+                <span className="nlp-badge nlp-badge-flag">🚩 Contrassegnata</span>
+              )}
+            </div>
+          )}
+
+          {false ? (
+            /* Form Mode — kept for reference, no longer shown */
             <form onSubmit={handleFormAdd} className="tasks-full-form">
               <div className="form-row main-field">
                 <input
@@ -1046,7 +1076,7 @@ export default function TasksSection({
                 </button>
               </div>
             </form>
-          )}
+          ) : null}
         </div>
 
         {/* ─── Filters bar ─── */}
