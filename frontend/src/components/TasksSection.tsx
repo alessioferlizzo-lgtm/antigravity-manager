@@ -1341,7 +1341,7 @@ function IOSToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => vo
 ════════════════════════════════════════════════════════════════ */
 function RowIcon({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <span className="ios-row-icon" style={{ background: color }}>
+    <span className="ios-row-icon" style={{ color }}>
       {children}
     </span>
   );
@@ -1376,19 +1376,25 @@ function TaskDrawer({
   const [titleEdit, setTitleEdit] = useState(false);
   const [dateEnabled, setDateEnabled] = useState(!!(form.due_date));
   const [timeEnabled, setTimeEnabled] = useState(!!(form.due_time));
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   function set(key: keyof Task, value: unknown) {
     setForm(p => ({ ...p, [key]: value }));
   }
 
-  const selectedClient = clients.find(c => c.id === form.client_id);
   const selectedList = customLists.find(l => l.id === form.list_id);
 
-  const priorityLabel: Record<string, string> = { alta: "Alta", media: "Media", bassa: "Bassa" };
-  const statusLabel: Record<string, string> = { todo: "Da fare", doing: "In corso", done: "Fatto" };
-  const recurringLabel: Record<string, string> = {
-    "": "Mai", daily: "Ogni giorno", weekly: "Ogni settimana", monthly: "Ogni mese"
-  };
+  function formatDateShort(dateStr: string): string {
+    if (!dateStr) return "";
+    const d = new Date(dateStr + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+    if (diff === 0) return "oggi";
+    if (diff === -1) return "ieri";
+    if (diff === 1) return "domani";
+    return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+  }
 
   return (
     <div className="task-drawer-container">
@@ -1397,10 +1403,10 @@ function TaskDrawer({
 
         {/* ── Header ── */}
         <div className="apple-drawer-header">
-          <button className="apple-drawer-close" onClick={onClose}>
-            <XMarkIcon width={16} />
-          </button>
           <h3 className="apple-drawer-heading">Promemoria</h3>
+          <button className="apple-drawer-close" onClick={onClose}>
+            <XMarkIcon width={14} />
+          </button>
         </div>
 
         {/* ── Scrollable Body ── */}
@@ -1419,389 +1425,302 @@ function TaskDrawer({
                 placeholder="Titolo"
               />
             ) : (
-              <button className="apple-drawer-title-btn" onClick={() => setTitleEdit(true)}>
+              <div className="apple-drawer-title-btn" onClick={() => setTitleEdit(true)}>
                 <span className="apple-drawer-title-text">{form.title || task.title || "Senza titolo"}</span>
-                <PencilIcon width={13} className="apple-drawer-title-edit-icon" />
-              </button>
+              </div>
             )}
           </div>
 
-          {/* Note & URL section (free-text) */}
-          <div className="apple-section-free">
+          {/* Note — minimal auto-expand */}
+          <div className="apple-drawer-free-section">
             <textarea
               value={form.notes || ""}
-              onChange={e => set("notes", e.target.value)}
+              onChange={e => {
+                set("notes", e.target.value);
+                // auto-expand
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+              }}
               placeholder="Note"
               className="apple-notes-textarea"
-              rows={3}
+              rows={1}
             />
+            <div className="apple-free-url-row">URL</div>
           </div>
 
-          {/* ── Section: Data e ora ── */}
+          {/* ── Data e ora ── */}
           <div className="apple-section-label">Data e ora</div>
           <div className="apple-group">
-            {/* Data */}
+
+            {/* Data row — clicking value text opens native picker */}
             <div className="apple-row">
               <div className="apple-row-left">
-                <RowIcon color="#FF3B30">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                   </svg>
                 </RowIcon>
                 <span className="apple-row-label">Data</span>
               </div>
               <div className="apple-row-right">
                 {dateEnabled && (
-                  <span className="apple-row-value muted">
-                    {form.due_date ? new Date(form.due_date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" }) : ""}
-                  </span>
+                  <label className="apple-row-value-btn">
+                    <span className="apple-row-value">{formatDateShort(form.due_date || "")}</span>
+                    <input ref={dateInputRef} type="date" value={form.due_date || ""} onChange={e => set("due_date", e.target.value)} className="apple-hidden-input" />
+                  </label>
                 )}
-                <IOSToggle
-                  on={dateEnabled}
-                  onChange={v => {
-                    setDateEnabled(v);
-                    if (!v) { set("due_date", ""); setTimeEnabled(false); set("due_time", ""); }
-                  }}
-                />
+                <IOSToggle on={dateEnabled} onChange={v => {
+                  setDateEnabled(v);
+                  if (!v) { set("due_date", ""); setTimeEnabled(false); set("due_time", ""); }
+                  else { dateInputRef.current?.showPicker?.(); }
+                }} />
               </div>
             </div>
-            {/* Date picker inline quando abilitato */}
-            {dateEnabled && (
-              <div className="apple-row apple-row-sub">
-                <input
-                  type="date"
-                  value={form.due_date || ""}
-                  onChange={e => set("due_date", e.target.value)}
-                  className="apple-date-input"
-                />
-              </div>
-            )}
 
-            {/* Ora (condizionale a Data) */}
+            {/* Ora — only when date is ON */}
             {dateEnabled && (
               <div className="apple-row apple-separator-top">
                 <div className="apple-row-left">
-                  <RowIcon color="#5856D6">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
+                  <RowIcon color="#8E8E93">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                     </svg>
                   </RowIcon>
                   <span className="apple-row-label">Ora</span>
                 </div>
                 <div className="apple-row-right">
                   {timeEnabled && (
-                    <span className="apple-row-value muted">{form.due_time || ""}</span>
+                    <label className="apple-row-value-btn">
+                      <span className="apple-row-value">{form.due_time || ""}</span>
+                      <input ref={timeInputRef} type="time" value={form.due_time || ""} onChange={e => set("due_time", e.target.value)} className="apple-hidden-input" />
+                    </label>
                   )}
-                  <IOSToggle
-                    on={timeEnabled}
-                    onChange={v => {
-                      setTimeEnabled(v);
-                      if (!v) set("due_time", "");
-                    }}
-                  />
+                  <IOSToggle on={timeEnabled} onChange={v => {
+                    setTimeEnabled(v);
+                    if (!v) set("due_time", "");
+                    else { timeInputRef.current?.showPicker?.(); }
+                  }} />
                 </div>
-              </div>
-            )}
-            {dateEnabled && timeEnabled && (
-              <div className="apple-row apple-row-sub">
-                <input
-                  type="time"
-                  value={form.due_time || ""}
-                  onChange={e => set("due_time", e.target.value)}
-                  className="apple-date-input"
-                />
               </div>
             )}
 
             {/* Urgente */}
-            <div className={`apple-row ${dateEnabled ? "apple-separator-top" : ""}`}>
+            <div className={`apple-row${dateEnabled ? " apple-separator-top" : ""}`}>
               <div className="apple-row-left">
-                <RowIcon color="#FF9500">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                   </svg>
                 </RowIcon>
                 <span className="apple-row-label">Urgente</span>
               </div>
               <div className="apple-row-right">
-                <IOSToggle
-                  on={form.priority === "alta"}
-                  onChange={v => set("priority", v ? "alta" : "media")}
-                />
+                <IOSToggle on={form.priority === "alta"} onChange={v => set("priority", v ? "alta" : "media")} />
               </div>
             </div>
+
             {!dateEnabled && (
               <p className="apple-hint">Per impostare una sveglia, segna il promemoria come urgente.</p>
             )}
           </div>
 
-          {/* ── Section: Ripetizione ── */}
+          {/* ── Ripetizione ── */}
           <div className="apple-section-label">Ripetizione</div>
           <div className="apple-group">
             <div className="apple-row">
               <div className="apple-row-left">
-                <RowIcon color="#34C759">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="17 1 21 5 17 9" />
-                    <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                    <polyline points="7 23 3 19 7 15" />
-                    <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
                   </svg>
                 </RowIcon>
-                <span className="apple-row-label">Ripeti</span>
+                <span className="apple-row-label">Ripetizione</span>
               </div>
               <div className="apple-row-right">
-                <select
-                  className="apple-select"
-                  value={form.recurring_frequency || ""}
-                  onChange={e => {
-                    set("recurring_frequency", e.target.value);
-                    set("recurring", !!e.target.value);
-                  }}
-                >
+                <select className="apple-select" value={form.recurring_frequency || ""} onChange={e => { set("recurring_frequency", e.target.value); set("recurring", !!e.target.value); }}>
                   <option value="">Mai</option>
                   <option value="daily">Ogni giorno</option>
                   <option value="weekly">Ogni settimana</option>
                   <option value="monthly">Ogni mese</option>
                 </select>
-                <ChevronRightIcon width={14} className="apple-chevron" />
+                <ChevronRightIcon width={12} className="apple-chevron" />
               </div>
             </div>
 
-            {/* Promemoria */}
             <div className="apple-row apple-separator-top">
               <div className="apple-row-left">
-                <RowIcon color="#FF3B30">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                   </svg>
                 </RowIcon>
                 <span className="apple-row-label">Avviso anticipato</span>
               </div>
               <div className="apple-row-right">
-                <input
-                  type="datetime-local"
-                  value={form.reminder_at ? form.reminder_at.slice(0, 16) : ""}
-                  onChange={e => set("reminder_at", e.target.value ? e.target.value + ":00" : "")}
-                  className="apple-datetime-input"
-                />
-                <ChevronRightIcon width={14} className="apple-chevron" />
+                <select className="apple-select" value={form.reminder_at || ""} onChange={e => set("reminder_at", e.target.value)}>
+                  <option value="">Nessuno</option>
+                  <option value="at_time">All&apos;orario</option>
+                  <option value="5min">5 min prima</option>
+                  <option value="15min">15 min prima</option>
+                  <option value="30min">30 min prima</option>
+                  <option value="1h">1 ora prima</option>
+                  <option value="1d">1 giorno prima</option>
+                  <option value="2d">2 giorni prima</option>
+                  <option value="1w">1 settimana prima</option>
+                </select>
+                <ChevronRightIcon width={12} className="apple-chevron" />
               </div>
             </div>
           </div>
 
-          {/* ── Section: Organizzazione ── */}
+          {/* ── Organizzazione ── */}
           <div className="apple-section-label">Organizzazione</div>
           <div className="apple-group">
-            {/* Lista */}
             <div className="apple-row">
               <div className="apple-row-left">
                 <RowIcon color="#FF3B30">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
                   </svg>
                 </RowIcon>
                 <span className="apple-row-label">Elenco</span>
               </div>
               <div className="apple-row-right">
-                <select
-                  className="apple-select"
-                  value={form.list_id || ""}
-                  onChange={e => set("list_id", e.target.value)}
-                >
+                {selectedList && <span className="apple-list-dot" style={{ background: "#FF3B30" }} />}
+                <select className="apple-select" value={form.list_id || ""} onChange={e => set("list_id", e.target.value)}>
                   <option value="">Nessuna lista</option>
-                  {customLists.map(l => (
-                    <option key={l.id} value={l.id}>{l.title}</option>
-                  ))}
+                  {customLists.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
                 </select>
-                {selectedList && (
-                  <span className="apple-list-dot" style={{ background: "#FF3B30" }} />
-                )}
-                <ChevronRightIcon width={14} className="apple-chevron" />
+                <ChevronRightIcon width={12} className="apple-chevron" />
               </div>
             </div>
 
-            {/* Cliente */}
             <div className="apple-row apple-separator-top">
               <div className="apple-row-left">
-                <RowIcon color="#007AFF">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                   </svg>
                 </RowIcon>
                 <span className="apple-row-label">Cliente</span>
               </div>
               <div className="apple-row-right">
-                <select
-                  className="apple-select"
-                  value={form.client_id || ""}
-                  onChange={e => {
-                    const c = clients.find(c => c.id === e.target.value);
-                    set("client_id", e.target.value);
-                    set("client_name", c?.name || "");
-                  }}
-                >
+                <select className="apple-select" value={form.client_id || ""} onChange={e => {
+                  const c = clients.find(c => c.id === e.target.value);
+                  set("client_id", e.target.value);
+                  set("client_name", c?.name || "");
+                }}>
                   <option value="">Nessuno</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-                <ChevronRightIcon width={14} className="apple-chevron" />
+                <ChevronRightIcon width={12} className="apple-chevron" />
               </div>
             </div>
 
-            {/* Contrassegna */}
             <div className="apple-row apple-separator-top">
               <div className="apple-row-left">
                 <RowIcon color="#FF9500">
-                  <FlagIconSolid width={13} style={{ color: "#fff" }} />
+                  <FlagIconSolid width={12} />
                 </RowIcon>
                 <span className="apple-row-label">Contrassegna</span>
               </div>
               <div className="apple-row-right">
-                <IOSToggle
-                  on={!!form.flagged}
-                  onChange={v => set("flagged", v)}
-                />
+                <IOSToggle on={!!form.flagged} onChange={v => set("flagged", v)} />
               </div>
             </div>
 
-            {/* Priorità */}
             <div className="apple-row apple-separator-top">
               <div className="apple-row-left">
-                <RowIcon color="#FF3B30">
-                  <span style={{ color: "#fff", fontSize: 10, fontWeight: 900, letterSpacing: -1 }}>!!!</span>
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                  </svg>
                 </RowIcon>
                 <span className="apple-row-label">Priorità</span>
               </div>
               <div className="apple-row-right">
-                <select
-                  className="apple-select"
-                  value={form.priority || "media"}
-                  onChange={e => set("priority", e.target.value)}
-                >
+                <select className="apple-select" value={form.priority || "media"} onChange={e => set("priority", e.target.value)}>
                   <option value="bassa">Bassa</option>
                   <option value="media">Media</option>
                   <option value="alta">Alta</option>
                 </select>
-                <ChevronRightIcon width={14} className="apple-chevron" />
+                <ChevronRightIcon width={12} className="apple-chevron" />
               </div>
             </div>
 
-            {/* Stato */}
             <div className="apple-row apple-separator-top">
               <div className="apple-row-left">
-                <RowIcon color="#5856D6">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
                 </RowIcon>
                 <span className="apple-row-label">Stato</span>
               </div>
               <div className="apple-row-right">
-                <select
-                  className="apple-select"
-                  value={form.status || "todo"}
-                  onChange={e => set("status", e.target.value)}
-                >
+                <select className="apple-select" value={form.status || "todo"} onChange={e => set("status", e.target.value)}>
                   <option value="todo">Da fare</option>
                   <option value="doing">In corso</option>
                   <option value="done">Completato</option>
                 </select>
-                <ChevronRightIcon width={14} className="apple-chevron" />
+                <ChevronRightIcon width={12} className="apple-chevron" />
               </div>
             </div>
 
-            {/* Tempo stimato */}
             <div className="apple-row apple-separator-top">
               <div className="apple-row-left">
-                <RowIcon color="#34C759">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
+                <RowIcon color="#8E8E93">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/>
                   </svg>
                 </RowIcon>
                 <span className="apple-row-label">Tempo stimato</span>
               </div>
               <div className="apple-row-right">
-                <select
-                  className="apple-select"
-                  value={form.estimated_time || ""}
-                  onChange={e => set("estimated_time", e.target.value)}
-                >
+                <select className="apple-select" value={form.estimated_time || ""} onChange={e => set("estimated_time", e.target.value)}>
                   <option value="">Nessuno</option>
-                  {["15m","30m","45m","1h","1h30","2h","3h","4h","1g"].map(v => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
+                  {["15m","30m","45m","1h","1h30","2h","3h","4h","1g"].map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <ChevronRightIcon width={14} className="apple-chevron" />
+                <ChevronRightIcon width={12} className="apple-chevron" />
               </div>
             </div>
           </div>
 
-          {/* ── Section: Subtask ── */}
+          {/* ── Subtask ── */}
           <div className="apple-section-label">Subtask</div>
           <div className="apple-group">
             {subtasks.map((st, idx) => (
-              <div key={st.id} className={`apple-subtask-row ${idx > 0 ? "apple-separator-top" : ""}`}>
-                <button
-                  className={`apple-subtask-check ${st.done ? "checked" : ""}`}
-                  onClick={() => onToggleSubtask(task, st.id)}
-                >
-                  {st.done && <CheckIcon width={10} strokeWidth={3} />}
+              <div key={st.id} className={`apple-subtask-row${idx > 0 ? " apple-separator-top" : ""}`}>
+                <button className={`apple-subtask-check${st.done ? " checked" : ""}`} onClick={() => onToggleSubtask(task, st.id)}>
+                  {st.done && <CheckIcon width={9} strokeWidth={3} />}
                 </button>
-                <span className={`apple-subtask-text ${st.done ? "done" : ""}`}>{st.text}</span>
+                <span className={`apple-subtask-text${st.done ? " done" : ""}`}>{st.text}</span>
                 <button className="apple-subtask-del" onClick={() => onDeleteSubtask(task, st.id)}>
-                  <XMarkIcon width={12} />
+                  <XMarkIcon width={11} />
                 </button>
               </div>
             ))}
-            <div className={`apple-subtask-add ${subtasks.length > 0 ? "apple-separator-top" : ""}`}>
-              <span className="apple-subtask-add-icon">
-                <PlusIcon width={12} />
-              </span>
-              <input
-                value={subtaskInput}
-                onChange={e => setSubtaskInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") onAddSubtask(); }}
-                placeholder="Aggiungi subtask..."
-                className="apple-subtask-add-input"
-              />
+            <div className={`apple-subtask-add${subtasks.length > 0 ? " apple-separator-top" : ""}`}>
+              <span className="apple-subtask-add-icon"><PlusIcon width={11} /></span>
+              <input value={subtaskInput} onChange={e => setSubtaskInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") onAddSubtask(); }} placeholder="Aggiungi subtask..." className="apple-subtask-add-input" />
             </div>
           </div>
 
-          {/* Progress subtask */}
           {subtasks.length > 0 && (
             <div className="apple-progress-section">
-              <div className="apple-progress-labels">
-                <span>Completate</span>
-                <span>{doneCount}/{subtasks.length}</span>
-              </div>
-              <div className="apple-progress-bar">
-                <div className="apple-progress-fill" style={{ width: `${(doneCount / subtasks.length) * 100}%` }} />
-              </div>
+              <div className="apple-progress-labels"><span>Completate</span><span>{doneCount}/{subtasks.length}</span></div>
+              <div className="apple-progress-bar"><div className="apple-progress-fill" style={{ width: `${(doneCount / subtasks.length) * 100}%` }} /></div>
             </div>
           )}
 
-          <div style={{ height: 32 }} />
+          <div style={{ height: 20 }} />
         </div>
 
         {/* ── Footer ── */}
         <div className="apple-drawer-footer">
           <button className="apple-drawer-cancel" onClick={onClose}>Annulla</button>
           <button className="apple-drawer-save" onClick={onSave} disabled={saving}>
-            {saving ? <ArrowPathIcon width={14} style={{ animation: "spin 1s linear infinite" }} /> : <CheckIcon width={14} />}
+            {saving ? <ArrowPathIcon width={13} style={{ animation: "spin 1s linear infinite" }} /> : <CheckIcon width={13} />}
             {saving ? "Salvataggio..." : "Salva modifiche"}
           </button>
         </div>
@@ -1809,6 +1728,7 @@ function TaskDrawer({
     </div>
   );
 }
+
 
 /* ════════════════════════════════════════════════════════════════
    CALENDAR VIEW
