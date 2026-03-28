@@ -34,7 +34,11 @@ load_dotenv(Path(__file__).parent / ".env")
 
 from .ai_service import AIService
 from .storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
-from .notion_service import notion_service
+try:
+    from .notion_service import notion_service
+except Exception as _ne:
+    print(f"⚠️  Notion service non disponibile in main.py: {_ne}")
+    notion_service = None
 from .strategic_context_loader import get_strategic_context_for_generator
 from .smart_lists_service import smart_lists_service
 
@@ -51,6 +55,10 @@ app.add_middleware(
 
 ai_service = AIService()
 storage_service = StorageService()
+
+# Job registry for long-running background analysis tasks
+# { job_id: { "status": "running"|"done"|"error", "result": ..., "error": ... } }
+_analysis_jobs: Dict[str, Dict[str, Any]] = {}
 
 # Health check endpoint for Render
 @app.get("/")
@@ -3452,18 +3460,29 @@ def serve_creative_image(filename: str):
 @app.post("/clients/{client_id}/analysis/complete")
 async def generate_complete_client_analysis(client_id: str):
     """
-    🔥 NUOVO SISTEMA - Raccolta Dati Massiva + Analisi Completa
-
-    Genera l'analisi completa del cliente in 14 sezioni.
-    Segue ESATTAMENTE la metodologia della guida Francesco Agostinis.
-
-    RACCOGLIE DATI DA:
-    - Sito web completo (prodotti, servizi, prezzi)
-    - Google Reviews (150+)
-    - Instagram completo (tutti post + commenti)
-    - Meta Ads (top 100 ads + copy)
-    - Competitor (zona + Italia top) + loro recensioni/Instagram
+    🔥 Lancia l'analisi in background e risponde subito con job_id.
+    Il frontend fa polling su /analysis/status/{job_id} per sapere quando è pronta.
     """
+    job_id = str(uuid.uuid4())
+    _analysis_jobs[job_id] = {"status": "running", "progress": "Avvio raccolta dati..."}
+
+    async def _run_analysis():
+        try:
+            await _do_complete_analysis(client_id, job_id)
+        except Exception as e:
+            print(f"❌ Errore job {job_id}: {e}")
+            _analysis_jobs[job_id] = {"status": "error", "error": str(e)}
+
+    asyncio.create_task(_run_analysis())
+    return {"status": "started", "job_id": job_id}
+
+
+async def _do_complete_analysis(client_id: str, job_id: str):
+    """Logica reale dell'analisi — gira in background."""
+    def _progress(msg: str):
+        if job_id in _analysis_jobs:
+            _analysis_jobs[job_id]["progress"] = msg
+
     metadata = storage_service.get_metadata(client_id)
     client_info = {
         "id": client_id,
@@ -3693,7 +3712,23 @@ async def generate_complete_client_analysis(client_id: str):
     except Exception as e:
         print(f"❌ Errore salvataggio Supabase: {e}")
 
-    return {"success": True, "analysis": complete_analysis}
+    # Marca il job come completato nel registry
+    _analysis_jobs[job_id] = {
+        "status": "done",
+        "analysis": complete_analysis,
+        "progress": "Analisi completata!"
+    }
+    print(f"✅ Job {job_id} completato")
+
+
+# ── Status endpoint per polling dal frontend ──────────────────────────────────
+@app.get("/clients/{client_id}/analysis/status/{job_id}")
+async def get_analysis_job_status(client_id: str, job_id: str):
+    """Polling endpoint: controlla lo stato di un job di analisi in background."""
+    job = _analysis_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job non trovato")
+    return job
 
 
 @app.get("/clients/{client_id}/analysis/complete")

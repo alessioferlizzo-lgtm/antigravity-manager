@@ -836,9 +836,9 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
 
     const generateAnalysis = async () => {
         setGenerating(true);
-        // Svuota subito l'analisi vecchia per non mostrare dati obsoleti
         setAnalysis(null);
         setGenerationStatus("Raccolta dati: sito web, social, recensioni e competitor…");
+
         const steps = [
             "🔍 Analisi sito web e contenuti…",
             "📸 Elaborazione dati Instagram…",
@@ -855,13 +855,46 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
             step = (step + 1) % steps.length;
             setGenerationStatus(steps[step]);
         }, 15000);
+
         try {
-            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`, { method: "POST" });
-            if (res.ok) {
-                const result = await res.json();
-                setAnalysis(result.analysis || result);
+            // 1. Avvia il job in background — Railway risponde subito
+            const startRes = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`, { method: "POST" });
+            if (!startRes.ok) {
+                console.error("Errore avvio analisi:", startRes.status);
+                clearInterval(interval);
+                setGenerating(false);
+                setGenerationStatus("");
+                return;
             }
-        } catch (e) { /* ignore */ }
+            const { job_id } = await startRes.json();
+
+            // 2. Polling ogni 5s finché il job non è done/error
+            const maxWait = 20 * 60 * 1000; // 20 minuti max
+            const pollStart = Date.now();
+
+            while (Date.now() - pollStart < maxWait) {
+                await new Promise(r => setTimeout(r, 5000));
+                try {
+                    const statusRes = await fetch(`${apiUrl}/clients/${clientId}/analysis/status/${job_id}`);
+                    if (!statusRes.ok) continue;
+                    const jobData = await statusRes.json();
+
+                    if (jobData.progress) setGenerationStatus(jobData.progress);
+
+                    if (jobData.status === "done") {
+                        setAnalysis(jobData.analysis);
+                        break;
+                    }
+                    if (jobData.status === "error") {
+                        console.error("Analisi fallita:", jobData.error);
+                        break;
+                    }
+                } catch { /* retry */ }
+            }
+        } catch (e) {
+            console.error("Errore rete:", e);
+        }
+
         clearInterval(interval);
         setGenerating(false);
         setGenerationStatus("");
