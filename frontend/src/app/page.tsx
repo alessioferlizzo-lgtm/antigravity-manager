@@ -219,7 +219,7 @@ export default function Dashboard() {
   // Function to load data from backend
   const loadData = useCallback(() => {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000); // 45s timeout - Render free tier needs time to wake up from sleep
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout - Railway always-on backend
 
     setLoading(true);
     Promise.all([
@@ -830,7 +830,6 @@ export default function Dashboard() {
       <div className="spinner" />
       <div style={{ textAlign: "center" }}>
         <div>Caricamento...</div>
-        <div style={{ fontSize: 12, marginTop: 8, color: "rgba(255,255,255,0.35)" }}>Prima apertura: attendi fino a 60 secondi</div>
       </div>
     </div>
   );

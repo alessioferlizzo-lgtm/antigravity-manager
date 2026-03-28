@@ -64,7 +64,8 @@ async def health():
 @app.on_event("startup")
 async def on_startup():
     import asyncio
-    await asyncio.to_thread(storage_service.sync_from_supabase)
+    # Run sync in background so Railway health check passes immediately
+    asyncio.create_task(asyncio.to_thread(storage_service.sync_from_supabase))
 
 class StructuredLink(BaseModel):
     url: str

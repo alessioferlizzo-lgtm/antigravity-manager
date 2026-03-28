@@ -766,7 +766,7 @@ export default function TasksSection({
           {isOffline && (
             <div style={{ background: "rgba(255,149,0,0.15)", borderBottom: "1px solid rgba(255,149,0,0.3)", padding: "6px 20px", display: "flex", alignItems: "center", gap: 12, color: "#ff9500", fontSize: 11, fontWeight: 700 }}>
               <ExclamationTriangleIcon width={14} />
-              <span style={{ flex: 1 }}>MODALITÀ OFFLINE — Il server non è raggiungibile. Attendi che si riattivi (richiede 30-60 secondi).</span>
+              <span style={{ flex: 1 }}>MODALITÀ OFFLINE — Il server non è raggiungibile. Prova a ricaricare la pagina.</span>
               {onRetryConnection && (
                 <button
                   onClick={onRetryConnection}
