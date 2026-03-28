@@ -5,7 +5,15 @@ import json_repair
 import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from .notion_service import notion_service, NOTION_ANGLES_VAULT_DB_ID, NOTION_COPY_VAULT_DB_ID
+try:
+    from .notion_service import notion_service, NOTION_ANGLES_VAULT_DB_ID, NOTION_COPY_VAULT_DB_ID
+    _notion_available = True
+except Exception as _notion_err:
+    print(f"⚠️  Notion service non disponibile: {_notion_err}")
+    notion_service = None
+    NOTION_ANGLES_VAULT_DB_ID = None
+    NOTION_COPY_VAULT_DB_ID = None
+    _notion_available = False
 
 # Caricamento prioritario del file .env in backend/
 env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -31,6 +39,7 @@ else:
 
 class AIService:
     def __init__(self):
+        self._openrouter_ok = True  # Circuit breaker: si disabilita al primo 401/403
         self.headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
@@ -61,7 +70,7 @@ class AIService:
         return truncated_msgs
 
     async def _call_ai(self, model: str, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000, timeout: float = 600.0) -> str:
-        """Call AI with automatic fallback to Google Gemini if OpenRouter fails (402 Payment Required)"""
+        """Call AI with automatic fallback to Google Gemini if OpenRouter fails (401/402/403)"""
         
         # Sostituzione timeout per modelli di ricerca/scraping (Sonar) per evitare blocchi infiniti
         if "sonar" in model.lower() and timeout == 600.0:
@@ -71,8 +80,8 @@ class AIService:
         # Tronca messaggi per evitare 400 Bad Request
         truncated_messages = self._truncate_messages(messages)
 
-        # Try OpenRouter first
-        if OPENROUTER_API_KEY:
+        # Try OpenRouter first — salta se già sappiamo che la chiave non è valida (circuit breaker)
+        if OPENROUTER_API_KEY and self._openrouter_ok:
             try:
                 payload = {
                     "model": model,
@@ -104,7 +113,10 @@ class AIService:
                         print(f"WARNING: Response truncated (finish_reason=length). Length: {len(content)}")
                     return content
             except httpx.HTTPStatusError as e:
-                if e.response.status_code in [400, 401, 402, 403]:
+                if e.response.status_code in [401, 403]:
+                    print(f"⚠️  OpenRouter: {e.response.status_code} — Chiave non valida. Circuit breaker attivato: uso Gemini per tutta la sessione.")
+                    self._openrouter_ok = False  # Disabilita OpenRouter per il resto della sessione
+                elif e.response.status_code in [400, 402]:
                     print(f"⚠️  OpenRouter: {e.response.status_code} {e.response.reason_phrase} - Switching to Google Gemini fallback")
                 else:
                     raise
@@ -113,10 +125,14 @@ class AIService:
 
         # Fallback to Google Gemini
         if GOOGLE_AI_API_KEY:
-            print(f"\n--- 🧠 CHIAMATA AI GOOGLE GEMINI (FALLBACK) ---")
+            if not self._openrouter_ok:
+                print(f"\n--- 🧠 CHIAMATA AI GOOGLE GEMINI 2.5 ---")
+            else:
+                print(f"\n--- 🧠 CHIAMATA AI GOOGLE GEMINI (FALLBACK) ---")
             return await self._call_google_gemini(messages, temperature, max_tokens)
 
         raise Exception("No AI provider available. Please configure OPENROUTER_API_KEY or GOOGLE_AI_API_KEY")
+
 
     async def _call_google_gemini(self, messages: List[Dict[str, Any]], temperature: float = 0.7, max_tokens: int = 16000, timeout: float = 600.0) -> str:
         """Call Google Gemini API directly"""
@@ -149,16 +165,15 @@ class AIService:
         if system_instruction:
             payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
-        # Use Gemini 1.5 Flash for speed and cost efficiency
-        # Proviamo v1 che è più stabile per la produzione
-        gemini_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GOOGLE_AI_API_KEY}"
+        # Use Gemini 2.5 Flash — confermato disponibile con la API Key corrente
+        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GOOGLE_AI_API_KEY}"
 
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(gemini_url, json=payload)
             response.raise_for_status()
             result = response.json()
 
-            print(f"Modello: Gemini 1.5 Flash")
+            print(f"Modello: Gemini 2.5 Flash")
             print(f"-----------------------------\n")
 
             content = result["candidates"][0]["content"]["parts"][0]["text"]
@@ -280,15 +295,17 @@ RISPONDI ESCLUSIVAMENTE CON QUESTO JSON (nessun testo fuori dal JSON):
             }
             funnel_context = f"\nFASE DEL FUNNEL (adatta gli angoli a questa fase):\n{funnel_descriptions.get(funnel_stage, funnel_stage)}\n"
             
-        # ── RAG DA NOTION ──
-        # 1. Recupera i framework teorici attivi per questa fase del funnel
-        frameworks_rules = await notion_service.get_copy_frameworks(funnel_stage)
-        framework_context = f"\n=== REGOLE E FRAMEWORK OBBLIGATORI (Da rispettare tassativamente) ===\n{frameworks_rules}\n" if frameworks_rules else ""
-
-        # 2. Recupera gli Swipe File vincenti (Headline/Angles) per il settore
-        # Il settore andrebbe preso da client_info, per ora prendiamo tutto
-        swipe_file_examples = await notion_service.get_vault_examples(NOTION_ANGLES_VAULT_DB_ID)
-        swipe_context = f"\n=== ESEMPI GOLD STANDARD ('Swipe File') ===\nPrendi ispirazione e modella i tuoi angoli basandoti sulla qualità e sullo stile di questi esempi vincenti del passato, ma NON copiarli letteralmente:\n{swipe_file_examples}\n" if swipe_file_examples else ""
+        # ── RAG DA NOTION (opzionale) ──
+        framework_context = ""
+        swipe_context = ""
+        if _notion_available and notion_service:
+            try:
+                frameworks_rules = await notion_service.get_copy_frameworks(funnel_stage)
+                framework_context = f"\n=== REGOLE E FRAMEWORK OBBLIGATORI (Da rispettare tassativamente) ===\n{frameworks_rules}\n" if frameworks_rules else ""
+                swipe_file_examples = await notion_service.get_vault_examples(NOTION_ANGLES_VAULT_DB_ID)
+                swipe_context = f"\n=== ESEMPI GOLD STANDARD ('Swipe File') ===\nPrendi ispirazione e modella i tuoi angoli basandoti sulla qualità e sullo stile di questi esempi vincenti del passato, ma NON copiarli letteralmente:\n{swipe_file_examples}\n" if swipe_file_examples else ""
+            except Exception as _ne:
+                print(f"⚠️  Notion RAG non disponibile: {_ne}")
         
         prompt = f"""Basandoti su questa ricerca di mercato:
 {research_content}
@@ -409,14 +426,17 @@ IMPORTANTE: Questo script DEVE differire completamente dalle altre variazioni ne
 ═══════════════════════════════════════════════════
 """
 
-        # ── RAG DA NOTION ──
-        # 1. Recupera i framework teorici attivi
-        frameworks_rules = await notion_service.get_copy_frameworks()
-        framework_context = f"\n=== REGOLE E FRAMEWORK OBBLIGATORI (Da rispettare tassativamente) ===\n{frameworks_rules}\n" if frameworks_rules else ""
-
-        # 2. Recupera gli Script vincenti dal Vault Copy
-        swipe_file_examples = await notion_service.get_vault_examples(NOTION_COPY_VAULT_DB_ID)
-        swipe_context = f"\n=== ESEMPI GOLD STANDARD ('Swipe File') ===\nPrendi ispirazione e modella il tuo script basandoti sulla qualità e sullo stile di questi esempi vincenti del passato, ma NON copiarli letteralmente:\n{swipe_file_examples}\n" if swipe_file_examples else ""
+        # ── RAG DA NOTION (opzionale) ──
+        framework_context = ""
+        swipe_context = ""
+        if _notion_available and notion_service:
+            try:
+                frameworks_rules = await notion_service.get_copy_frameworks()
+                framework_context = f"\n=== REGOLE E FRAMEWORK OBBLIGATORI (Da rispettare tassativamente) ===\n{frameworks_rules}\n" if frameworks_rules else ""
+                swipe_file_examples = await notion_service.get_vault_examples(NOTION_COPY_VAULT_DB_ID)
+                swipe_context = f"\n=== ESEMPI GOLD STANDARD ('Swipe File') ===\nPrendi ispirazione e modella il tuo script basandoti sulla qualità e sullo stile di questi esempi vincenti del passato, ma NON copiarli letteralmente:\n{swipe_file_examples}\n" if swipe_file_examples else ""
+            except Exception as _ne:
+                print(f"⚠️  Notion RAG non disponibile: {_ne}")
 
         prompt = f"""SEI UN COPYWRITER ESPERTO DI VIDEO BREVI. Il tuo output sarà letto direttamente in camera.
 

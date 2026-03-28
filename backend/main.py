@@ -3688,7 +3688,6 @@ async def generate_complete_client_analysis(client_id: str):
                 "swot": complete_analysis.get("swot", {}),
                 "objectives": complete_analysis.get("objectives", {}),
                 "strategy": complete_analysis.get("strategy", ""),
-                "updated_at": "NOW()"
             }).execute()
             print("✅ Analisi salvata in Supabase")
     except Exception as e:
