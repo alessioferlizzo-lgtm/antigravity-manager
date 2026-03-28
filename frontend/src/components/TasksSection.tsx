@@ -588,8 +588,19 @@ export default function TasksSection({
         });
         if (r.ok) {
           const updated = await r.json();
-          // Merge server response with current form to preserve fields the server might not return (e.g. flagged, reminder_at)
-          const merged = { ...updatedLocally, ...updated };
+          // drawerForm has the user's intended values; server response is the canonical data.
+          // Merge: server response is base, but locally-set user fields take priority
+          // (the server may not return all fields like flagged, due_time, priority="")
+          const preservedFields = {
+            flagged: drawerForm.flagged ?? updated.flagged ?? false,
+            priority: drawerForm.priority !== undefined ? drawerForm.priority : updated.priority,
+            due_time: drawerForm.due_time !== undefined ? drawerForm.due_time : updated.due_time,
+            reminder_at: drawerForm.reminder_at !== undefined ? drawerForm.reminder_at : updated.reminder_at,
+            recurring: drawerForm.recurring !== undefined ? drawerForm.recurring : updated.recurring,
+            recurring_frequency: drawerForm.recurring_frequency !== undefined ? drawerForm.recurring_frequency : updated.recurring_frequency,
+            list_id: drawerForm.list_id !== undefined ? drawerForm.list_id : updated.list_id,
+          };
+          const merged = { ...updated, ...preservedFields };
           setTasks(p => p.map(t => t.id === drawerTask.id ? merged : t));
           setDrawerTask(merged);
           setDrawerForm({ ...merged });

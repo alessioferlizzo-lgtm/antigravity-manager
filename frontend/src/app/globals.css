@@ -917,10 +917,10 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   position: fixed;
   right: 16px;
   top: 60px;
-  width: 305px;
+  width: 340px;
   max-height: calc(100vh - 80px);
   background: #F2F2F7;
-  border-radius: 14px;
+  border-radius: 16px;
   z-index: 201;
   display: flex;
   flex-direction: column;
@@ -1101,6 +1101,7 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   font-weight: 400;
   letter-spacing: -0.01em;
   white-space: nowrap;
+  flex-shrink: 0;  /* prevent label from shrinking or wrapping */
 }
 
 .apple-row-value {

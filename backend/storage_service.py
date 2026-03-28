@@ -265,13 +265,14 @@ class StorageService:
                     task_type: Optional[str] = "", subtasks: Optional[List[Dict]] = None,
                     recurring: Optional[bool] = False, recurring_frequency: Optional[str] = "",
                     reminder_at: Optional[str] = "", list_id: Optional[str] = "",
-                    flagged: bool = False) -> Dict[str, Any]:
+                    flagged: bool = False, due_time: Optional[str] = "") -> Dict[str, Any]:
         tasks = self.get_tasks()
         task = {
             "id": str(uuid.uuid4()), "title": title,
             "client_id": client_id or "", "client_name": client_name or "",
             "priority": priority, "status": "todo",
-            "due_date": due_date or "", "notes": notes or "",
+            "due_date": due_date or "", "due_time": due_time or "",
+            "notes": notes or "",
             "estimated_time": estimated_time or "",
             "parent_id": parent_id,
             "task_type": task_type or "",
@@ -280,7 +281,7 @@ class StorageService:
             "recurring_frequency": recurring_frequency or "",
             "reminder_at": reminder_at or "",
             "list_id": list_id or "",
-            "flagged": flagged, # Added flagged field
+            "flagged": flagged,
             "completed_at": None,
             "created_at": datetime.now().isoformat()
         }

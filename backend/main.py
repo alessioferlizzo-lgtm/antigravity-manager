@@ -2886,8 +2886,9 @@ class TaskCreate(BaseModel):
     title: str
     client_id: Optional[str] = ""
     client_name: Optional[str] = ""
-    priority: Optional[str] = "media"
+    priority: Optional[str] = ""
     due_date: Optional[str] = ""
+    due_time: Optional[str] = ""           # HH:MM time string
     notes: Optional[str] = ""
     estimated_time: Optional[str] = ""
     parent_id: Optional[str] = None
@@ -2895,14 +2896,16 @@ class TaskCreate(BaseModel):
     subtasks: Optional[List[Dict]] = []    # [{id, text, done}]
     recurring: Optional[bool] = False
     recurring_frequency: Optional[str] = ""  # daily, weekly, monthly
-    reminder_at: Optional[str] = ""           # ISO datetime string
+    reminder_at: Optional[str] = ""           # ISO datetime string or short code
     list_id: Optional[str] = ""               # Custom list ID
+    flagged: Optional[bool] = False            # Bandierina/contrassegna
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
     due_date: Optional[str] = None
+    due_time: Optional[str] = None          # HH:MM time string
     notes: Optional[str] = None
     client_id: Optional[str] = None
     client_name: Optional[str] = None
@@ -2914,6 +2917,7 @@ class TaskUpdate(BaseModel):
     recurring_frequency: Optional[str] = None
     reminder_at: Optional[str] = None
     list_id: Optional[str] = None
+    flagged: Optional[bool] = None          # Bandierina/contrassegna
     completed_at: Optional[str] = None
 
 @app.get("/tasks")
@@ -2926,8 +2930,9 @@ async def create_task(task: TaskCreate):
         title=task.title,
         client_id=task.client_id,
         client_name=task.client_name,
-        priority=task.priority,
+        priority=task.priority or "",
         due_date=task.due_date,
+        due_time=task.due_time,
         notes=task.notes,
         estimated_time=task.estimated_time,
         parent_id=task.parent_id,
@@ -2937,13 +2942,16 @@ async def create_task(task: TaskCreate):
         recurring_frequency=task.recurring_frequency,
         reminder_at=task.reminder_at,
         list_id=task.list_id,
+        flagged=task.flagged or False,
     )
 
 @app.patch("/tasks/{task_id}")
 async def update_task(task_id: str, update: TaskUpdate):
     try:
+    # Only update fields that were explicitly set (exclude_unset), but also allow empty strings
         updates = {k: v for k, v in update.dict(exclude_unset=True).items()}
-        updates = {k: v for k, v in updates.items() if v is not None or k in ("subtasks", "recurring", "completed_at")}
+        # Allow None only for subtasks, recurring, completed_at, flagged (boolean can be False)
+        updates = {k: v for k, v in updates.items() if v is not None or k in ("subtasks", "recurring", "completed_at", "flagged", "due_time", "reminder_at", "recurring_frequency", "list_id", "priority")}
         return storage_service.update_task(task_id, updates)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Task not found")
