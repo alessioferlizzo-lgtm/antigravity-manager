@@ -588,9 +588,11 @@ export default function TasksSection({
         });
         if (r.ok) {
           const updated = await r.json();
-          setTasks(p => p.map(t => t.id === drawerTask.id ? updated : t));
-          setDrawerTask(updated);
-          setDrawerForm({ ...updated });
+          // Merge server response with current form to preserve fields the server might not return (e.g. flagged, reminder_at)
+          const merged = { ...updatedLocally, ...updated };
+          setTasks(p => p.map(t => t.id === drawerTask.id ? merged : t));
+          setDrawerTask(merged);
+          setDrawerForm({ ...merged });
         } else throw new Error("Server error");
       } catch (err) {
         console.warn("Offline save, kept local changes");
@@ -1452,7 +1454,7 @@ function TaskDrawer({
           <div className="apple-section-label">Data e ora</div>
           <div className="apple-group">
 
-            {/* Data row — clicking value text opens native picker */}
+            {/* Data row */}
             <div className="apple-row">
               <div className="apple-row-left">
                 <RowIcon color="#8E8E93">
@@ -1460,22 +1462,33 @@ function TaskDrawer({
                     <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                   </svg>
                 </RowIcon>
-                <span className="apple-row-label">Data</span>
+                <div className="apple-row-label-stack">
+                  <span className="apple-row-label">Data</span>
+                  {dateEnabled && form.due_date && (
+                    <span className="apple-row-sublabel">{formatDateShort(form.due_date)}</span>
+                  )}
+                </div>
               </div>
               <div className="apple-row-right">
-                {dateEnabled && (
-                  <label className="apple-row-value-btn">
-                    <span className="apple-row-value">{formatDateShort(form.due_date || "")}</span>
-                    <input ref={dateInputRef} type="date" value={form.due_date || ""} onChange={e => set("due_date", e.target.value)} className="apple-hidden-input" />
-                  </label>
-                )}
                 <IOSToggle on={dateEnabled} onChange={v => {
                   setDateEnabled(v);
                   if (!v) { set("due_date", ""); setTimeEnabled(false); set("due_time", ""); }
-                  else { dateInputRef.current?.showPicker?.(); }
+                  else if (!form.due_date) { set("due_date", new Date().toISOString().split("T")[0]); }
                 }} />
               </div>
             </div>
+
+            {/* Inline date picker when Data is ON */}
+            {dateEnabled && (
+              <div className="apple-picker-row apple-separator-top">
+                <input
+                  type="date"
+                  value={form.due_date || ""}
+                  onChange={e => set("due_date", e.target.value)}
+                  className="apple-date-input-full"
+                />
+              </div>
+            )}
 
             {/* Ora — only when date is ON */}
             {dateEnabled && (
@@ -1486,21 +1499,32 @@ function TaskDrawer({
                       <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                     </svg>
                   </RowIcon>
-                  <span className="apple-row-label">Ora</span>
+                  <div className="apple-row-label-stack">
+                    <span className="apple-row-label">Ora</span>
+                    {timeEnabled && form.due_time && (
+                      <span className="apple-row-sublabel">{form.due_time}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="apple-row-right">
-                  {timeEnabled && (
-                    <label className="apple-row-value-btn">
-                      <span className="apple-row-value">{form.due_time || ""}</span>
-                      <input ref={timeInputRef} type="time" value={form.due_time || ""} onChange={e => set("due_time", e.target.value)} className="apple-hidden-input" />
-                    </label>
-                  )}
                   <IOSToggle on={timeEnabled} onChange={v => {
                     setTimeEnabled(v);
                     if (!v) set("due_time", "");
-                    else { timeInputRef.current?.showPicker?.(); }
+                    else if (!form.due_time) set("due_time", "09:00");
                   }} />
                 </div>
+              </div>
+            )}
+
+            {/* Inline time picker when Ora is ON */}
+            {dateEnabled && timeEnabled && (
+              <div className="apple-picker-row apple-separator-top">
+                <input
+                  type="time"
+                  value={form.due_time || ""}
+                  onChange={e => set("due_time", e.target.value)}
+                  className="apple-date-input-full"
+                />
               </div>
             )}
 
@@ -1515,7 +1539,7 @@ function TaskDrawer({
                 <span className="apple-row-label">Urgente</span>
               </div>
               <div className="apple-row-right">
-                <IOSToggle on={form.priority === "alta"} onChange={v => set("priority", v ? "alta" : "media")} />
+                <IOSToggle on={form.priority === "alta"} onChange={v => set("priority", v ? "alta" : (form.priority === "alta" ? "" : form.priority || ""))} />
               </div>
             </div>
 
@@ -1639,7 +1663,8 @@ function TaskDrawer({
                 <span className="apple-row-label">Priorità</span>
               </div>
               <div className="apple-row-right">
-                <select className="apple-select" value={form.priority || "media"} onChange={e => set("priority", e.target.value)}>
+                <select className="apple-select" value={form.priority || ""} onChange={e => set("priority", e.target.value)}>
+                  <option value="">Nessuna</option>
                   <option value="bassa">Bassa</option>
                   <option value="media">Media</option>
                   <option value="alta">Alta</option>

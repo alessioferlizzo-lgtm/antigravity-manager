@@ -1164,28 +1164,39 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
   flex-shrink: 0;
 }
 
-/* ── Date inputs in sub rows ── */
-.apple-date-input {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 15px;
-  color: #000;
-  font-family: inherit;
-  cursor: pointer;
-  width: 100%;
+/* ── Inline date/time picker rows ── */
+.apple-picker-row {
+  background: #F9F9F9;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.apple-datetime-input {
+.apple-date-input-full {
+  width: 100%;
   background: transparent;
   border: none;
   outline: none;
   font-size: 14px;
-  color: #8E8E93;
+  color: #000;
   font-family: inherit;
   cursor: pointer;
-  text-align: right;
-  max-width: 180px;
+  padding: 0;
+  text-align: center;
+}
+
+/* ── Row label with sublabel (date value under label like Apple) ── */
+.apple-row-label-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.apple-row-sublabel {
+  font-size: 11.5px;
+  color: #8E8E93;
+  font-weight: 400;
 }
 
 /* ── Hint text ── */
@@ -1200,11 +1211,12 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 /* ── row-left and row-right ── */
 .apple-row-left {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  padding-top: 1px;
 }
 .apple-row-right {
   display: flex;
