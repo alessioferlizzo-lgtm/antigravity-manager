@@ -105,7 +105,7 @@ export default function Dashboard() {
   const [smartLists, setSmartLists] = useState<any[]>([]);
   const [smartListEditorOpen, setSmartListEditorOpen] = useState(false);
   const [editingSmartList, setEditingSmartList] = useState<any | null>(null);
-
+  const [smartListCtxMenu, setSmartListCtxMenu] = useState<{ id: string; title: string; x: number; y: number } | null>(null);
 
   // Sidebar enhancements
   const [clientSearch, setClientSearch] = useState("");
@@ -1019,7 +1019,8 @@ export default function Dashboard() {
                   onContextMenu={(e) => {
                     if (!sl.is_system) {
                       e.preventDefault();
-                      openSmartListEditor(sl);
+                      e.stopPropagation();
+                      setSmartListCtxMenu({ id: sl.id, title: sl.title, x: e.clientX, y: e.clientY });
                     }
                   }}
                 >
@@ -1031,35 +1032,31 @@ export default function Dashboard() {
                   </div>
                   <div className="smart-list-label">{sl.title}</div>
 
-                  {/* Delete button for custom Smart Lists */}
+                  {/* Delete button — visible on hover, Apple style */}
                   {!sl.is_system && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm(`Eliminare la Smart List "${sl.title}"?`)) {
-                          deleteSmartList(sl.id);
-                        }
+                        setSmartListCtxMenu({ id: sl.id, title: sl.title, x: e.clientX, y: e.clientY });
                       }}
                       style={{
                         position: "absolute",
-                        top: 8,
-                        right: 8,
-                        background: "rgba(0,0,0,0.4)",
+                        top: 6, right: 6,
+                        background: "rgba(0,0,0,0.35)",
                         border: "none",
-                        color: "#ef4444",
+                        color: "rgba(255,255,255,0.5)",
                         cursor: "pointer",
-                        fontSize: 14,
-                        width: 20,
-                        height: 20,
+                        fontSize: 13,
+                        width: 20, height: 20,
                         borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        display: "flex", alignItems: "center", justifyContent: "center",
                         opacity: 0,
                         transition: "opacity 0.15s",
+                        lineHeight: 1,
                       }}
                       className="smart-list-delete-btn"
-                    >×</button>
+                      title="Opzioni"
+                    >···</button>
                   )}
                 </div>
               );
@@ -2572,6 +2569,64 @@ export default function Dashboard() {
         onSave={handleSmartListSave}
         initialData={editingSmartList}
       />
+
+
+      {/* ═══ Smart List Context Menu ═══ */}
+      {smartListCtxMenu && (
+        <>
+          <div
+            onClick={() => setSmartListCtxMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setSmartListCtxMenu(null); }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              left: Math.min(smartListCtxMenu.x, window.innerWidth - 200),
+              top: Math.min(smartListCtxMenu.y, window.innerHeight - 120),
+              zIndex: 9999,
+              background: 'rgba(30,30,32,0.97)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+              minWidth: 190,
+              overflow: 'hidden',
+              animation: 'applePopIn 0.18s cubic-bezier(0.34,1.4,0.64,1) forwards',
+            }}
+          >
+            <div style={{ padding: '8px 14px 4px', fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              {smartListCtxMenu.title}
+            </div>
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+            <button
+              onClick={() => {
+                const sl = smartLists.find((s: any) => s.id === smartListCtxMenu.id);
+                if (sl) openSmartListEditor(sl);
+                setSmartListCtxMenu(null);
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.85)', cursor: 'pointer', fontSize: 14, fontFamily: 'inherit', textAlign: 'left' as const }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' style={{ opacity: 0.6, flexShrink: 0 }}><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/></svg>
+              Modifica lista
+            </button>
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            <button
+              onClick={() => { deleteSmartList(smartListCtxMenu.id); setSmartListCtxMenu(null); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'none', border: 'none', color: '#ff453a', cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: 'inherit', textAlign: 'left' as const }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,69,58,0.1)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' style={{ flexShrink: 0 }}><polyline points='3 6 5 6 21 6'/><path d='M19 6l-1 14H6L5 6'/><path d='M10 11v6M14 11v6'/><path d='M9 6V4h6v2'/></svg>
+              Elimina lista
+            </button>
+          </div>
+        </>
+      )}
+
 
     </div>
   );
