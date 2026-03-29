@@ -1734,6 +1734,7 @@ export default function Dashboard() {
                       <div key={m.id}
                         onClick={() => setGfxModel(m.id)}
                         style={{
+                          display: "flex", flexDirection: "column", height: "100%",
                           background: gfxModel === m.id ? "rgba(255,158,28,0.08)" : "rgba(255,255,255,0.03)",
                           border: gfxModel === m.id ? "2px solid var(--orange)" : "1px solid rgba(255,255,255,0.1)",
                           borderRadius: 12, padding: "16px 20px", cursor: "pointer", transition: "all 0.15s",
@@ -1811,8 +1812,8 @@ export default function Dashboard() {
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: 0.8, transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.8"}>
                               <div style={{ color: "#3b82f6" }}>{slot.icon}</div>
                               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", letterSpacing: "0.02em", textTransform: "uppercase" }}>{slot.label}</div>
-                                <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>{slot.subLabel}</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: "#ffffff", letterSpacing: "0.02em", textTransform: "uppercase" }}>{slot.label}</div>
+                                <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{slot.subLabel}</div>
                               </div>
                             </div>
                           )}

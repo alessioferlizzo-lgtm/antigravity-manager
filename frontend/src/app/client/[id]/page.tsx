@@ -815,11 +815,28 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
 
             {/* ═══ MAIN ═══ */}
             <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
-                <div className="mobile-only-header" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(4, 37, 88, 0.65)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 40, width: "100%" }}>
-                    <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(true)} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: 4, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Bars3Icon style={{ width: 22, height: 22 }} />
-                    </button>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>{client.name || "Caricamento..."}</div>
+                <div className="mobile-only-header" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(4, 37, 88, 0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 40, width: "100%", flexDirection: "column", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                        <button onClick={() => window.location.href = "/"} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: 4, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <ArrowLeftIcon strokeWidth={2.5} style={{ width: 18, height: 18 }} />
+                        </button>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>{client.name || "Caricamento..."}</div>
+                    </div>
+                    {/* Mobile Tabs */}
+                    <div className="mobile-tabs-scroll" style={{ display: "flex", width: "100%", overflowX: "auto", gap: 12, paddingBottom: 4, marginTop: 12, msOverflowStyle: "none", scrollbarWidth: "none" }}>
+                        <style>{`.mobile-tabs-scroll::-webkit-scrollbar { display: none; }`}</style>
+                        {navItems.map(({ key, label }) => (
+                            <button key={key} onClick={() => setSection(key)} style={{
+                                background: "none", border: "none", padding: "6px 2px",
+                                fontSize: 14, fontWeight: section === key ? 700 : 500,
+                                color: section === key ? "#fff" : "rgba(255,255,255,0.5)",
+                                borderBottom: section === key ? "2px solid var(--lime)" : "2px solid transparent",
+                                whiteSpace: "nowrap", cursor: "pointer", transition: "all 0.15s"
+                            }}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
                 
                 <div style={{ padding: "24px" }}>

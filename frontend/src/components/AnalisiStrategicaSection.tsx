@@ -978,8 +978,8 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                     <div style={{ background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.2)", borderRadius: 8, padding: "10px 16px", marginBottom: 24, fontSize: 12, color: "var(--orange)", maxWidth: 560, margin: "0 auto 24px" }}>
                         ⏱️ Tempo stimato: <strong>4-8 minuti</strong> • AI parallele orchestrate per velocità massima
                     </div>
-                    <button className="btn btn-primary" style={{ fontSize: 15, padding: "14px 36px", fontWeight: 700 }} onClick={generateAnalysis} disabled={generating}>
-                        {generating ? (<><div className="spinner" style={{ width: 14, height: 14 }} />{generationStatus || "Generazione in corso…"}</>) : (<><SparklesIcon style={{ width: 16, height: 16 }} />🚀 Genera Analisi Strategica Completa</>)}
+                    <button className="btn btn-primary" style={{ fontSize: 15, padding: "16px 20px", fontWeight: 700, whiteSpace: "normal", height: "auto", minHeight: 48, maxWidth: "100%", wordWrap: "break-word" }} onClick={generateAnalysis} disabled={generating}>
+                        {generating ? (<><div className="spinner" style={{ width: 14, height: 14 }} />{generationStatus || "Generazione in corso…"}</>) : (<><SparklesIcon style={{ width: 16, height: 16, flexShrink: 0 }} />🚀 Genera Analisi Strategica Completa</>)}
                     </button>
                 </div>
             </div>
