@@ -293,35 +293,94 @@ Procedi autonomamente con il ragionamento e l'esecuzione degli strumenti necessa
 
     async def _call_aria_reasoning(self, system: str, messages: List[Dict]) -> Dict:
         """
-        Calls Claude Sonnet with tool_use enabled directly via Anthropic API through OpenRouter.
-        Falls back to standard AIService if tool_use not available.
+        Calls Claude Sonnet with tool_use enabled via OpenRouter.
+        Falls back to standard text-only reasoning via AIService if key missing.
         """
         import os, httpx
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
         if not openrouter_key:
             # Fallback: plain text reasoning
-            flat_messages = []
+            flat_messages = [{"role": "system", "content": system}] if system else []
             for m in messages:
                 if isinstance(m["content"], str):
                     flat_messages.append(m)
                 elif isinstance(m["content"], list):
-                    text_parts = [b.get("text", b.get("content", "")) for b in m["content"] if isinstance(b, dict)]
+                    text_parts = [
+                        b.get("text") or b.get("content") or json.dumps(b)
+                        for b in m["content"] if isinstance(b, dict)
+                    ]
                     flat_messages.append({"role": m["role"], "content": " ".join(str(p) for p in text_parts)})
             result_text = await self.ai._call_ai("anthropic/claude-3.7-sonnet", flat_messages)
             return {"stop_reason": "end_turn", "content": [{"type": "text", "text": result_text}]}
 
-        # Use OpenRouter with tool_use support
+        # Build messages with system as first message (OpenRouter tool_use compatible)
+        openrouter_messages = []
+        if system:
+            openrouter_messages.append({"role": "system", "content": system})
+
+        for m in messages:
+            role = m["role"]
+            content = m["content"]
+
+            if isinstance(content, str):
+                openrouter_messages.append({"role": role, "content": content})
+            elif isinstance(content, list):
+                # Convert Anthropic-style content blocks to OpenRouter format
+                if role == "assistant":
+                    # For assistant messages with tool calls, keep as-is but convert blocks
+                    text_parts = ""
+                    tool_calls_out = []
+                    for block in content:
+                        if block.get("type") == "text":
+                            text_parts += block.get("text", "")
+                        elif block.get("type") == "tool_use":
+                            tool_calls_out.append({
+                                "id": block["id"],
+                                "type": "function",
+                                "function": {
+                                    "name": block["name"],
+                                    "arguments": json.dumps(block["input"], ensure_ascii=False)
+                                }
+                            })
+                    msg: Dict[str, Any] = {"role": "assistant"}
+                    if text_parts:
+                        msg["content"] = text_parts
+                    if tool_calls_out:
+                        msg["tool_calls"] = tool_calls_out
+                    openrouter_messages.append(msg)
+                elif role == "user":
+                    # Tool results — send as separate tool messages
+                    for block in content:
+                        if block.get("type") == "tool_result":
+                            openrouter_messages.append({
+                                "role": "tool",
+                                "tool_call_id": block["tool_use_id"],
+                                "content": block["content"],
+                            })
+                        elif block.get("type") == "text":
+                            openrouter_messages.append({"role": "user", "content": block.get("text", "")})
+            else:
+                openrouter_messages.append({"role": role, "content": str(content)})
+
         payload = {
             "model": "anthropic/claude-3.7-sonnet",
-            "messages": messages,
-            "tools": ARIA_TOOLS,
-            "tool_choice": {"type": "auto"},
+            "messages": openrouter_messages,
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t["name"],
+                        "description": t["description"],
+                        "parameters": t["input_schema"],
+                    }
+                }
+                for t in ARIA_TOOLS
+            ],
+            "tool_choice": "auto",
             "max_tokens": 8000,
             "temperature": 0.5,
         }
-        if system:
-            payload["system"] = system
 
         headers = {
             "Authorization": f"Bearer {openrouter_key}",
@@ -330,36 +389,40 @@ Procedi autonomamente con il ragionamento e l'esecuzione degli strumenti necessa
             "X-Title": "ARIA Agent",
         }
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers=headers,
-                json=payload,
-            )
-            response.raise_for_status()
-            data = response.json()
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPStatusError as e:
+            body = e.response.text[:500] if hasattr(e, "response") else ""
+            print(f"❌ ARIA OpenRouter error {e.response.status_code}: {body}")
+            raise
 
-        # Normalize OpenRouter response to Anthropic-like format
         choice = data["choices"][0]
-        finish_reason = choice.get("finish_reason", "stop")
         msg = choice["message"]
 
         content_blocks = []
         if msg.get("content"):
             content_blocks.append({"type": "text", "text": msg["content"]})
 
-        # Tool calls in OpenRouter format
-        tool_calls = msg.get("tool_calls", [])
+        tool_calls = msg.get("tool_calls") or []
         stop_reason = "tool_use" if tool_calls else "end_turn"
         for tc in tool_calls:
+            args = tc["function"]["arguments"]
+            parsed_args = json.loads(args) if isinstance(args, str) else args
             content_blocks.append({
                 "type": "tool_use",
                 "id": tc.get("id", f"call_{uuid.uuid4().hex[:8]}"),
                 "name": tc["function"]["name"],
-                "input": json.loads(tc["function"]["arguments"]) if isinstance(tc["function"]["arguments"], str) else tc["function"]["arguments"],
+                "input": parsed_args,
             })
 
-        print(f"🧠 ARIA reasoning — stop_reason: {stop_reason}, tools called: {[b['name'] for b in content_blocks if b['type']=='tool_use']}")
+        print(f"🧠 ARIA — stop: {stop_reason}, tools: {[b['name'] for b in content_blocks if b['type']=='tool_use']}")
         return {"stop_reason": stop_reason, "content": content_blocks}
 
     # ── Tool execution ───────────────────────────────────────────────────────
