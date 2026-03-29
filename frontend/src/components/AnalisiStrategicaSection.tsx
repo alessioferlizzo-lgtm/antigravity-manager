@@ -20,7 +20,7 @@ function MD({ text }: { text: string }) {
                     <p key={i} style={{ marginBottom: 6 }}>
                         {parts.map((p, j) =>
                             p.startsWith("**") && p.endsWith("**")
-                                ? <strong key={j} style={{ color: "var(--navy)" }}>{p.slice(2, -2)}</strong>
+                                ? <strong key={j} style={{ color: "#ffffff" }}>{p.slice(2, -2)}</strong>
                                 : <span key={j}>{p}</span>
                         )}
                     </p>
@@ -50,7 +50,7 @@ function GenericValue({ value }: { value: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {Object.entries(value).map(([k, v]) => (
                 <div key={k} style={{ paddingLeft: 10, borderLeft: "3px solid var(--lime)", paddingBottom: 8 }}>
-                    <strong style={{ fontSize: 12, textTransform: "capitalize", color: "var(--navy)", display: "block", marginBottom: 4 }}>
+                    <strong style={{ fontSize: 12, textTransform: "capitalize", color: "#ffffff", display: "block", marginBottom: 4 }}>
                         {k.replace(/_/g, " ")}
                     </strong>
                     <GenericValue value={v} />
@@ -71,7 +71,7 @@ function Chip({ label, color = "#3b82f6" }: { label: string; color?: string }) {
 
 // ── Section card wrapper ──────────────────────────────────────────────────────
 function SCard({ children }: { children: React.ReactNode }) {
-    return <div style={{ background: "#fafafa", borderRadius: 10, padding: "14px 16px", border: "1px solid var(--border)" }}>{children}</div>;
+    return <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "14px 16px", border: "1px solid var(--border)" }}>{children}</div>;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -118,7 +118,7 @@ function BrandIdentityRenderer({ data }: { data: any }) {
             {data.brand_statement && (
                 <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(16,185,129,0.08))", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10, padding: "14px 18px" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", marginBottom: 6 }}>✨ BRAND STATEMENT</div>
-                    <p style={{ fontStyle: "italic", fontSize: 15, fontWeight: 600, color: "var(--navy)", margin: 0 }}>"{data.brand_statement}"</p>
+                    <p style={{ fontStyle: "italic", fontSize: 15, fontWeight: 600, color: "#ffffff", margin: 0 }}>"{data.brand_statement}"</p>
                 </div>
             )}
             {Array.isArray(data.strategic_notes) && data.strategic_notes.length > 0 && (
@@ -298,8 +298,8 @@ function ContentMatrixRenderer({ data }: { data: any }) {
                 </thead>
                 <tbody>
                     {rows.map((row: any, i: number) => (
-                        <tr key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--navy)", verticalAlign: "top", minWidth: 120 }}>{row.icp || row.persona || row.target || `ICP ${i + 1}`}</td>
+                        <tr key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "rgba(255,255,255,0.04)" : "transparent" }}>
+                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "#ffffff", verticalAlign: "top", minWidth: 120 }}>{row.icp || row.persona || row.target || `ICP ${i + 1}`}</td>
                             <td style={{ padding: "10px 12px", fontStyle: "italic", verticalAlign: "top", color: "#6366f1" }}>"{row.hook || row.hook_principale || row.headline || "—"}"</td>
                             <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{row.paid_ads || row.paid || row.paid_strategy || "—"}</td>
                             <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{row.organic_social || row.organic || row.organic_strategy || "—"}</td>
@@ -332,7 +332,7 @@ function BrandVoiceRenderer({ data }: { data: any }) {
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>📖 Glossario Brand</div>
                     <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                            <thead><tr style={{ background: "#f1f5f9" }}><th style={{ padding: "8px 12px", textAlign: "left" }}>Invece di...</th><th style={{ padding: "8px 12px", textAlign: "left" }}>Usa...</th></tr></thead>
+                            <thead><tr style={{ background: "rgba(255,255,255,0.05)" }}><th style={{ padding: "8px 12px", textAlign: "left" }}>Invece di...</th><th style={{ padding: "8px 12px", textAlign: "left" }}>Usa...</th></tr></thead>
                             <tbody>
                                 {(Array.isArray(data.glossary) ? data.glossary : Object.entries(data.glossary)).map((item: any, i: number) => (
                                     <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
@@ -412,7 +412,7 @@ function ReviewsVoCRenderer({ data }: { data: any }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {hooks.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 12, padding: "16px" }}>
+                <div style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 12, padding: "16px" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 14 }}>🏆 Golden Hooks (Estrazione Agostinis)</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {hooks.map((h: any, i: number) => {
@@ -423,10 +423,10 @@ function ReviewsVoCRenderer({ data }: { data: any }) {
                                 <div key={i} style={{ border: "1px solid rgba(245,158,11,0.3)", borderRadius: 8, overflow: "hidden" }}>
                                     <div style={{ background: "rgba(245,158,11,0.1)", padding: "8px 12px", borderBottom: "1px solid rgba(245,158,11,0.2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                         <div style={{ fontWeight: 700, color: "#d97706", fontSize: 13 }}>Gancio: {h.hook || `Hook #${i + 1}`}</div>
-                                        {h.source && <div style={{ fontSize: 11, background: "#fff", padding: "2px 8px", borderRadius: 12, border: "1px solid rgba(245,158,11,0.3)", color: "#b45309" }}>{h.source}</div>}
+                                        {h.source && <div style={{ fontSize: 11, background: "transparent", padding: "2px 8px", borderRadius: 12, border: "1px solid rgba(245,158,11,0.3)", color: "#b45309" }}>{h.source}</div>}
                                     </div>
                                     <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: 10 }}>
-                                        <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--navy)", borderLeft: "3px solid #f59e0b", paddingLeft: 10 }}>
+                                        <div style={{ fontSize: 13, fontStyle: "italic", color: "#ffffff", borderLeft: "3px solid #f59e0b", paddingLeft: 10 }}>
                                             "{h.verbatim || h.text || h.quote || "Nessuna citazione letterale trovata"}"
                                         </div>
                                         {h.marketing_use && (
@@ -442,17 +442,17 @@ function ReviewsVoCRenderer({ data }: { data: any }) {
                 </div>
             )}
             {data.pain_points && Array.isArray(data.pain_points) && data.pain_points.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 12, padding: "16px" }}>
+                <div style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 12, padding: "16px" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: 14 }}>🔴 Pain Points (Lamentele & Obiezioni)</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {data.pain_points.map((p: any, i: number) => (
                             <div key={i} style={{ border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, overflow: "hidden" }}>
                                 <div style={{ background: "rgba(239,68,68,0.1)", padding: "8px 12px", borderBottom: "1px solid rgba(239,68,68,0.2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <div style={{ fontWeight: 700, color: "#b91c1c", fontSize: 13 }}>Gancio a contrasto: {p.pain || `Dolore #${i + 1}`}</div>
-                                    {p.source && <div style={{ fontSize: 11, background: "#fff", padding: "2px 8px", borderRadius: 12, border: "1px solid rgba(239,68,68,0.3)", color: "#b91c1c" }}>{p.source}</div>}
+                                    {p.source && <div style={{ fontSize: 11, background: "transparent", padding: "2px 8px", borderRadius: 12, border: "1px solid rgba(239,68,68,0.3)", color: "#b91c1c" }}>{p.source}</div>}
                                 </div>
                                 <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: 10 }}>
-                                    <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--navy)", borderLeft: "3px solid #ef4444", paddingLeft: 10 }}>
+                                    <div style={{ fontSize: 13, fontStyle: "italic", color: "#ffffff", borderLeft: "3px solid #ef4444", paddingLeft: 10 }}>
                                         "{p.verbatim || "Citazione non disponibile"}"
                                     </div>
                                     {p.marketing_use && (
@@ -541,7 +541,7 @@ function SeasonalRoadmapRenderer({ data }: { data: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
                 {quartersArray.map((q: any, i: number) => (
-                    <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                    <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "transparent", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
                         <div style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "12px 16px" }}>
                             <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>📅 {q.id}</div>
                             {q.theme && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 12, marginTop: 4 }}>Tema: {q.theme}</div>}
@@ -550,7 +550,7 @@ function SeasonalRoadmapRenderer({ data }: { data: any }) {
                             {q.hero_product && (
                                 <div>
                                     <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 2 }}>🏆 Hero Product</div>
-                                    <div style={{ fontWeight: 600, color: "var(--navy)" }}>{q.hero_product}</div>
+                                    <div style={{ fontWeight: 600, color: "#ffffff" }}>{q.hero_product}</div>
                                 </div>
                             )}
                             {q.strategy && (
@@ -578,7 +578,7 @@ function SeasonalRoadmapRenderer({ data }: { data: any }) {
             {data.execution_tips && Array.isArray(data.execution_tips) && data.execution_tips.length > 0 && (
                 <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, padding: "16px" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#d97706", textTransform: "uppercase", marginBottom: 8 }}>📌 Tattiche di Esecuzione</div>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "var(--navy)", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "#ffffff", display: "flex", flexDirection: "column", gap: 6 }}>
                         {data.execution_tips.map((tip: any, idx: number) => <li key={idx}>{tip}</li>)}
                     </ul>
                 </div>
@@ -625,7 +625,7 @@ function PsychographicRenderer({ data }: { data: any }) {
                                         
                                         return (
                                             <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
-                                                <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--navy)", verticalAlign: "top", width: "25%" }}>
+                                                <td style={{ padding: "10px 12px", fontWeight: 700, color: "#ffffff", verticalAlign: "top", width: "25%" }}>
                                                     {attrKey ? String(item[attrKey]) : `${i + 1}`}
                                                 </td>
                                                 <td style={{ padding: "10px 12px", verticalAlign: "top", width: "45%" }}>
@@ -965,7 +965,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                 </p>
                 <div className="card" style={{ textAlign: "center", padding: "60px 24px" }}>
                     <DocumentTextIcon style={{ width: 52, height: 52, color: "var(--text-muted)", margin: "0 auto 16px" }} />
-                    <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-header)", marginBottom: 8 }}>Nessuna analisi generata</h3>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>Nessuna analisi generata</h3>
                     <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 520, margin: "0 auto 24px" }}>
                         Genera l&apos;analisi strategica completa in 14 sezioni basata sulla metodologia Francesco Agostinis per Meta Ads.
                     </p>
@@ -988,7 +988,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
 
     // ── Generated progress bar (during regeneration) ───────────────────────────
     const generatingOverlay = generating && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, background: "var(--navy)", color: "#fff", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.2)", zIndex: 1000, maxWidth: 360 }}>
+        <div style={{ position: "fixed", bottom: 24, right: 24, background: "var(--navy-glass, rgba(0,0,0,0.8))", backdropFilter: "blur(12px)", color: "#fff", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", zIndex: 1000, maxWidth: 360 }}>
             <div className="spinner" style={{ width: 16, height: 16, borderColor: "rgba(255,255,255,0.3)", borderTopColor: "var(--lime)" }} />
             <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--lime)" }}>Rigenerazione in corso</div>
@@ -1006,17 +1006,17 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
             {generatingOverlay}
 
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
                 <div>
                     <h1 className="page-title" style={{ marginBottom: 4 }}>Analisi Strategica</h1>
-                    <p style={{ color: "var(--text-muted)", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: 12, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                         <CheckCircleIcon style={{ width: 14, height: 14, color: "#10b981" }} />
                         <span>{filledCount}/{allSections.length} sezioni complete</span>
                         <span style={{ color: "var(--border)" }}>•</span>
                         <span>Metodologia Francesco Agostinis</span>
                     </p>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={generateAnalysis} disabled={generating}>
+                <button className="btn btn-primary btn-sm" onClick={generateAnalysis} disabled={generating}>
                     <ArrowPathIcon style={{ width: 13, height: 13 }} />{generating ? "Rigenerando…" : "Rigenera"}
                 </button>
             </div>
@@ -1044,9 +1044,9 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                                         const hasData = sectionData && (typeof sectionData !== "object" || Object.keys(sectionData).length > 0 || (Array.isArray(sectionData) && sectionData.length > 0));
                                         return (
                                             <div key={key} style={{ marginTop: 12, border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                                                <div onClick={() => toggleSection(key)} style={{ width: "100%", padding: "12px 16px", border: "none", background: isOpen ? "rgba(0,0,0,0.02)" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                                                    {isOpen ? <ChevronDownIcon style={{ width: 15, height: 15, color: "var(--navy)" }} /> : <ChevronRightIcon style={{ width: 15, height: 15, color: "var(--navy)" }} />}
-                                                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-header)", flex: 1, textAlign: "left" }}>{label}</span>
+                                                <div onClick={() => toggleSection(key)} style={{ width: "100%", padding: "12px 16px", border: "none", background: isOpen ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                                                    {isOpen ? <ChevronDownIcon style={{ width: 15, height: 15, color: "#ffffff" }} /> : <ChevronRightIcon style={{ width: 15, height: 15, color: "#ffffff" }} />}
+                                                    <span style={{ fontSize: 13, fontWeight: 600, color: "#ffffff", flex: 1, textAlign: "left" }}>{label}</span>
                                                     
                                                     {sectionLoading[key] ? (
                                                         <div className="spinner" style={{ width: 14, height: 14 }} />
@@ -1068,7 +1068,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                                                     )}
                                                 </div>
                                                 {isOpen && (
-                                                    <div style={{ padding: 16, background: "#fafafa", fontSize: 13, color: "var(--text-dark-primary)", borderTop: "1px solid var(--border)" }}>
+                                                    <div style={{ padding: 16, background: "rgba(255,255,255,0.03)", fontSize: 13, color: "#ffffff", borderTop: "1px solid var(--border)" }}>
                                                         {hasData
                                                             ? <Renderer data={sectionData} />
                                                             : (
