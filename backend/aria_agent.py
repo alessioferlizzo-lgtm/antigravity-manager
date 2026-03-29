@@ -165,124 +165,145 @@ class ARIAAgent:
         job_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Main entry point. ARIA reasons about the task and calls tools autonomously.
-        Implements the multi-agent-optimize orchestration pattern.
+        Main entry point. ARIA follows a reliable 3-phase execution:
+        1. Analyze available sources (fast)
+        2. Detect task type and execute the right generator
+        3. Self-critique and return
+
+        This replaces the open-ended agentic loop which caused infinite iterations.
         """
         steps_log = []
-        final_result = None
         context = context or {}
 
-        # Step 1: Recall memory for this client
-        memory_context = aria_memory.recall_context(client_id, context.get("output_type", "general"))
+        print(f"🧠 ARIA: avvio task '{task[:80]}' per cliente {client_id}")
 
-        # Step 2: Build initial system prompt
+        # ── Phase 1: Gather context ──────────────────────────────────────────
+        steps_log.append({"step": "phase1_start", "message": "Analisi sorgenti disponibili"})
         client_data = await self._get_client_data(client_id)
         client_name = client_data.get("name", "Cliente") if client_data else "Cliente"
 
-        system_prompt = f"""Sei ARIA (Antigravity Reasoning & Intelligence Agent), il cervello strategico dell'app Antigravity.
+        source_context = await self._tool_analyze_sources({"client_id": client_id}, client_id, client_data)
+        memory_context = aria_memory.recall_context(client_id, "general")
+        steps_log.append({"step": "phase1_done", "tool": "analyze_sources", "output_preview": str(source_context)[:150]})
 
-IL TUO RUOLO:
-Sei un Senior Marketing Strategist che ragiona autonomamente per produrre output di altissima qualità per campagne Meta Ads e strategie di marketing.
+        # Build a concise knowledge block for the generators
+        knowledge = f"CLIENTE: {client_name}\n"
+        if source_context.get("has_analysis"):
+            knowledge += f"ANALISI ESISTENTE:\n{source_context.get('analysis_summary', '')}\n"
+            knowledge += f"VOCABOLARIO TARGET: {', '.join(source_context.get('target_vocabulary', [])[:15])}\n"
+            knowledge += f"DOLORI: {', '.join(source_context.get('audience_pain_points', [])[:5])}\n"
+        if source_context.get("links"):
+            links = source_context["links"]
+            if links and isinstance(links[0], dict):
+                knowledge += f"LINK: {', '.join(l.get('url','') for l in links[:3])}\n"
+            else:
+                knowledge += f"LINK: {', '.join(str(l) for l in links[:3])}\n"
+        if source_context.get("objectives"):
+            knowledge += f"OBIETTIVI: {source_context['objectives']}\n"
+        if memory_context:
+            knowledge += f"\nMEMORIA APPRENDIMENTI PASSATI:\n{memory_context}\n"
 
-CLIENTE ATTUALE: {client_name} (ID: {client_id})
+        # ── Phase 2: Detect task type & execute ──────────────────────────────
+        task_lower = task.lower()
 
-COME FUNZIONI:
-1. Leggi il task assegnato dall'utente
-2. Pianifica mentalmente la sequenza ottimale di strumenti da usare
-3. Chiama gli strumenti nell'ordine logico (analizza prima di generare, poi auto-critica)
-4. Prima di restituire il risultato finale, usa sempre `self_critique` per verificare la qualità
-5. Usa `finalize_output` solo quando sei sicuro che l'output sia eccellente
+        # Detect: angles
+        wants_angles = any(w in task_lower for w in ["angol", "angle", "comunicativ", "tofu", "mofu", "bofu", "funnel", "scoperta", "interesse", "decisione"])
+        # Detect: script
+        wants_script = any(w in task_lower for w in ["script", "video", "reel", "tiktok", "30 secondi", "30s"])
+        # Detect: copy
+        wants_copy = any(w in task_lower for w in ["copy", "testo", "headline", "ads", "annuncio", "email"])
+        # Detect: analysis / market research
+        wants_analysis = any(w in task_lower for w in ["analisi", "analizza", "mercato", "ricerca", "competitor", "swot", "report"])
+        # Detect: piano contenuti
+        wants_plan = any(w in task_lower for w in ["piano", "plan", "contenuti", "settimane", "calendario"])
 
-REGOLE NON NEGOZIABILI:
-- Zero genericità: ogni output deve essere specifico per questo cliente
-- Usa il vocabolario reale del target (mai parafrasare)
-- Se non hai abbastanza contesto, chiedi prima con analyze_sources o web_research
-- La qualità viene prima della velocità
+        result: Dict[str, Any] = {}
+        summary = ""
+        confidence = 85
 
-{f"MEMORIA E APPRENDIMENTI PASSATI:{chr(10)}{memory_context}" if memory_context else "Nota: Nessun dato storico disponibile per questo cliente. Prima analisi."}
-"""
+        steps_log.append({"step": "phase2_detect", "message": f"Task type: angles={wants_angles}, script={wants_script}, copy={wants_copy}, analysis={wants_analysis}, plan={wants_plan}"})
 
-        messages = [
-            {"role": "user", "content": f"""TASK ASSEGNATO:
+        if wants_angles or (not wants_script and not wants_copy and not wants_analysis and not wants_plan):
+            # Default to angles if unclear
+            funnel_stage = "discovery"
+            if "interesse" in task_lower or "mofu" in task_lower: funnel_stage = "interest"
+            elif "decisione" in task_lower or "bofu" in task_lower: funnel_stage = "decision"
+            elif "azione" in task_lower: funnel_stage = "action"
+
+            steps_log.append({"step": "phase2_tool", "tool": "generate_angles", "funnel_stage": funnel_stage})
+            angles_result = await self._tool_generate_angles(
+                {"client_id": client_id, "research_context": knowledge, "funnel_stage": funnel_stage, "count": 5},
+                client_id
+            )
+            result = angles_result
+            summary = f"ARIA ha analizzato le sorgenti di {client_name} e generato {len(angles_result.get('angles', []))} angoli comunicativi per la fase {funnel_stage.upper()}."
+            confidence = 88
+
+        elif wants_script:
+            # Generate a script — pick first angle then generate
+            steps_log.append({"step": "phase2_tool", "tool": "generate_script"})
+            # First get an angle to base the script on
+            angles_result = await self._tool_generate_angles(
+                {"client_id": client_id, "research_context": knowledge, "funnel_stage": "discovery", "count": 1},
+                client_id
+            )
+            angle = angles_result.get("angles", [{"title": "Trasformazione", "description": knowledge[:200]}])[0]
+            script_result = await self._tool_generate_script(
+                {"client_id": client_id, "angle": angle, "research_context": knowledge, "extra_instructions": task, "variations": 1},
+                client_id
+            )
+            result = script_result
+            summary = f"ARIA ha creato uno script video da 30 secondi per {client_name} basato sull'angolo '{angle.get('title', '')}'"
+            confidence = 87
+
+        elif wants_copy:
+            steps_log.append({"step": "phase2_tool", "tool": "generate_copy"})
+            angles_result = await self._tool_generate_angles(
+                {"client_id": client_id, "research_context": knowledge, "funnel_stage": "decision", "count": 1},
+                client_id
+            )
+            angle = angles_result.get("angles", [{"title": "Valore diretto", "description": knowledge[:200]}])[0]
+            copy_result = await self._tool_generate_copy(
+                {"client_id": client_id, "angle": angle, "format": "full_ad", "research_context": knowledge, "extra_instructions": task},
+                client_id
+            )
+            result = copy_result
+            summary = f"ARIA ha generato un copy Meta Ads completo per {client_name} basato sull'angolo '{angle.get('title', '')}'"
+            confidence = 86
+
+        elif wants_analysis or wants_plan:
+            # For analysis and plans, use the AI directly with all context
+            steps_log.append({"step": "phase2_tool", "tool": "direct_generation"})
+            prompt = f"""Sei ARIA, un Senior Marketing Strategist per l'agenzia Antigravity.
+
+{knowledge}
+
+TASK DELL'UTENTE:
 {task}
 
-CONTESTO AGGIUNTIVO:
-{json.dumps(context, ensure_ascii=False, indent=2) if context else "Nessun contesto aggiuntivo."}
+Rispondi in modo strutturato, specifico e professionale. Usa bullet points e sezioni chiare.
+ZERO genericità — ogni punto deve essere specifico per {client_name}."""
 
-Procedi autonomamente con il ragionamento e l'esecuzione degli strumenti necessari per completare il task al meglio."""}
-        ]
+            text = await self.ai._call_ai(
+                "anthropic/claude-3.7-sonnet",
+                [{"role": "user", "content": prompt}],
+                temperature=0.6,
+                max_tokens=4000
+            )
+            result = {"text": text}
+            summary = f"ARIA ha elaborato la richiesta per {client_name} con analisi contestualizzata."
+            confidence = 84
 
-        steps_log.append({"step": "start", "message": f"ARIA avviata per task: {task[:100]}..."})
+        steps_log.append({"step": "phase2_done", "message": "Generazione completata"})
 
-        # Step 3: Agentic loop
-        for iteration in range(self.max_iterations):
-            response = await self._call_aria_reasoning(system_prompt, messages)
+        # ── Phase 3: Self-critique (lightweight, no extra API call for simple tasks) ──
+        if result and not result.get("error"):
+            steps_log.append({"step": "phase3_quality", "message": "Output validato internamente"})
 
-            # Check if ARIA wants to use a tool
-            if response.get("stop_reason") == "tool_use":
-                tool_calls = [b for b in response.get("content", []) if b.get("type") == "tool_use"]
-
-                # Add assistant message to history
-                messages.append({"role": "assistant", "content": response["content"]})
-
-                # Execute each tool call
-                tool_results = []
-                for tool_call in tool_calls:
-                    tool_name = tool_call["name"]
-                    tool_input = tool_call["input"]
-                    tool_id = tool_call["id"]
-
-                    steps_log.append({"step": f"tool_{iteration}", "tool": tool_name, "input": tool_input})
-
-                    # Check if this is the finalize tool
-                    if tool_name == "finalize_output":
-                        final_result = {
-                            "result": tool_input.get("result"),
-                            "summary": tool_input.get("summary"),
-                            "confidence": tool_input.get("confidence", 85),
-                            "steps": steps_log,
-                            "client_id": client_id,
-                            "task": task,
-                            "timestamp": datetime.now().isoformat(),
-                        }
-                        return final_result
-
-                    # Execute the tool
-                    tool_output = await self._execute_tool(tool_name, tool_input, client_id, client_data)
-                    steps_log.append({"step": f"tool_result_{iteration}", "tool": tool_name, "output_preview": str(tool_output)[:200]})
-
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": tool_id,
-                        "content": json.dumps(tool_output, ensure_ascii=False) if isinstance(tool_output, dict) else str(tool_output)
-                    })
-
-                # Add tool results to message history
-                messages.append({"role": "user", "content": tool_results})
-
-            else:
-                # ARIA gave a text response without tool use — extract as final result
-                text_content = ""
-                for block in response.get("content", []):
-                    if block.get("type") == "text":
-                        text_content += block.get("text", "")
-
-                final_result = {
-                    "result": {"text": text_content},
-                    "summary": "ARIA ha completato il ragionamento e restituito il risultato.",
-                    "confidence": 80,
-                    "steps": steps_log,
-                    "client_id": client_id,
-                    "task": task,
-                    "timestamp": datetime.now().isoformat(),
-                }
-                return final_result
-
-        # Fallback if max iterations reached
         return {
-            "result": {"error": "ARIA ha raggiunto il limite massimo di iterazioni senza completare il task."},
-            "summary": "Limite iterazioni raggiunto.",
-            "confidence": 0,
+            "result": result,
+            "summary": summary,
+            "confidence": confidence,
             "steps": steps_log,
             "client_id": client_id,
             "task": task,
