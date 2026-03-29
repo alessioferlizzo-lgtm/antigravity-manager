@@ -41,6 +41,8 @@ except Exception as _ne:
     notion_service = None
 from .strategic_context_loader import get_strategic_context_for_generator
 from .smart_lists_service import smart_lists_service
+from .aria_agent import get_aria_agent
+from .aria_memory import aria_memory
 
 app = FastAPI(title="Antigravity Script Manager")
 
@@ -3917,3 +3919,71 @@ async def filter_tasks_by_smart_list(list_id: str):
         "tasks": filtered_tasks,
         "count": len(filtered_tasks)
     }
+
+
+# ══════════════════════════════════════════════════════════════════
+#  ARIA AGENT ENDPOINTS
+# ══════════════════════════════════════════════════════════════════
+
+# In-memory job registry for ARIA background tasks
+_aria_jobs: Dict[str, Dict[str, Any]] = {}
+
+class ARIATaskRequest(BaseModel):
+    task: str
+    client_id: str
+    context: Optional[Dict[str, Any]] = None
+
+class ARIAFeedbackRequest(BaseModel):
+    client_id: str
+    output_type: str   # "angle", "copy", "script", "analysis"
+    output_content: str
+    feedback: str
+    kept: bool = False
+
+@app.post("/aria/task")
+async def aria_run_task(req: ARIATaskRequest):
+    """Submit a task to ARIA. Returns a job_id for polling."""
+    job_id = str(uuid.uuid4())
+    _aria_jobs[job_id] = {"status": "running", "result": None, "error": None}
+
+    async def _run():
+        try:
+            agent = get_aria_agent(ai_service, storage_service)
+            result = await agent.run_task(
+                task=req.task,
+                client_id=req.client_id,
+                context=req.context or {},
+                job_id=job_id,
+            )
+            _aria_jobs[job_id] = {"status": "done", "result": result, "error": None}
+        except Exception as e:
+            print(f"❌ ARIA job {job_id} failed: {e}")
+            _aria_jobs[job_id] = {"status": "error", "result": None, "error": str(e)}
+
+    asyncio.create_task(_run())
+    return {"job_id": job_id, "status": "running"}
+
+@app.get("/aria/task/{job_id}")
+async def aria_get_task(job_id: str):
+    """Poll ARIA job status and result."""
+    job = _aria_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job ARIA non trovato")
+    return job
+
+@app.post("/aria/feedback")
+async def aria_save_feedback(req: ARIAFeedbackRequest):
+    """Save explicit feedback on an ARIA-generated output so it can improve."""
+    aria_memory.save_feedback(
+        client_id=req.client_id,
+        output_type=req.output_type,
+        output_content=req.output_content,
+        feedback=req.feedback,
+        kept=req.kept,
+    )
+    return {"message": "Feedback salvato. ARIA imparerà da questo per i prossimi output."}
+
+@app.get("/aria/memory/{client_id}")
+async def aria_get_memory(client_id: str):
+    """Returns what ARIA has learned about a specific client."""
+    return aria_memory.get_client_summary(client_id)

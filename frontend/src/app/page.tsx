@@ -18,6 +18,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import TasksSection from "@/components/TasksSection";
 import SmartListEditor from "@/components/SmartListEditor";
+import ARIAPanel from "@/components/ARIAPanel";
 import { Client, Task } from "@/types";
 
 
@@ -72,7 +73,7 @@ function FormatText({ text }: { text: string }) {
 
 
 
-type WsSection = "tasks" | "grafiche" | "angoli" | "script" | "copy" | "live-ads";
+type WsSection = "tasks" | "grafiche" | "angoli" | "script" | "copy" | "live-ads" | "aria";
 const STATUS_CYCLE: Record<string, string> = { todo: "doing", doing: "done", done: "todo" };
 const PRIORITY_ORDER: Record<string, number> = { alta: 0, media: 1, bassa: 2 };
 const GFX_FORMATS = ["Feed IG (1:1)", "Feed IG (4:5)", "Stories (9:16)", "Banner (16:9)", "Carosello", "LinkedIn (1.91:1)", "Pinterest (2:3)"];
@@ -944,6 +945,7 @@ export default function Dashboard() {
     { key: "copy", icon: PencilSquareIcon, label: "Copy" },
     { key: "grafiche", icon: PaintBrushIcon, label: "Grafiche" },
     { key: "live-ads", icon: ChartBarIcon, label: "Live Ads" },
+    { key: "aria", icon: SparklesIcon, label: "ARIA" },
   ];
 
   return (
@@ -2650,6 +2652,40 @@ export default function Dashboard() {
         </>
       )}
 
+
+      {/* ══ ARIA FULL-SCREEN OVERLAY ══ */}
+      {section === "aria" && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "var(--navy)",
+          display: "flex", flexDirection: "column",
+        }}>
+          {/* Close bar */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "10px 20px",
+            background: "rgba(4,37,88,0.9)", backdropFilter: "blur(20px)",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            <button
+              onClick={() => setSection("tasks")}
+              style={{
+                background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8, padding: "5px 14px", color: "#fff", fontSize: 13,
+                fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6
+              }}
+            >
+              ← Chiudi
+            </button>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>
+              Centro Operativo ARIA
+            </div>
+          </div>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <ARIAPanel clients={clients} />
+          </div>
+        </div>
+      )}
 
     </div>
   );
