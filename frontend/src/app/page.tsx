@@ -1781,11 +1781,11 @@ export default function Dashboard() {
                             const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = "image/*"; inp.onchange = () => handleSlotUpload(inp.files, slot.setter as any); inp.click();
                           }}
                           style={{
-                            border: hasSelected ? "2px solid var(--orange)" : "2px dashed transparent",
-                            padding: "16px 10px", textAlign: "center", cursor: "pointer",
-                            transition: "all 0.15s", minHeight: 120, display: "flex", flexDirection: "column",
-                            alignItems: "center", justifyContent: "center", gap: 8, position: "relative",
-                            marginBottom: 0
+                            border: hasSelected ? "2px solid var(--orange)" : "1px solid rgba(255,255,255,0.1)",
+                            padding: "20px 10px", textAlign: "center", cursor: "pointer",
+                            transition: "all 0.15s", minHeight: 140, display: "flex", flexDirection: "column",
+                            alignItems: "center", justifyContent: "center", gap: 10, position: "relative",
+                            marginBottom: 0, height: "100%"
                           }}
                         >
                           {slot.state.length > 0 ? (
@@ -1811,9 +1811,9 @@ export default function Dashboard() {
                           ) : (
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: 0.8, transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.8"}>
                               <div style={{ color: "#3b82f6" }}>{slot.icon}</div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                               <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center", textAlign: "center" }}>
                                 <div style={{ fontSize: 14, fontWeight: 800, color: "#ffffff", letterSpacing: "0.02em", textTransform: "uppercase" }}>{slot.label}</div>
-                                <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{slot.subLabel}</div>
+                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{slot.subLabel}</div>
                               </div>
                             </div>
                           )}
