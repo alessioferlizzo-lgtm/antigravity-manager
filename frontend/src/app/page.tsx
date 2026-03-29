@@ -14,6 +14,8 @@ import {
 import { FlagIcon as FlagIconSolid, Bars3Icon } from "@heroicons/react/24/solid";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import TasksSection from "@/components/TasksSection";
 import SmartListEditor from "@/components/SmartListEditor";
 import { Client, Task } from "@/types";
@@ -92,7 +94,7 @@ export default function Dashboard() {
   const [backendError, setBackendError] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Modals
   const [clientModal, setClientModal] = useState(false);
@@ -106,6 +108,15 @@ export default function Dashboard() {
   const [smartListEditorOpen, setSmartListEditorOpen] = useState(false);
   const [editingSmartList, setEditingSmartList] = useState<any | null>(null);
   const [smartListCtxMenu, setSmartListCtxMenu] = useState<{ id: string; title: string; x: number; y: number } | null>(null);
+
+  useGSAP(() => {
+    // Initial staggered entry for smart lists
+    gsap.fromTo(
+      ".smart-list-card",
+      { y: 20, opacity: 0, scale: 0.95, rotationX: 10 },
+      { y: 0, opacity: 1, scale: 1, rotationX: 0, duration: 0.5, stagger: 0.05, ease: "back.out(1.2)", delay: 0.1, clearProps: "all" }
+    );
+  }, { scope: containerRef, dependencies: [section, smartLists] });
 
   // Sidebar enhancements
   const [clientSearch, setClientSearch] = useState("");
@@ -931,7 +942,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="home-layout">
+    <div className="home-layout" ref={containerRef}>
       {/* Mobile sidebar overlay */}
       <div className={`sidebar-overlay ${mobileMenuOpen ? 'visible' : ''}`} onClick={() => setMobileMenuOpen(false)} />
 

@@ -87,7 +87,9 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .home-sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
-  background: var(--navy);
+  background: rgba(4, 37, 88, 0.65);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-right: 1px solid rgba(255,255,255,0.06);
   position: fixed;
   top: 0; left: 0; bottom: 0;
@@ -176,23 +178,30 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 }
 
 .smart-list-card {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px 14px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0);
+  will-change: transform, box-shadow, background;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, background 0.4s ease, border-color 0.4s ease;
   display: flex;
   flex-direction: column;
   gap: 6px;
   position: relative;
   min-width: 0;
   min-height: 75px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .smart-list-card:hover {
   background: rgba(255,255,255,0.1);
-  transform: translateY(-1px);
+  transform: perspective(1000px) translateY(-4px) rotateX(2deg) rotateY(-2deg) translateZ(10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 20px rgba(242,144,26,0.15);
+  border-color: rgba(255,255,255,0.2);
 }
 
 .smart-list-card.active {
@@ -310,7 +319,9 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
-  background: var(--navy);
+  background: rgba(4, 37, 88, 0.65);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -668,20 +679,27 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
    10. TASK CARDS — APPLE SIMPLE ROWS
    ══════════════════════════════════════════════════════════════ */
 .task-card {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  border-radius: 0;
+  background: rgba(255,255,255,0.02);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
   padding: 0;
-  margin-bottom: 0;
+  margin-bottom: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transform: perspective(1000px) translateZ(0);
+  will-change: transform, box-shadow;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, background 0.4s ease;
   position: relative;
   overflow: visible;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .task-card:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.06);
+  transform: perspective(1000px) translateY(-3px) translateZ(5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25), 0 0 15px rgba(242,144,26,0.1);
+  border-color: rgba(255,255,255,0.12);
 }
 
 .task-card.done { opacity: 0.5; }

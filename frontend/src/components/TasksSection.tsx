@@ -11,6 +11,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleSolid, FlagIcon as FlagIconSolid } from "@heroicons/react/24/solid";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { Client, Subtask, Task } from "@/types";
 
 
@@ -112,6 +115,15 @@ export default function TasksSection({
   /* ─── internal filters ─── */
   const [fTimeRange, setFTimeRange] = useState("all");
   const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    gsap.fromTo(
+      ".task-card",
+      { y: 30, opacity: 0, scale: 0.98 },
+      { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.04, ease: "power2.out", clearProps: "all" }
+    );
+  }, { scope: containerRef, dependencies: [tasks, activeSmartList, activeClientFilter, fTimeRange, search] });
 
   /* ─── quick add ─── */
   const [quickAdd, setQuickAdd] = useState("");
@@ -758,7 +770,7 @@ export default function TasksSection({
   ];
 
   return (
-    <div className="tasks-root">
+    <div className="tasks-root" ref={containerRef}>
       <div className="tasks-section-wrapper">
         {/* ════ MAIN CONTENT ════ */}
         <div className="tasks-main">
