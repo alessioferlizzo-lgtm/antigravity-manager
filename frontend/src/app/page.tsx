@@ -110,11 +110,16 @@ export default function Dashboard() {
   const [smartListCtxMenu, setSmartListCtxMenu] = useState<{ id: string; title: string; x: number; y: number } | null>(null);
 
   useGSAP(() => {
-    // Initial staggered entry for smart lists
+    // Initial staggered entry for smart lists and general cards
     gsap.fromTo(
       ".smart-list-card",
       { y: 20, opacity: 0, scale: 0.95, rotationX: 10 },
       { y: 0, opacity: 1, scale: 1, rotationX: 0, duration: 0.5, stagger: 0.05, ease: "back.out(1.2)", delay: 0.1, clearProps: "all" }
+    );
+    gsap.fromTo(
+      ".card, .angle-card, .persona-card, .report-card",
+      { y: 20, opacity: 0, scale: 0.98 },
+      { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.04, ease: "power2.out", clearProps: "all" }
     );
   }, { scope: containerRef, dependencies: [section, smartLists] });
 

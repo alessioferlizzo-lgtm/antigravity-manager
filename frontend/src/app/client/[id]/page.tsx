@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, use, useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import AnalisiStrategicaSection from "@/components/AnalisiStrategicaSection";
 import {
     ArrowLeftIcon,
@@ -31,6 +33,7 @@ import {
     ChevronDownIcon,
     ChevronRightIcon,
 } from "@heroicons/react/24/outline";
+import { Bars3Icon } from "@heroicons/react/24/solid";
 
 const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? 'https://antigravity-backend-production-41ee.up.railway.app' : 'http://127.0.0.1:8001');
 
@@ -362,6 +365,16 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     // Personas Specifiche
     const [newPersonaTheme, setNewPersonaTheme] = useState("");
     const [personaLoading, setPersonaLoading] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    
+    useGSAP(() => {
+        gsap.fromTo(
+            ".card, .angle-card, .persona-card, .report-card",
+            { y: 20, opacity: 0, scale: 0.98 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.04, ease: "power2.out", clearProps: "all" }
+        );
+    }, { scope: containerRef, dependencies: [section, client, reports, battlecards] });
 
     // Ref to always have the latest client state in closures (prevents race conditions on blur)
     const clientRef = useRef<any>(client);
@@ -729,9 +742,10 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     ];
 
     return (
-        <div className="app-layout">
+        <div className="app-layout" ref={containerRef}>
+            <div className={`sidebar-overlay ${mobileMenuOpen ? 'visible' : ''}`} onClick={() => setMobileMenuOpen(false)} />
             {/* ═══ SIDEBAR ═══ */}
-            <aside className="sidebar">
+            <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
                 <div className="sidebar-header">
                     <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <img src="/logo.png" alt="Alessio Ferlizzo" style={{ height: '26px', width: 'auto', borderRadius: '4px' }} />
@@ -755,7 +769,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                 <div className="sidebar-section-label">Dati Cliente</div>
                 <nav className="sidebar-nav">
                     {navItems.map(({ key, icon: Icon, label }) => (
-                        <button key={key} onClick={() => setSection(key)} className={`sidebar-link ${section === key ? "active" : ""}`}>
+                        <button key={key} onClick={() => { setSection(key); setMobileMenuOpen(false); }} className={`sidebar-link ${section === key ? "active" : ""}`}>
                             <Icon />{label}
                             {key === "reports" && reports.length > 0 && (
                                 <span style={{ marginLeft: "auto", fontSize: 10, background: "rgba(199,239,0,0.15)", color: "var(--lime)", padding: "1px 6px", borderRadius: 10, fontWeight: 700 }}>
@@ -800,8 +814,15 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
             </aside>
 
             {/* ═══ MAIN ═══ */}
-            <main className="main-content">
-
+            <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
+                <div className="mobile-only-header" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(4, 37, 88, 0.65)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 40, width: "100%" }}>
+                    <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(true)} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: 4, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Bars3Icon style={{ width: 22, height: 22 }} />
+                    </button>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>{client.name || "Caricamento..."}</div>
+                </div>
+                
+                <div style={{ padding: "24px" }}>
                 {/* ══ SORGENTI ══ */}
                 {section === "sorgenti" && (
                     <div style={{ maxWidth: "1200px", margin: "0 auto", overflowX: "hidden" }}>
@@ -1667,6 +1688,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                 {section === "analisi-strategica" && (
                     <AnalisiStrategicaSection clientId={id} apiUrl={API} />
                 )}
+                </div>
             </main>
         </div>
     );

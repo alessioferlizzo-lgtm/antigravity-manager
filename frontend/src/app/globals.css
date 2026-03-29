@@ -81,6 +81,8 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .home-layout {
   display: flex;
   min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* ─── Sidebar ─── */
@@ -314,7 +316,12 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 /* ══════════════════════════════════════════════════════════════
    8. SIDEBAR — Client Page Variant
    ══════════════════════════════════════════════════════════════ */
-.app-layout { display: flex; min-height: 100vh; }
+.app-layout { 
+  display: flex; 
+  min-height: 100vh; 
+  width: 100%;
+  overflow-x: hidden;
+}
 
 .sidebar {
   width: var(--sidebar-w);
@@ -1593,33 +1600,45 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 
 
 /* ══════════════════════════════════════════════════════════════
-   13. CARDS & CONTAINERS (White on Navy)
+   13. CARDS & CONTAINERS (Antigravity Glassmorphism)
    ══════════════════════════════════════════════════════════════ */
 .card, .card-sm, .inset, .angle-card, .persona-card, .funnel-btn, .swot-body {
-  --border: #e5e7eb;
-  --border-mid: #d1d5db;
-  --text-primary: var(--text-dark-primary);
-  --text-body: var(--text-dark-body);
-  --text-muted: var(--text-dark-muted);
+  --border: rgba(255,255,255,0.08);
+  --border-mid: rgba(255,255,255,0.15);
+  --text-primary: #ffffff;
+  --text-body: rgba(255,255,255,0.8);
+  --text-muted: rgba(255,255,255,0.5);
+  color: var(--text-body);
 }
 
 .card {
-  background: var(--card-bg);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  border-radius: 12px; padding: 24px;
-  color: var(--text-dark-body);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  transition: box-shadow 0.2s;
+  border-radius: 14px; 
+  padding: 24px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transform: perspective(1000px) translateZ(0);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+  will-change: transform, box-shadow;
 }
-.card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-.card .page-title, .card .section-title { color: var(--text-dark-primary); }
-.card .label { color: var(--text-dark-muted); }
+.card:hover {
+  transform: perspective(1000px) translateY(-3px) translateZ(5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25), 0 0 15px rgba(242,144,26,0.1);
+  border-color: rgba(255,255,255,0.15);
+}
+.card .page-title, .card .section-title { color: var(--text-primary); }
+.card .label { color: var(--text-muted); }
 
 .card-sm {
-  background: var(--card-bg);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border);
-  border-radius: 10px; padding: 16px;
-  color: var(--text-dark-body);
+  border-radius: 12px; 
+  padding: 16px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
 }
 
 .inset {
@@ -1743,17 +1762,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 
 /* Angles */
 .angle-card {
-  background: #fff; border: 1.5px solid var(--border);
-  border-radius: 10px; padding: 16px 20px;
-  cursor: pointer; transition: all 0.15s;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 20px;
+  cursor: pointer; 
+  transform: perspective(1000px) translateZ(0);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
   display: flex; gap: 16px; align-items: flex-start;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  color: #fff;
 }
-.angle-card:hover { border-color: var(--navy); box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
-.angle-card.selected { border-color: var(--orange); background: #fff9f0; }
+.angle-card:hover { 
+  border-color: rgba(255,255,255,0.15); 
+  transform: perspective(1000px) translateY(-3px) translateZ(5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25), 0 0 15px rgba(242,144,26,0.1); 
+}
+.angle-card.selected { border-color: var(--orange); background: rgba(242, 144, 26, 0.08); }
 .angle-emotion-badge { font-size: 10px; font-weight: 700; color: #1a2600; background: var(--lime); padding: 4px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
 
 /* Persona */
-.persona-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.persona-card { 
+  background: rgba(255, 255, 255, 0.03); 
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border); 
+  border-radius: 14px; padding: 20px; 
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  color: #fff;
+}
 .persona-name { font-weight: 700; font-size: 15px; color: #111827; background: transparent; border: none; outline: none; font-family: inherit; width: 100%; }
 .persona-field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
 .persona-field-label.pf-profile { color: var(--navy); }
@@ -1780,19 +1816,31 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .graphics-option-btn .go-icon { font-size: 24px; }
 .graphics-option-btn .go-label { font-size: 12px; font-weight: 600; color: #111827; }
 
+/* Format Chips */
 .format-chip {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 14px; border: 1.5px solid #e5e7eb;
+  padding: 6px 14px; border: 1px solid var(--border);
   border-radius: 20px; font-size: 12px; font-weight: 600;
-  cursor: pointer; background: #fff; font-family: inherit;
-  transition: all 0.15s; color: #374151;
+  cursor: pointer; background: rgba(255,255,255,0.04); font-family: inherit;
+  transition: all 0.15s; color: rgba(255,255,255,0.7);
 }
-.format-chip:hover { border-color: var(--navy); }
-.format-chip.active { border-color: var(--orange); background: #fff9f0; color: var(--orange-dark); }
+.format-chip:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff;}
+.format-chip.active { border-color: var(--orange); background: rgba(242,144,26,0.1); color: var(--orange); }
 
 /* Report cards */
-.report-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: box-shadow 0.15s; }
-.report-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+.report-card { 
+  background: rgba(255, 255, 255, 0.03); 
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border); 
+  border-radius: 14px; padding: 20px; 
+  transition: transform 0.4s ease, box-shadow 0.4s ease; 
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  color: #fff;
+}
+.report-card:hover { 
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25); 
+  transform: translateY(-3px); 
+}
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
 .kpi-field label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6b7280; margin-bottom: 5px; }
 
@@ -1961,7 +2009,35 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
     padding: 20px 16px 60px;
   }
 
-  .smart-lists-grid { grid-template-columns: 1fr; }
+  .smart-lists-grid { 
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; 
+    align-items: center;
+  }
+  .smart-lists-grid::-webkit-scrollbar { display: none; }
+  
+  .smart-list-card {
+    min-width: 64px;
+    min-height: 64px;
+    padding: 10px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 16px;
+  }
+  .smart-list-card-header {
+    margin-bottom: 0px;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .smart-list-label {
+    display: none;
+  }
   .task-drawer, .lateral-drawer { width: 100%; }
   .cal-grid { grid-template-columns: 1fr; min-height: auto; }
   .cal-col { min-height: 120px; }
@@ -1971,6 +2047,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   .tasks-quickadd-container { padding: 10px 16px; }
   .tasks-filters { padding: 8px 16px 10px; }
   .tasks-list { padding: 10px 16px 40px; }
+}
+
+@media (min-width: 769px) {
+  .mobile-only-header { display: none !important; }
 }
 
 /* Phone */
