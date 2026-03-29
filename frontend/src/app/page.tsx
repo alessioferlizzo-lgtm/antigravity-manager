@@ -1772,21 +1772,28 @@ export default function Dashboard() {
                     ] as const).map(slot => {
                       const hasSelected = slot.state.some((img: any) => img.selected);
                       return (
-                        <div key={slot.key} className="card"
+                        <div key={slot.key}
                           onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--orange)"; }}
-                          onDragLeave={e => { e.currentTarget.style.borderColor = hasSelected ? "var(--orange)" : "transparent"; }}
-                          onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = hasSelected ? "var(--orange)" : "transparent"; handleSlotUpload(e.dataTransfer.files, slot.setter as any); }}
+                          onDragLeave={e => { e.currentTarget.style.borderColor = hasSelected ? "var(--orange)" : "rgba(255,255,255,0.1)"; }}
+                          onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = hasSelected ? "var(--orange)" : "rgba(255,255,255,0.1)"; handleSlotUpload(e.dataTransfer.files, slot.setter as any); }}
                           onClick={(e) => {
                             if ((e.target as HTMLElement).closest(".img-thumb-container")) return;
                             const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = "image/*"; inp.onchange = () => handleSlotUpload(inp.files, slot.setter as any); inp.click();
                           }}
                           style={{
+                            background: "rgba(255, 255, 255, 0.03)",
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                            borderRadius: "14px",
                             border: hasSelected ? "2px solid var(--orange)" : "1px solid rgba(255,255,255,0.1)",
                             padding: "20px 10px", textAlign: "center", cursor: "pointer",
-                            transition: "all 0.15s", minHeight: 140, display: "flex", flexDirection: "column",
+                            transition: "all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)",
+                            height: 180, display: "flex", flexDirection: "column",
                             alignItems: "center", justifyContent: "center", gap: 10, position: "relative",
-                            marginBottom: 0, height: "100%"
+                            margin: 0, boxSizing: "border-box"
                           }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)"; }}
                         >
                           {slot.state.length > 0 ? (
                             <div style={{ width: "100%" }}>
