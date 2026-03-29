@@ -14,6 +14,15 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, DragEndEvent
+} from "@dnd-kit/core";
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  verticalListSortingStrategy, useSortable
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Client, Subtask, Task } from "@/types";
 
 
@@ -271,7 +280,8 @@ export default function TasksSection({
       if (activeSmartList === "scheduled") {
         return (a.due_date || "9999").localeCompare(b.due_date || "9999") || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       }
-      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      // Preserve backend array order by default so manual Drag and Drop is retained!
+      return 0;
     });
   })();
 
@@ -760,6 +770,45 @@ export default function TasksSection({
     }
   }
 
+  /* ─── dnd-kit ─── */
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    
+    // Sort tasks locally based on their presence in displayTasks
+    const activeIndex = displayTasks.findIndex(t => t.id === active.id);
+    const overIndex = displayTasks.findIndex(t => t.id === over.id);
+    if (activeIndex === -1 || overIndex === -1) return;
+    
+    const newTasks = arrayMove(displayTasks, activeIndex, overIndex);
+    const newOrderIds = newTasks.map(t => t.id);
+    
+    setManualOrder(newOrderIds);
+    setAiSortOrderIds(null); // Clear AI sorting when user manually reorders
+    
+    // Persist to backend without blocking UI
+    try {
+      await fetch(`${API}/tasks/order`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task_ids: newOrderIds })
+      });
+    } catch (err) {
+      console.error("Failed to commit task order:", err);
+    }
+  }
+
   /* ─── smart lists config ─── */
   const smartLists = [
     { id: "oggi" as SmartListId, label: "Oggi", icon: CalendarIcon, color: "#007aff", count: todayTasks.length },
@@ -1171,27 +1220,33 @@ export default function TasksSection({
               </div>
             ))
           ) : (
-            displayTasks.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={completeTask}
-                onOpen={openDrawer}
-                onToggleFlag={toggleFlag}
-                onDelete={id => setDeleteConfirmId(id)}
-                onSubtaskToggle={toggleSubtask}
-                onDragStart={onDragStart}
-                onDragEnter={onDragEnter}
-                onDrop={onDrop}
-                onDragEnd={() => setDragOver(null)}
-                dragOver={dragOver === task.id}
-                completing={completingIds.has(task.id)}
-                hidden={hiddenIds.has(task.id)}
-                deleteConfirm={deleteConfirmId === task.id}
-                onDeleteConfirm={deleteTask}
-                onDeleteCancel={() => setDeleteConfirmId(null)}
-              />
-            ))
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={displayTasks.map(t => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {displayTasks.map(task => (
+                  <SortableTaskRow
+                    key={task.id}
+                    task={task}
+                    onComplete={completeTask}
+                    onOpen={openDrawer}
+                    onToggleFlag={toggleFlag}
+                    onDelete={id => setDeleteConfirmId(id)}
+                    onSubtaskToggle={toggleSubtask}
+                    completing={completingIds.has(task.id)}
+                    hidden={hiddenIds.has(task.id)}
+                    deleteConfirm={deleteConfirmId === task.id}
+                    onDeleteConfirm={deleteTask}
+                    onDeleteCancel={() => setDeleteConfirmId(null)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
         </div>
@@ -1220,6 +1275,39 @@ export default function TasksSection({
 }
 
 /* ════════════════════════════════════════════════════════════════
+   DND-KIT SORTABLE ROW COMPONENT
+════════════════════════════════════════════════════════════════ */
+function SortableTaskRow(props: TaskCardProps & { disabled?: boolean }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: props.task.id,
+    disabled: props.disabled,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    ...(props.style || {}),
+  };
+
+  return (
+    <TaskCard
+      {...props}
+      dragRef={setNodeRef}
+      style={style}
+      dragHandleProps={{...attributes, ...listeners}}
+      isDragging={isDragging}
+    />
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
    TASK CARD
 ════════════════════════════════════════════════════════════════ */
 interface TaskCardProps {
@@ -1229,22 +1317,27 @@ interface TaskCardProps {
   onToggleFlag: (t: Task) => void;
   onDelete: (id: string) => void;
   onSubtaskToggle: (t: Task, stId: string) => void;
-  onDragStart: (id: string) => void;
-  onDragEnter: (id: string) => void;
-  onDrop: (id: string) => void;
-  onDragEnd: () => void;
-  dragOver: boolean;
+  onDragStart?: (id: string) => void;
+  onDragEnter?: (id: string) => void;
+  onDrop?: (id: string) => void;
+  onDragEnd?: () => void;
+  dragOver?: boolean;
   completing: boolean;
   hidden: boolean;
   deleteConfirm: boolean;
   onDeleteConfirm: (id: string) => void;
   onDeleteCancel: () => void;
+  dragRef?: (node: HTMLElement | null) => void;
+  style?: React.CSSProperties;
+  dragHandleProps?: Record<string, any>;
+  isDragging?: boolean;
 }
 
 function TaskCard({
   task, onComplete, onOpen, onToggleFlag, onDelete, onSubtaskToggle,
   onDragStart, onDragEnter, onDrop, onDragEnd,
-  dragOver, completing, hidden, deleteConfirm, onDeleteConfirm, onDeleteCancel
+  dragOver, completing, hidden, deleteConfirm, onDeleteConfirm, onDeleteCancel,
+  dragRef, style, dragHandleProps, isDragging
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const isDone = task.status === "done";
@@ -1254,16 +1347,26 @@ function TaskCard({
 
   return (
     <div
-      draggable
-      onDragStart={() => onDragStart(task.id)}
-      onDragOver={e => { e.preventDefault(); onDragEnter(task.id); }}
-      onDrop={() => onDrop(task.id)}
-      onDragEnd={onDragEnd}
-      className={`task-card ${isDone ? "done" : ""} ${completing ? "completing" : ""} ${hidden ? "hiding" : ""} ${dragOver ? "drag-over" : ""}`}
+      ref={dragRef}
+      className={`task-card ${isDone ? "done" : ""} ${completing ? "completing" : ""} ${hidden ? "hiding" : ""} ${dragOver ? "drag-over" : ""} ${isDragging ? "dragging" : ""}`}
       style={{
         "--task-type-color": "transparent",
+        ...style
       } as React.CSSProperties}
     >
+      {/* Drag handle */}
+      {dragHandleProps && (
+        <div className="task-drag-handle" {...dragHandleProps}>
+          <svg viewBox="0 0 24 24" width={14} height={14} fill="currentColor" style={{ opacity: 0.3 }}>
+            <circle cx="9" cy="5" r="1.5" />
+            <circle cx="15" cy="5" r="1.5" />
+            <circle cx="9" cy="12" r="1.5" />
+            <circle cx="15" cy="12" r="1.5" />
+            <circle cx="9" cy="19" r="1.5" />
+            <circle cx="15" cy="19" r="1.5" />
+          </svg>
+        </div>
+      )}
       {/* Left border accent */}
       <div className="task-card-accent" />
 

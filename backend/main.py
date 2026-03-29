@@ -2973,6 +2973,14 @@ async def delete_task(task_id: str):
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Task not found")
 
+class TaskOrderRequest(BaseModel):
+    task_ids: List[str]
+
+@app.put("/tasks/order")
+async def update_tasks_order(req: TaskOrderRequest):
+    """Saves the manual order computed on the frontend"""
+    return storage_service.reorder_tasks(req.task_ids)
+
 @app.post("/tasks/sort")
 async def ai_sort_tasks():
     """Use AI to suggest an optimized, prioritized order for open tasks."""

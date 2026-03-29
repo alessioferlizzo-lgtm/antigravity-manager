@@ -225,7 +225,6 @@ class StorageService:
         with open(TASKS_FILE, "w") as f:
             json.dump(tasks, f, indent=4)
         
-        # Optimization: only one call for all tasks if possible, or use upsert
         def _sync_all(sb):
             try:
                 # Instead of deleting all, we use upsert to keep the DB clean and fast
@@ -235,6 +234,19 @@ class StorageService:
             except Exception as e:
                 print(f"[Supabase] Bulk task sync failed: {e}")
         _sb_run(_sync_all)
+
+    def reorder_tasks(self, ordered_ids: List[str]):
+        tasks = self.get_tasks()
+        task_dict = {t["id"]: t for t in tasks}
+        new_tasks = []
+        # First append items in the provided order
+        for tid in ordered_ids:
+            if tid in task_dict:
+                new_tasks.append(task_dict.pop(tid))
+        # Then append any remaining items
+        new_tasks.extend(task_dict.values())
+        self.save_tasks(new_tasks)
+        return {"message": "Tasks reordered successfully"}
 
     # ─── LISTS CRUD ───────────────────────────────────────────────
     def get_lists(self) -> List[Dict]:

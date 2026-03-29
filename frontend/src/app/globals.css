@@ -2096,3 +2096,5 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   .btn { padding: 8px 14px; font-size: 13px; }
   .btn-sm { padding: 5px 10px; font-size: 11px; }
 }
+.task-drag-handle { display: flex; align-items: center; justify-content: center; width: 24px; cursor: grab; margin-left: -4px; margin-right: 4px; z-index: 10; touch-action: none; }
+.task-card.dragging { z-index: 999; opacity: 0.8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); }

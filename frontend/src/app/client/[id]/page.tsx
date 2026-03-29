@@ -815,7 +815,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
 
             {/* ═══ MAIN ═══ */}
             <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
-                <div className="mobile-only-header" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(4, 37, 88, 0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 40, width: "100%", flexDirection: "column", alignItems: "flex-start" }}>
+                <div className="mobile-only-header" style={{ display: "flex", gap: 12, padding: "12px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(4, 37, 88, 0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 40, width: "100%", flexDirection: "column", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
                         <button onClick={() => window.location.href = "/"} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: 4, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <ArrowLeftIcon strokeWidth={2.5} style={{ width: 18, height: 18 }} />
