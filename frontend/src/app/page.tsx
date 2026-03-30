@@ -1359,22 +1359,37 @@ export default function Dashboard() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 4 }}>Angoli generati {angFunnel && `· ${FUNNEL_STAGES.find(s => s.key === angFunnel)?.label}`}</p>
                     {angles.map((angle: any, i: number) => (
-                      <div key={i} className="angle-card"
-                        onClick={() => { setScrCliId(angCliId); setScrAngle(angle); loadClientAngles(angCliId); setSection("script"); }}>
+                      <div key={i} className="angle-card" style={{ cursor: "default" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontWeight: 700, fontSize: 14, color: "#111827", marginBottom: 4 }}>{angle.title}</p>
-                          <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>{angle.description}</p>
+                          <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{angle.title}</p>
+                          <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6 }}>{angle.description}</p>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
                           <span className="angle-emotion-badge">{angle.emotion}</span>
-                          <span style={{ fontSize: 11, color: "#9ca3af" }}>→ Script</span>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            style={{ padding: "4px 8px", fontSize: 11, marginTop: 4, display: "flex", gap: 4, alignItems: "center" }}
-                            onClick={(e) => { e.stopPropagation(); openVaultModal("angle", angle.title, angle.description, angCliId, angFunnel); }}
-                          >
-                            <BookmarkSquareIcon style={{ width: 14, height: 14 }} /> Salva in Vault
-                          </button>
+                          {/* ACTION BUTTONS — collegano Angoli → Script e Angoli → Copy */}
+                          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ padding: "4px 10px", fontSize: 11, display: "flex", gap: 4, alignItems: "center", color: "var(--orange)" }}
+                              onClick={() => { setScrCliId(angCliId); setScrAngle(angle); loadClientAngles(angCliId); setAllScripts([]); setSection("script"); }}
+                            >
+                              <DocumentTextIcon style={{ width: 12, height: 12 }} /> → Script
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ padding: "4px 10px", fontSize: 11, display: "flex", gap: 4, alignItems: "center", color: "#60a5fa" }}
+                              onClick={() => { setCpyCliId(angCliId); setCpyAngle(angle); setCpyAngles(angles); setCpyOutput(""); setSection("copy"); }}
+                            >
+                              <PencilSquareIcon style={{ width: 12, height: 12 }} /> → Copy
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ padding: "4px 8px", fontSize: 11, display: "flex", gap: 4, alignItems: "center" }}
+                              onClick={(e) => { e.stopPropagation(); openVaultModal("angle", angle.title, angle.description, angCliId, angFunnel); }}
+                            >
+                              <BookmarkSquareIcon style={{ width: 12, height: 12 }} /> Vault
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1496,9 +1511,27 @@ export default function Dashboard() {
                         <ArrowPathIcon style={{ width: 15, height: 15 }} />Rifinisci
                       </button>
                     </div>
-                    <button className="btn btn-ghost" onClick={() => openVaultModal("copy", scrAngle?.title || "Script Video", scrText, scrCliId, scrAngle?.funnel_stage, "Script Video")} style={{ display: "flex", gap: 6 }}>
-                      <BookmarkSquareIcon style={{ width: 16, height: 16 }} /> Salva in Vault
-                    </button>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {/* FIX: → Copy button after script generation */}
+                      {scrAngle && (
+                        <button
+                          className="btn btn-ghost"
+                          style={{ display: "flex", gap: 6, color: "#60a5fa", border: "1px solid rgba(96,165,250,0.3)" }}
+                          onClick={() => {
+                            setCpyCliId(scrCliId);
+                            setCpyAngle(scrAngle);
+                            setCpyAngles(scrCliAngles);
+                            setCpyOutput("");
+                            setSection("copy");
+                          }}
+                        >
+                          <PencilSquareIcon style={{ width: 16, height: 16 }} /> Genera Copy per questo angolo
+                        </button>
+                      )}
+                      <button className="btn btn-ghost" onClick={() => openVaultModal("copy", scrAngle?.title || "Script Video", scrText, scrCliId, scrAngle?.funnel_stage, "Script Video")} style={{ display: "flex", gap: 6 }}>
+                        <BookmarkSquareIcon style={{ width: 16, height: 16 }} /> Salva in Vault
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : !scrCliId ? (
