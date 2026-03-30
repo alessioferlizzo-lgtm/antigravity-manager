@@ -170,12 +170,19 @@ class ARIAAgent:
         2. Detect task type and execute the right generator
         3. Self-critique and return
 
-        This replaces the open-ended agentic loop which caused infinite iterations.
+        Supports regeneration context so ARIA knows exactly what to fix
+        and stays locked to the correct client output type.
         """
         steps_log = []
         context = context or {}
 
-        print(f"🧠 ARIA: avvio task '{task[:80]}' per cliente {client_id}")
+        # ── Regeneration context ─────────────────────────────────────────────
+        is_regen = context.get("is_regeneration", False)
+        regen_output_type = context.get("previous_output_type", "")   # angle / copy / script
+        regen_previous = context.get("previous_output", "")           # snippet of what was bad
+        regen_feedback = context.get("user_feedback", "")             # why it was rejected
+
+        print(f"🧠 ARIA: avvio task '{task[:80]}' per cliente {client_id} [regen={is_regen}]")
 
         # ── Phase 1: Gather context ──────────────────────────────────────────
         steps_log.append({"step": "phase1_start", "message": "Analisi sorgenti disponibili"})
@@ -203,25 +210,44 @@ class ARIAAgent:
         if memory_context:
             knowledge += f"\nMEMORIA APPRENDIMENTI PASSATI:\n{memory_context}\n"
 
+        # If regenerating, inject the rejection context into knowledge so the
+        # generator knows exactly what NOT to repeat.
+        if is_regen and regen_feedback:
+            knowledge += (
+                f"\n⚠️  RIGENERAZIONE RICHIESTA:\n"
+                f"Il risultato precedente NON andava bene per questo motivo: '{regen_feedback}'\n"
+                f"Output precedente (da NON ripetere): {regen_previous[:300]}\n"
+                f"Genera qualcosa di completamente diverso, migliorato, che tenga conto del feedback.\n"
+            )
+
         # ── Phase 2: Detect task type & execute ──────────────────────────────
         task_lower = task.lower()
 
-        # Detect: angles
-        wants_angles = any(w in task_lower for w in ["angol", "angle", "comunicativ", "tofu", "mofu", "bofu", "funnel", "scoperta", "interesse", "decisione"])
-        # Detect: script
-        wants_script = any(w in task_lower for w in ["script", "video", "reel", "tiktok", "30 secondi", "30s"])
-        # Detect: copy
-        wants_copy = any(w in task_lower for w in ["copy", "testo", "headline", "ads", "annuncio", "email"])
-        # Detect: analysis / market research
-        wants_analysis = any(w in task_lower for w in ["analisi", "analizza", "mercato", "ricerca", "competitor", "swot", "report"])
-        # Detect: piano contenuti
-        wants_plan = any(w in task_lower for w in ["piano", "plan", "contenuti", "settimane", "calendario"])
+        # When regenerating, trust the previous_output_type from context;
+        # only fall back to keyword detection if no context is provided.
+        if is_regen and regen_output_type:
+            wants_angles = regen_output_type == "angle"
+            wants_script = regen_output_type == "script"
+            wants_copy   = regen_output_type == "copy"
+            wants_analysis = False
+            wants_plan     = False
+        else:
+            # Detect: angles
+            wants_angles = any(w in task_lower for w in ["angol", "angle", "comunicativ", "tofu", "mofu", "bofu", "funnel", "scoperta", "interesse", "decisione"])
+            # Detect: script
+            wants_script = any(w in task_lower for w in ["script", "video", "reel", "tiktok", "30 secondi", "30s"])
+            # Detect: copy
+            wants_copy = any(w in task_lower for w in ["copy", "testo", "headline", "ads", "annuncio", "email"])
+            # Detect: analysis / market research
+            wants_analysis = any(w in task_lower for w in ["analisi", "analizza", "mercato", "ricerca", "competitor", "swot", "report"])
+            # Detect: piano contenuti
+            wants_plan = any(w in task_lower for w in ["piano", "plan", "contenuti", "settimane", "calendario"])
 
         result: Dict[str, Any] = {}
         summary = ""
         confidence = 85
 
-        steps_log.append({"step": "phase2_detect", "message": f"Task type: angles={wants_angles}, script={wants_script}, copy={wants_copy}, analysis={wants_analysis}, plan={wants_plan}"})
+        steps_log.append({"step": "phase2_detect", "message": f"Task type: angles={wants_angles}, script={wants_script}, copy={wants_copy}, analysis={wants_analysis}, plan={wants_plan}, is_regen={is_regen}"})
 
         if wants_angles or (not wants_script and not wants_copy and not wants_analysis and not wants_plan):
             # Default to angles if unclear
@@ -236,7 +262,8 @@ class ARIAAgent:
                 client_id
             )
             result = angles_result
-            summary = f"ARIA ha analizzato le sorgenti di {client_name} e generato {len(angles_result.get('angles', []))} angoli comunicativi per la fase {funnel_stage.upper()}."
+            regen_label = " (versione migliorata)" if is_regen else ""
+            summary = f"ARIA ha analizzato le sorgenti di {client_name} e generato {len(angles_result.get('angles', []))} angoli comunicativi per la fase {funnel_stage.upper()}{regen_label}."
             confidence = 88
 
         elif wants_script:
@@ -253,7 +280,8 @@ class ARIAAgent:
                 client_id
             )
             result = script_result
-            summary = f"ARIA ha creato uno script video da 30 secondi per {client_name} basato sull'angolo '{angle.get('title', '')}'"
+            regen_label = " (versione migliorata)" if is_regen else ""
+            summary = f"ARIA ha creato uno script video da 30 secondi per {client_name} basato sull'angolo '{angle.get('title', '')}'{regen_label}"
             confidence = 87
 
         elif wants_copy:
@@ -268,7 +296,8 @@ class ARIAAgent:
                 client_id
             )
             result = copy_result
-            summary = f"ARIA ha generato un copy Meta Ads completo per {client_name} basato sull'angolo '{angle.get('title', '')}'"
+            regen_label = " (versione migliorata)" if is_regen else ""
+            summary = f"ARIA ha generato un copy Meta Ads per {client_name} basato sull'angolo '{angle.get('title', '')}'{regen_label}"
             confidence = 86
 
         elif wants_analysis or wants_plan:
@@ -307,6 +336,7 @@ ZERO genericità — ogni punto deve essere specifico per {client_name}."""
             "steps": steps_log,
             "client_id": client_id,
             "task": task,
+            "is_regeneration": is_regen,
             "timestamp": datetime.now().isoformat(),
         }
 

@@ -5,7 +5,7 @@ import {
   SparklesIcon, PaperAirplaneIcon, ArrowPathIcon,
   ChatBubbleLeftRightIcon, HandThumbUpIcon, HandThumbDownIcon,
   ChevronDownIcon, ChevronUpIcon, ClockIcon, CheckCircleIcon,
-  ExclamationTriangleIcon, BoltIcon, BeakerIcon,
+  ExclamationTriangleIcon, BoltIcon, BeakerIcon, LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { SparklesIcon as SparklesSolid } from "@heroicons/react/24/solid";
 import { Client } from "@/types";
@@ -23,6 +23,9 @@ interface ARIAMessage {
   outputType?: string;
   timestamp: Date;
   status?: "thinking" | "done" | "error";
+  // Track context for regeneration
+  originalTask?: string;
+  clientId?: string;
 }
 
 interface ARIAMemoryStats {
@@ -87,27 +90,108 @@ function StepsBadge({ steps }: { steps: any[] }) {
   );
 }
 
-function ResultRenderer({ result, onFeedback, messageId, clientId }: {
-  result: any; onFeedback: (kept: boolean, feedback: string, outputContent: string, outputType: string) => void;
-  messageId: string; clientId: string;
+function ResultRenderer({ result, onFeedback, onRegen, messageId, clientId }: {
+  result: any;
+  onFeedback: (kept: boolean, feedback: string, outputContent: string, outputType: string) => void;
+  onRegen: (feedback: string, outputContent: string, outputType: string) => void;
+  messageId: string;
+  clientId: string;
 }) {
   const [feedbackSent, setFeedbackSent] = useState<"kept" | "discarded" | null>(null);
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
+  const [pendingAction, setPendingAction] = useState<"keep" | "regen" | null>(null);
 
   if (!result) return null;
 
-  const handleFeedback = (kept: boolean) => {
-    if (feedbackText) {
-      const outputContent = JSON.stringify(result).slice(0, 500);
-      const outputType = result.angles ? "angle" : result.scripts ? "script" : result.copy ? "copy" : "general";
-      onFeedback(kept, feedbackText, outputContent, outputType);
-      setFeedbackSent(kept ? "kept" : "discarded");
-      setShowFeedbackInput(false);
-    } else {
+  const getOutputType = () =>
+    result.angles ? "angle" : result.scripts ? "script" : result.copy ? "copy" : "general";
+
+  const handleKeep = () => {
+    if (!showFeedbackInput) {
+      setPendingAction("keep");
       setShowFeedbackInput(true);
+      return;
     }
+    const outputContent = JSON.stringify(result).slice(0, 500);
+    const outputType = getOutputType();
+    onFeedback(true, feedbackText || "Approvato", outputContent, outputType);
+    setFeedbackSent("kept");
+    setShowFeedbackInput(false);
   };
+
+  // FIX: "Rifai" now passes context so ARIA knows what to fix
+  const handleRegen = () => {
+    if (!showFeedbackInput) {
+      setPendingAction("regen");
+      setShowFeedbackInput(true);
+      return;
+    }
+    if (!feedbackText.trim()) {
+      // Force user to write feedback before regenerating
+      return;
+    }
+    const outputContent = JSON.stringify(result).slice(0, 500);
+    const outputType = getOutputType();
+    // Save negative feedback
+    onFeedback(false, feedbackText, outputContent, outputType);
+    // Trigger regeneration with context
+    onRegen(feedbackText, outputContent, outputType);
+    setFeedbackSent("discarded");
+    setShowFeedbackInput(false);
+  };
+
+  const FeedbackSection = () => (
+    <div style={{ marginTop: 10 }}>
+      {showFeedbackInput && (
+        <div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>
+            {pendingAction === "regen"
+              ? "✏️ Cosa non va? Scrivi il motivo (obbligatorio per rigenerare):"
+              : "💬 Commento opzionale:"}
+          </div>
+          <textarea
+            value={feedbackText}
+            onChange={e => setFeedbackText(e.target.value)}
+            placeholder={
+              pendingAction === "regen"
+                ? "Es: 'troppo generico', 'hook non efficace', 'tono troppo formale'..."
+                : "Es: 'perfetto il tono', 'hook efficace'..."
+            }
+            autoFocus
+            style={{
+              width: "100%", padding: "8px 10px", borderRadius: 8,
+              border: `1px solid ${pendingAction === "regen" ? "rgba(245,158,11,0.4)" : "rgba(255,255,255,0.15)"}`,
+              background: "rgba(255,255,255,0.05)",
+              color: "#fff", fontSize: 12, resize: "vertical", minHeight: 60,
+              fontFamily: "inherit", marginBottom: 8
+            }}
+          />
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={handleKeep} style={{
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+          background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e"
+        }}>
+          <HandThumbUpIcon width={14} /> Tieni questo
+        </button>
+        <button onClick={handleRegen} style={{
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+          background: pendingAction === "regen" && !feedbackText.trim()
+            ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)",
+          border: `1px solid ${pendingAction === "regen" && !feedbackText.trim()
+            ? "rgba(239,68,68,0.3)" : "rgba(245,158,11,0.3)"}`,
+          color: pendingAction === "regen" && !feedbackText.trim() ? "#ef4444" : "#f59e0b"
+        }}>
+          <ArrowPathIcon width={14} />
+          {pendingAction === "regen" && !feedbackText.trim() ? "Scrivi il motivo prima" : "Rifai"}
+        </button>
+      </div>
+    </div>
+  );
 
   // Render angles
   if (result.angles && Array.isArray(result.angles)) {
@@ -132,11 +216,10 @@ function ResultRenderer({ result, onFeedback, messageId, clientId }: {
           ))}
         </div>
         {!feedbackSent ? (
-          <FeedbackSection showInput={showFeedbackInput} feedbackText={feedbackText}
-            setFeedbackText={setFeedbackText} onKeep={() => handleFeedback(true)} onDiscard={() => handleFeedback(false)} />
+          <FeedbackSection />
         ) : (
           <div style={{ marginTop: 8, fontSize: 11, color: feedbackSent === "kept" ? "#22c55e" : "#f59e0b" }}>
-            {feedbackSent === "kept" ? "✓ ARIA ha memorizzato questo successo!" : "↺ Feedback registrato — ARIA migliorerà al prossimo round."}
+            {feedbackSent === "kept" ? "✓ ARIA ha memorizzato questo successo!" : "↺ Feedback registrato — ARIA sta rigenerando..."}
           </div>
         )}
       </div>
@@ -159,11 +242,10 @@ function ResultRenderer({ result, onFeedback, messageId, clientId }: {
           </div>
         ))}
         {!feedbackSent ? (
-          <FeedbackSection showInput={showFeedbackInput} feedbackText={feedbackText}
-            setFeedbackText={setFeedbackText} onKeep={() => handleFeedback(true)} onDiscard={() => handleFeedback(false)} />
+          <FeedbackSection />
         ) : (
           <div style={{ marginTop: 8, fontSize: 11, color: feedbackSent === "kept" ? "#22c55e" : "#f59e0b" }}>
-            {feedbackSent === "kept" ? "✓ ARIA ha memorizzato questo stile!" : "↺ Feedback registrato."}
+            {feedbackSent === "kept" ? "✓ ARIA ha memorizzato questo stile!" : "↺ Feedback registrato — ARIA sta rigenerando..."}
           </div>
         )}
       </div>
@@ -182,10 +264,11 @@ function ResultRenderer({ result, onFeedback, messageId, clientId }: {
           {result.copy}
         </div>
         {!feedbackSent ? (
-          <FeedbackSection showInput={showFeedbackInput} feedbackText={feedbackText}
-            setFeedbackText={setFeedbackText} onKeep={() => handleFeedback(true)} onDiscard={() => handleFeedback(false)} />
+          <FeedbackSection />
         ) : (
-          <div style={{ marginTop: 8, fontSize: 11, color: "#22c55e" }}>✓ Feedback salvato.</div>
+          <div style={{ marginTop: 8, fontSize: 11, color: feedbackSent === "kept" ? "#22c55e" : "#f59e0b" }}>
+            {feedbackSent === "kept" ? "✓ Feedback salvato." : "↺ Feedback registrato — ARIA sta rigenerando..."}
+          </div>
         )}
       </div>
     );
@@ -210,69 +293,35 @@ function ResultRenderer({ result, onFeedback, messageId, clientId }: {
   );
 }
 
-function FeedbackSection({ showInput, feedbackText, setFeedbackText, onKeep, onDiscard }: {
-  showInput: boolean; feedbackText: string; setFeedbackText: (v: string) => void;
-  onKeep: () => void; onDiscard: () => void;
-}) {
-  return (
-    <div style={{ marginTop: 10 }}>
-      {showInput && (
-        <textarea
-          value={feedbackText}
-          onChange={e => setFeedbackText(e.target.value)}
-          placeholder="Descrivi brevemente cosa va bene o cosa migliorare... (es: 'hook troppo lungo', 'tono perfetto')"
-          style={{
-            width: "100%", padding: "8px 10px", borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)",
-            color: "#fff", fontSize: 12, resize: "vertical", minHeight: 60,
-            fontFamily: "inherit", marginBottom: 8
-          }}
-        />
-      )}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={onKeep} style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
-          background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e"
-        }}>
-          <HandThumbUpIcon width={14} /> Tieni questo
-        </button>
-        <button onClick={onDiscard} style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
-          background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "#f59e0b"
-        }}>
-          <ArrowPathIcon width={14} /> Rifai
-        </button>
-      </div>
-    </div>
-  );
-}
-
 
 // ── Main Component ────────────────────────────────────────────────────────
 export default function ARIAPanel({ clients }: { clients: Client[] }) {
   const [messages, setMessages] = useState<ARIAMessage[]>([{
     id: "welcome",
     role: "aria",
-    content: "Ciao! Sono **ARIA**, il tuo agente AI strategico.\n\nDimmi su quale cliente vuoi lavorare, poi assegnami un task — creerò angoli, copy, script o analisi ragionando autonomamente sulle sorgenti disponibili e imparando dai tuoi feedback nel tempo.",
+    content: "Ciao! Sono **ARIA**, il tuo agente AI strategico.\n\nSeleziona il cliente su cui vuoi lavorare, poi assegnami un task — creerò angoli, copy, script o analisi ragionando autonomamente sulle sorgenti disponibili e imparando dai tuoi feedback nel tempo.",
     timestamp: new Date(),
     status: "done",
   }]);
   const [input, setInput] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
+  // FIX 1: Lock client once conversation starts
+  const [lockedClientId, setLockedClientId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [memoryStats, setMemoryStats] = useState<ARIAMemoryStats | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // The active client is the locked one (if set) or the selected one
+  const activeClientId = lockedClientId ?? selectedClientId;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
-    if (selectedClientId) loadMemoryStats(selectedClientId);
-  }, [selectedClientId]);
+    if (activeClientId) loadMemoryStats(activeClientId);
+  }, [activeClientId]);
 
   async function loadMemoryStats(clientId: string) {
     try {
@@ -281,26 +330,61 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
     } catch (e) { /* silent */ }
   }
 
-  async function sendMessage() {
-    if (!input.trim() || !selectedClientId || isLoading) return;
-    const userText = input.trim();
-    setInput("");
+  // FIX 2: Core send function now accepts optional regeneration context
+  async function sendMessage(
+    overrideTask?: string,
+    regenContext?: {
+      is_regeneration: boolean;
+      previous_output_type: string;
+      previous_output: string;
+      user_feedback: string;
+    }
+  ) {
+    const taskText = overrideTask ?? input.trim();
+    if (!taskText || !activeClientId || isLoading) return;
+
+    if (!overrideTask) setInput("");
+
+    // FIX 1: Lock the client to this conversation on first real message
+    if (!lockedClientId && selectedClientId) {
+      setLockedClientId(selectedClientId);
+    }
+
+    const clientId = lockedClientId ?? selectedClientId;
 
     const userMsg: ARIAMessage = {
-      id: crypto.randomUUID(), role: "user", content: userText, timestamp: new Date(),
+      id: crypto.randomUUID(),
+      role: "user",
+      content: regenContext
+        ? `↺ Rifai ${regenContext.previous_output_type} — "${regenContext.user_feedback}"`
+        : taskText,
+      timestamp: new Date(),
+      clientId,
     };
     const ariaMsg: ARIAMessage = {
-      id: crypto.randomUUID(), role: "aria", content: "", timestamp: new Date(), status: "thinking",
+      id: crypto.randomUUID(),
+      role: "aria",
+      content: "",
+      timestamp: new Date(),
+      status: "thinking",
+      clientId,
+      originalTask: taskText,
     };
     setMessages(p => [...p, userMsg, ariaMsg]);
     setIsLoading(true);
 
     try {
-      // Submit task to ARIA
+      // FIX 2: Pass regeneration context to backend
+      const body: any = {
+        task: taskText,
+        client_id: clientId,
+        context: regenContext ?? {},
+      };
+
       const r = await fetch(`${API}/aria/task`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: userText, client_id: selectedClientId }),
+        body: JSON.stringify(body),
       });
       const { job_id } = await r.json();
 
@@ -325,8 +409,7 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
         status: "done",
       } : m));
 
-      // Refresh memory stats
-      loadMemoryStats(selectedClientId);
+      loadMemoryStats(clientId);
 
     } catch (err: any) {
       setMessages(p => p.map(m => m.id === ariaMsg.id ? {
@@ -339,29 +422,71 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
     }
   }
 
-  async function sendFeedback(messageId: string, kept: boolean, feedback: string, outputContent: string, outputType: string) {
-    if (!selectedClientId) return;
+  async function sendFeedback(
+    messageId: string,
+    kept: boolean,
+    feedback: string,
+    outputContent: string,
+    outputType: string
+  ) {
+    if (!activeClientId) return;
     try {
       await fetch(`${API}/aria/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_id: selectedClientId,
+          client_id: activeClientId,
           output_type: outputType,
           output_content: outputContent,
           feedback,
           kept,
         }),
       });
-      loadMemoryStats(selectedClientId);
+      loadMemoryStats(activeClientId);
     } catch (e) { /* silent */ }
+  }
+
+  // FIX 3: Triggered when user clicks "Rifai" — sends a proper regeneration task with context
+  function handleRegenerate(
+    originalMessage: ARIAMessage,
+    userFeedback: string,
+    outputContent: string,
+    outputType: string
+  ) {
+    const originalTask = originalMessage.originalTask ?? "Crea un copy per Meta Ads";
+
+    const regenTask = `Rigenera il ${outputType} precedente. TASK ORIGINALE: "${originalTask}". ` +
+      `Il risultato NON andava bene per questo motivo: "${userFeedback}". ` +
+      `Genera una versione completamente diversa, migliorata, tenendo conto del feedback.`;
+
+    sendMessage(regenTask, {
+      is_regeneration: true,
+      previous_output_type: outputType,
+      previous_output: outputContent,
+      user_feedback: userFeedback,
+    });
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
-  const selectedClient = clients.find(c => c.id === selectedClientId);
+  // FIX 1: Reset conversation
+  function resetConversation() {
+    setLockedClientId(null);
+    setSelectedClientId("");
+    setMessages([{
+      id: "welcome",
+      role: "aria",
+      content: "Ciao! Sono **ARIA**, il tuo agente AI strategico.\n\nSeleziona il cliente su cui vuoi lavorare, poi assegnami un task — creerò angoli, copy, script o analisi ragionando autonomamente sulle sorgenti disponibili e imparando dai tuoi feedback nel tempo.",
+      timestamp: new Date(),
+      status: "done",
+    }]);
+    setMemoryStats(null);
+  }
+
+  const selectedClient = clients.find(c => c.id === activeClientId);
+  const conversationStarted = messages.length > 1;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", position: "relative" }}>
@@ -389,7 +514,7 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
               Ragiona · Genera · Impara
             </div>
           </div>
-          {memoryStats && selectedClientId && (
+          {memoryStats && activeClientId && (
             <div style={{ marginLeft: "auto", textAlign: "right" }}>
               <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Memoria</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#60a5fa" }}>
@@ -402,27 +527,54 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
           )}
         </div>
 
-        {/* Client selector */}
-        <select
-          value={selectedClientId}
-          onChange={e => setSelectedClientId(e.target.value)}
-          style={{
-            width: "100%", padding: "9px 12px", borderRadius: 8,
-            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-            color: selectedClientId ? "#fff" : "rgba(255,255,255,0.35)", fontSize: 13,
-            fontFamily: "inherit", cursor: "pointer", appearance: "none",
-          }}
-        >
-          <option value="">↓ Seleziona il cliente su cui lavorare...</option>
-          {clients.map(c => <option key={c.id} value={c.id} style={{ background: "#042558" }}>{c.name}</option>)}
-        </select>
+        {/* FIX 1: Client selector — locks once conversation starts */}
+        {!lockedClientId ? (
+          <select
+            value={selectedClientId}
+            onChange={e => setSelectedClientId(e.target.value)}
+            style={{
+              width: "100%", padding: "9px 12px", borderRadius: 8,
+              background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
+              color: selectedClientId ? "#fff" : "rgba(255,255,255,0.35)", fontSize: 13,
+              fontFamily: "inherit", cursor: "pointer", appearance: "none",
+            }}
+          >
+            <option value="">↓ Seleziona il cliente su cui lavorare...</option>
+            {clients.map(c => <option key={c.id} value={c.id} style={{ background: "#042558" }}>{c.name}</option>)}
+          </select>
+        ) : (
+          // Locked state: show client name + reset button
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "9px 12px", borderRadius: 8,
+            background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.25)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <LockClosedIcon width={14} style={{ color: "#60a5fa" }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#60a5fa" }}>
+                {selectedClient?.name ?? "Cliente"}
+              </span>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>— sessione attiva</span>
+            </div>
+            <button
+              onClick={resetConversation}
+              style={{
+                fontSize: 11, color: "rgba(255,255,255,0.4)", cursor: "pointer",
+                background: "none", border: "none", padding: "2px 6px",
+                borderRadius: 4, textDecoration: "underline"
+              }}
+            >
+              Cambia cliente
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Quick prompts */}
-        {messages.length <= 1 && selectedClientId && (
+        {messages.length <= 1 && activeClientId && (
           <div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
               Task rapidi
@@ -474,13 +626,18 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
                   </div>
                 )}
 
-                {/* Result */}
+                {/* Result — FIX 3: pass onRegen callback with message context */}
                 {msg.result && msg.role === "aria" && (
                   <ResultRenderer
                     result={msg.result}
                     messageId={msg.id}
-                    clientId={selectedClientId}
-                    onFeedback={(kept, feedback, content, type) => sendFeedback(msg.id, kept, feedback, content, type)}
+                    clientId={activeClientId}
+                    onFeedback={(kept, feedback, content, type) =>
+                      sendFeedback(msg.id, kept, feedback, content, type)
+                    }
+                    onRegen={(feedback, content, type) =>
+                      handleRegenerate(msg, feedback, content, type)
+                    }
                   />
                 )}
 
@@ -507,7 +664,7 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
         borderTop: "1px solid rgba(255,255,255,0.06)",
         background: "rgba(4,37,88,0.6)", backdropFilter: "blur(20px)",
       }}>
-        {!selectedClientId && (
+        {!activeClientId && (
           <div style={{
             textAlign: "center", padding: "10px", borderRadius: 8, marginBottom: 12,
             background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)",
@@ -520,15 +677,15 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
           display: "flex", gap: 10, alignItems: "flex-end",
           background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
           borderRadius: 14, padding: "10px 10px 10px 16px",
-          opacity: selectedClientId ? 1 : 0.5,
+          opacity: activeClientId ? 1 : 0.5,
         }}>
           <textarea
             ref={textareaRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            disabled={!selectedClientId || isLoading}
-            placeholder={selectedClientId
+            disabled={!activeClientId || isLoading}
+            placeholder={activeClientId
               ? `Assegna un task ad ARIA per ${selectedClient?.name || "questo cliente"}... (Invio per inviare)`
               : "Seleziona prima un cliente..."}
             rows={2}
@@ -538,14 +695,14 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
             }}
           />
           <button
-            onClick={sendMessage}
-            disabled={!input.trim() || !selectedClientId || isLoading}
+            onClick={() => sendMessage()}
+            disabled={!input.trim() || !activeClientId || isLoading}
             style={{
               width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-              background: input.trim() && selectedClientId && !isLoading
+              background: input.trim() && activeClientId && !isLoading
                 ? "linear-gradient(135deg, #3b82f6, #8b5cf6)"
                 : "rgba(255,255,255,0.1)",
-              border: "none", cursor: input.trim() && selectedClientId && !isLoading ? "pointer" : "not-allowed",
+              border: "none", cursor: input.trim() && activeClientId && !isLoading ? "pointer" : "not-allowed",
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "all 0.2s",
             }}
