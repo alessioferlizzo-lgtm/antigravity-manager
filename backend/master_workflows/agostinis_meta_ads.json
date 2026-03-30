@@ -14,7 +14,7 @@
         "competitor_data",
         "raw_docs"
       ],
-      "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito (tenendo conto sia dei prodotti che degli eventuali servizi) e genera un documento estremamente lungo e accademico (1000+ parole). STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": {\"style\": \"...\", \"target_audience\": \"...\", \"linguistic_approach\": \"...\", \"vocabulary\": [\"...\"]}, \"positioning\": \"...\", \"statement\": \"...\"}"
+      "system_prompt": "Agisci come un Senior Brand Consultant e Analista di Mercato. Analizza il brand fornito (tenendo conto sia dei prodotti che degli eventuali servizi) e genera un documento estremamente lungo e accademico (1000+ parole). REGOLA CRITICA: Se tra le fonti vedi link a piattaforme di menu digitali (es. Leggimenu, Menudigitale), NON pensare che il cliente venda software. Il cliente usa quei tool per mostrare i suoi prodotti reali (es. pizze, cibo). Analizza l'attività del cliente reale, non il fornitore del tool. STRUTTURA JSON RICHIESTA: {\"mission\": \"...\", \"tone_of_voice\": {\"style\": \"...\", \"target_audience\": \"...\", \"linguistic_approach\": \"...\", \"vocabulary\": [\"...\"]}, \"positioning\": \"...\", \"statement\": \"...\"}"
     },
     {
       "step_id": "brand_values",
@@ -33,7 +33,7 @@
         "products_csv",
         "services_txt"
       ],
-      "system_prompt": "STRETTI VINCOLI: Se sono presenti servizi (nei dati o nel TXT), DEVI TASSATIVAMENTE ELENCARLI E ANALIZZARLI TUTTI, NESSUNO ESCLUSO, anche se sono 10 o 15. Non omettere nessun servizio del cliente. Per i prodotti (dal CSV), analizza e raggruppa i principali o più importanti (almeno 10). Raggruppali per fase di utilizzo, categoria o percorso utente. Analizzali secondo la profonda logica di Agostinis. Restituisci JSON: {\"core_products\": [{\"name\": \"...\", \"benefit_tech\": \"...\", \"key_ingredients\": \"...\", \"usp\": \"...\"}], \"pre_during_products\": [...], \"post_treatment_products\": [...], \"lifestyle_products\": [...]}"
+      "system_prompt": "STRETTI VINCOLI: Se sono presenti servizi (nei dati o nel TXT), DEVI TASSATIVAMENTE ELENCARLI E ANALIZZARLI TUTTI, NESSUNO ESCLUSO, anche se sono 10 o 15. Non omettere nessun servizio del cliente. Se trovi un menu digitale, estrai i prodotti reali (pizze, piatti, bevande) e analizzali come core products. NON analizzare il software del menu come prodotto. Per i prodotti (dal CSV o menu), analizza e raggruppa i principali o più importanti (almeno 10). Raggruppali per fase di utilizzo, categoria o percorso utente. Analizzali secondo la profonda logica di Agostinis. Restituisci JSON: {\"core_products\": [{\"name\": \"...\", \"benefit_tech\": \"...\", \"key_ingredients\": \"...\", \"usp\": \"...\"}], \"pre_during_products\": [...], \"post_treatment_products\": [...], \"lifestyle_products\": [...]}"
     },
     {
       "step_id": "reasons_to_buy",

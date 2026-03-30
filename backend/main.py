@@ -3576,8 +3576,8 @@ async def _do_complete_analysis(client_id: str, job_id: str):
         for page in pages_data:
             if isinstance(page, dict) and "url" in page:
                 url = page["url"]
-                # Cerca pagine che contengono "trattament", "serviz", "epilazione", "service" nell'URL
-                if any(keyword in url.lower() for keyword in ["trattament", "serviz", "epilazione", "service", "treatment"]):
+                # Cerca pagine che contengono "trattament", "serviz", "epilazione", "service", "menu", "pizza", "ristorant" nell'URL
+                if any(keyword in url.lower() for keyword in ["trattament", "serviz", "epilazione", "service", "treatment", "menu", "pizza", "ristorant", "food", "carta", "lista"]):
                     # Estrai il contenuto
                     if "data" in page and isinstance(page["data"], dict):
                         raw_text = page["data"].get("raw_text", "")

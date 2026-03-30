@@ -76,7 +76,8 @@ class DataCollectionService:
 
             # 4. Servizi / Landing Page
             if label_lc == "service" or any(x in label_lc for x in [
-                "servizi", "servizio", "trattamenti", "trattamento", "landing"
+                "servizi", "servizio", "trattamenti", "trattamento", "landing",
+                "menu", "carta", "listino", "bevande", "food"
             ]):
                 service_urls.append({"url": url, "context": f"{desc or label}".strip()})
                 return
@@ -229,7 +230,11 @@ class DataCollectionService:
         prompt = f"""Analizza approfonditamente questa pagina web: {url}
 {"Contesto fornito dall'utente: " + context if context else ""}
 
-Estrai TUTTE le informazioni rilevanti per un media buyer:
+Estrai TUTTE le informazioni rilevanti per un media buyer.
+
+⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu (es. Leggimenu, Menudigitale, Flazio, Linktree, etc.), NON analizzare il fornitore del software o del servizio. Il cliente NON vende menu digitali; il cliente usa quel link per mostrare la sua offerta reale. Concentrati esclusivamente sui piatti, pizze, prodotti, servizi, prezzi e descrizioni dell'attività reale presenti nel link.
+
+COMPONENTI RICHIESTI:
 1. Prodotti/Servizi principali con relativi prezzi o offerte
 2. Angoli di attacco (Pain points risolti, promesse, trasformazione)
 3. Elementi di trust (Anni di esperienza, certificazioni, premi)
