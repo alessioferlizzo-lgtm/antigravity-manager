@@ -21,10 +21,11 @@ import json_repair
 import asyncio
 import uuid
 from typing import Dict, Any, List, Optional, Tuple
+from pathlib import Path
 from datetime import datetime
 
 from .ai_service import AIService
-from .storage_service import StorageService
+from .storage_service import StorageService, CLIENTS_DIR
 from .aria_memory import aria_memory
 
 
@@ -209,6 +210,17 @@ class ARIAAgent:
             knowledge += f"OBIETTIVI: {source_context['objectives']}\n"
         if memory_context:
             knowledge += f"\nMEMORIA APPRENDIMENTI PASSATI:\n{memory_context}\n"
+
+        # Inject conversation history so ARIA knows what was generated before
+        conv_history = context.get("conversation_history", [])
+        if conv_history:
+            history_lines = []
+            for h in conv_history[-3:]:
+                rtype = h.get("result_type", "output").upper()
+                summary = h.get("summary", "")
+                preview = h.get("result_preview", "")[:400]
+                history_lines.append(f"[{rtype} GENERATO PRIMA] {summary}\nContenuto: {preview}")
+            knowledge += f"\n\nCONTESTO SESSIONE (output precedenti di questa conversazione):\n" + "\n---\n".join(history_lines) + "\n"
 
         # If regenerating, inject the rejection context into knowledge so the
         # generator knows exactly what NOT to repeat.
@@ -502,7 +514,11 @@ ZERO genericità — ogni punto deve essere specifico per {client_name}."""
             return {"error": str(e)}
 
     async def _tool_analyze_sources(self, inp: Dict, client_id: str, client_data: Optional[Dict]) -> Dict:
-        """Reads and summarizes available sources for the client."""
+        """Reads and summarizes available sources for the client.
+        
+        Reads market_research.md directly from disk so ARIA always has
+        the freshest analysis, regardless of metadata cache state.
+        """
         if not client_data:
             return {"error": "Cliente non trovato", "client_id": client_id}
 
@@ -515,21 +531,43 @@ ZERO genericità — ogni punto deve essere specifico per {client_name}."""
             "documents_count": 0,
             "has_analysis": False,
             "analysis_summary": "",
+            "target_vocabulary": [],
+            "audience_pain_points": [],
         }
 
-        # Check if there's an existing analysis
-        analysis = client_data.get("analysis")
-        if analysis:
-            summary["has_analysis"] = True
-            research = analysis.get("research_text", "")
-            summary["analysis_summary"] = research[:1000] + "..." if len(research) > 1000 else research
-            summary["target_vocabulary"] = analysis.get("target_vocabulary", [])
-            summary["audience_pain_points"] = analysis.get("audience_pain_points", [])
+        # FIX: Read market_research.md directly from disk (always fresh)
+        research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
+        if research_path.exists():
+            try:
+                research_text = research_path.read_text(encoding="utf-8")
+                if research_text.strip():
+                    summary["has_analysis"] = True
+                    summary["analysis_summary"] = research_text[:2000]
+                    print(f"✅ ARIA: letto market_research.md per {client_id} ({len(research_text)} chars)")
+            except Exception as e:
+                print(f"⚠️  ARIA: errore lettura market_research.md: {e}")
 
-            # Learn vocabulary from existing analysis
-            vocab = analysis.get("target_vocabulary", [])
-            if vocab:
-                aria_memory.learn_vocabulary(client_id, vocab)
+        # Pull structured data from metadata preferences (set during research)
+        prefs = client_data.get("preferences", {})
+        vocab = prefs.get("target_vocabulary", [])
+        pain_points = prefs.get("audience_pain_points", [])
+        summary["target_vocabulary"] = vocab
+        summary["audience_pain_points"] = pain_points
+
+        # Also check old-style analysis key (backwards compat)
+        if not summary["has_analysis"]:
+            analysis = client_data.get("analysis")
+            if analysis:
+                summary["has_analysis"] = True
+                research = analysis.get("research_text", "")
+                summary["analysis_summary"] = research[:2000]
+                vocab = analysis.get("target_vocabulary", vocab)
+                summary["target_vocabulary"] = vocab
+                summary["audience_pain_points"] = analysis.get("audience_pain_points", pain_points)
+
+        # Learn vocabulary for future use
+        if vocab:
+            aria_memory.learn_vocabulary(client_id, vocab)
 
         return summary
 
@@ -682,11 +720,15 @@ Rispondi SOLO con JSON:
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     async def _get_client_data(self, client_id: str) -> Optional[Dict]:
-        """Fetches client data from storage."""
+        """
+        Fetches FULL client metadata from disk (fresh read every time).
+        Uses get_metadata() — the correct StorageService method — so ARIA
+        always has up-to-date analysis, preferences and brand data.
+        """
         try:
-            clients = self.storage.get_clients()
-            return next((c for c in clients if c["id"] == client_id), None)
-        except Exception:
+            return self.storage.get_metadata(client_id)
+        except Exception as e:
+            print(f"❌ ARIA: errore lettura metadata cliente {client_id}: {e}")
             return None
 
 

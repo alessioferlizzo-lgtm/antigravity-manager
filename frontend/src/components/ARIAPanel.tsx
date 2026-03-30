@@ -374,11 +374,24 @@ export default function ARIAPanel({ clients }: { clients: Client[] }) {
     setIsLoading(true);
 
     try {
-      // FIX 2: Pass regeneration context to backend
+      // FIX 2: Pass regeneration context + conversation history to backend
+      // so ARIA knows what was generated before in this session
+      const conversationHistory = messages
+        .filter(m => m.role === "aria" && m.status === "done" && m.result)
+        .slice(-3)
+        .map(m => ({
+          result_type: m.result?.angles ? "angle" : m.result?.scripts ? "script" : m.result?.copy ? "copy" : "text",
+          summary: m.content,
+          result_preview: JSON.stringify(m.result).slice(0, 600),
+        }));
+
       const body: any = {
         task: taskText,
         client_id: clientId,
-        context: regenContext ?? {},
+        context: {
+          ...(regenContext ?? {}),
+          ...(conversationHistory.length > 0 ? { conversation_history: conversationHistory } : {}),
+        },
       };
 
       const r = await fetch(`${API}/aria/task`, {

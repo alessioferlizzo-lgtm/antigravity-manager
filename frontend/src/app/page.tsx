@@ -211,6 +211,10 @@ export default function Dashboard() {
   const [cpyPrompt, setCpyPrompt] = useState("");
   const [cpyOutput, setCpyOutput] = useState("");
   const [cpyLoading, setCpyLoading] = useState(false);
+  // FIX: copy now has angle selector like script does
+  const [cpyAngles, setCpyAngles] = useState<any[]>([]);
+  const [cpyAngle, setCpyAngle] = useState<any>(null);
+  const [cpyAngLoading, setCpyAngLoading] = useState(false);
 
   // Live Ads
   const [ladsPeriod, setLadsPeriod] = useState("last_30d");
@@ -472,16 +476,24 @@ export default function Dashboard() {
   }
 
   /* ─── copy helpers ─── */
+  async function loadCopyClientAngles(clientId: string) {
+    if (!clientId) { setCpyAngles([]); setCpyAngle(null); return; }
+    setCpyAngLoading(true);
+    const r = await fetch(`${API}/clients/${clientId}/angles`);
+    if (r.ok) setCpyAngles(await r.json());
+    setCpyAngLoading(false);
+  }
+
   async function genCopy() {
     if (!cpyCliId) return;
     setCpyLoading(true);
-    // Use existing script endpoint with copy-focused instructions
     const r = await fetch(`${API}/clients/${cpyCliId}/scripts`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: `Copy ${cpyType}`,
-        description: cpyPrompt || `Crea copy per ${cpyType}`,
-        script_instructions: `TIPO DI COPY: ${cpyType.toUpperCase()}. ${cpyPrompt}. Non scrivere uno script video. Crea copy ottimizzato per ${cpyType}.`,
+        title: cpyAngle?.title || `Copy ${cpyType}`,
+        description: cpyAngle?.description || cpyPrompt || `Crea copy per ${cpyType}`,
+        emotion: cpyAngle?.emotion || "",
+        script_instructions: `TIPO DI COPY: ${cpyType.toUpperCase()}. Non scrivere uno script video. Scrivi SOLO il copy pronto per essere pubblicato su ${cpyType}. ${cpyAngle ? `ANGOLO: "${cpyAngle.title}" — ${cpyAngle.description}` : ""} ${cpyPrompt ? `ISTRUZIONI EXTRA: ${cpyPrompt}` : ""}`.trim(),
         count: 1
       })
     });
@@ -1473,7 +1485,7 @@ export default function Dashboard() {
                       ))}
                     </div>
                   )}
-                  <div className="script-output" style={{ marginBottom: 24, fontSize: 14, color: "#374151" }}>
+                  <div className="script-output" style={{ marginBottom: 24, fontSize: 14 }}>
                     <FormatText text={scrText} />
                   </div>
                   <hr className="divider" />
@@ -1505,11 +1517,33 @@ export default function Dashboard() {
               <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 24 }}>Crea copy ottimizzato per ogni formato</p>
 
               <div className="card" style={{ marginBottom: 16, padding: "16px 20px" }}>
-                <ClientSelector value={cpyCliId} onChange={setCpyCliId} label="Cliente" />
+                <ClientSelector value={cpyCliId} onChange={id => { setCpyCliId(id); setCpyOutput(""); setCpyAngle(null); loadCopyClientAngles(id); }} label="Cliente" />
               </div>
 
               {cpyCliId && (<>
                 <div className="card" style={{ marginBottom: 16 }}>
+                  {/* FIX: Angle selector for copy — same as script section */}
+                  <div style={{ marginBottom: 16 }}>
+                    <label className="label" style={{ display: "block", marginBottom: 6 }}>Angolo Comunicativo (opzionale)</label>
+                    <select
+                      className="input"
+                      value={cpyAngle?.title || ""}
+                      onChange={e => {
+                        const a = cpyAngles.find((a: any) => a.title === e.target.value);
+                        setCpyAngle(a || null);
+                      }}
+                      disabled={cpyAngLoading}
+                    >
+                      <option value="">{cpyAngLoading ? "Caricamento angoli..." : cpyAngles.length > 0 ? "Nessun angolo (ARIA sceglie il migliore)" : "Nessun angolo salvato — ARIA sceglierà"}</option>
+                      {cpyAngles.map((a: any, i: number) => <option key={i} value={a.title}>{a.title}</option>)}
+                    </select>
+                    {cpyAngle && (
+                      <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-muted)", padding: "6px 10px", background: "rgba(255,165,0,0.05)", borderRadius: 6, border: "1px solid rgba(255,165,0,0.15)" }}>
+                        🎯 {cpyAngle.description}
+                      </div>
+                    )}
+                  </div>
+
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 12 }}>Tipo di copy</p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                     {[
@@ -1531,14 +1565,14 @@ export default function Dashboard() {
                     value={cpyPrompt} onChange={e => setCpyPrompt(e.target.value)} />
 
                   <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={genCopy} disabled={cpyLoading}>
-                    {cpyLoading ? <><div className="spinner" />Generando...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Copy</>}
+                    {cpyLoading ? <><div className="spinner" />Generando...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Copy{cpyAngle ? ` dall'Angolo` : ""}</> }
                   </button>
                 </div>
 
                 {cpyOutput && (
                   <div className="card">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>✍️ Copy Generato</p>
+                      <p style={{ fontWeight: 700, fontSize: 14 }}>✍️ Copy Generato</p>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openVaultModal("copy", `Copy ${cpyType}`, cpyOutput, cpyCliId, "", cpyType)}>
                           <BookmarkSquareIcon style={{ width: 14, height: 14 }} /> Salva in Vault
@@ -1548,7 +1582,7 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </div>
-                    <div style={{ fontSize: 14, lineHeight: 1.8, color: "#374151" }}>
+                    <div style={{ fontSize: 14, lineHeight: 1.8 }}>
                       <FormatText text={cpyOutput} />
                     </div>
                     <hr className="divider" />
