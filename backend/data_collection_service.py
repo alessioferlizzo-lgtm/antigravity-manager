@@ -38,6 +38,7 @@ class DataCollectionService:
         site_urls = []       # Siti web generali da analizzare
         review_urls = []     # Link a recensioni (Trustpilot, FB, etc.)
         service_urls = []    # Link a landing page servizi
+        product_urls = []    # Link a landing page prodotti o menu digitali
         competitor_links = [] # Link a competitor specifici
         instagram_handle = ""
         google_maps_url = ""
@@ -76,10 +77,16 @@ class DataCollectionService:
 
             # 4. Servizi / Landing Page
             if label_lc == "service" or any(x in label_lc for x in [
-                "servizi", "servizio", "trattamenti", "trattamento", "landing",
-                "menu", "carta", "listino", "bevande", "food"
+                "servizi", "servizio", "trattamenti", "trattamento", "landing"
             ]):
                 service_urls.append({"url": url, "context": f"{desc or label}".strip()})
+                return
+
+            # 4.5 Prodotti / Menu
+            if label_lc == "product" or any(x in label_lc for x in [
+                "menu", "carta", "listino", "bevande", "food", "prodotti", "catalogo", "shop"
+            ]):
+                product_urls.append({"url": url, "context": f"{desc or label}".strip()})
                 return
 
             # 5. Sito Web
@@ -149,27 +156,31 @@ class DataCollectionService:
             # 2. Scraping Landing Page Servizi (Specifici)
             service_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in service_urls]
             
+            # 2.5 Scraping Landing Page Prodotti / Menu
+            product_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in product_urls]
+            
             # 3. Task in parallelo principali
-            print(f"   📊 Lancio {len(site_tasks)} task sito, {len(service_tasks)} task servizi, {len(review_urls)} task recensioni extra")
+            print(f"   📊 Lancio {len(site_tasks)} task sito, {len(service_tasks)} task servizi, {len(product_tasks)} task prodotti/menu, {len(review_urls)} task recensioni")
             
             main_results = await asyncio.wait_for(
                 asyncio.gather(
                     asyncio.gather(*site_tasks, return_exceptions=True),
                     asyncio.gather(*service_tasks, return_exceptions=True),
+                    asyncio.gather(*product_tasks, return_exceptions=True),
                     self._collect_google_reviews(client_name, metadata.get("location", ""), google_maps_url),
-                    self._mine_reviews_from_urls(review_urls), # 🔥 NUOVO: Miner multi-fonte
+                    self._mine_reviews_from_urls(review_urls),
                     self._collect_instagram_data_complete(instagram_handle, metadata),
                     self._collect_meta_ads_data(metadata),
-                    self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata.get("competitors", []), competitor_links), # 🔥 PASSATI LINK EXTRA
+                    self._find_and_analyze_competitors(client_name, metadata.get("industry", ""), metadata.get("location", ""), metadata.get("competitors", []), competitor_links),
                     return_exceptions=True
                 ),
                 timeout=540.0 # 9 minuti
             )
         except asyncio.TimeoutError:
             print("⚠️ TIMEOUT GLOBALE RACCOLTA DATI (9 min) - Procedo con i dati parziali")
-            main_results = [[], [], {}, {}, {}, {}, {}] 
+            main_results = [[], [], [], {}, {}, {}, {}, {}] 
 
-        site_res, service_res, g_reviews, extra_reviews, instagram_data, ads_data, competitor_data = main_results
+        site_res, service_res, product_res, g_reviews, extra_reviews, instagram_data, ads_data, competitor_data = main_results
 
         # 🔥 UNISCI CONTENUTI SITO
         combined_site_content = ""
@@ -189,6 +200,13 @@ class DataCollectionService:
             url = service_urls[i]["url"]
             if not isinstance(res, Exception):
                 combined_services_text += f"\n\n--- DETTAGLI SERVIZIO DA: {url} ---\n{res.get('raw_text', str(res))}"
+        
+        # 🔥 UNISCI PRODOTTI E MENU (Vengono messi in products_txt)
+        combined_products_text = ""
+        for i, res in enumerate(product_res or []):
+            url = product_urls[i]["url"]
+            if not isinstance(res, Exception):
+                combined_products_text += f"\n\n--- PRODOTTI/MENU DA: {url} ---\n{res.get('raw_text', str(res))}"
         
         site_content_combined = {"combined_raw_text": combined_site_content, "pages": processed_site_results}
 
@@ -212,13 +230,14 @@ class DataCollectionService:
 
         return {
             "site_url": site_urls[0]["url"] if site_urls else (service_urls[0]["url"] if service_urls else ""),
-            "site_urls": site_urls + service_urls,
+            "site_urls": site_urls + service_urls + product_urls,
             "site_content": site_content_combined,
             "google_reviews": merged_reviews,
             "instagram_data": instagram_full,
             "meta_ads": meta_ads,
             "competitor_data": competitors,
-            "services_txt": combined_services_text # Ritorniamo questo per il main.py
+            "services_txt": combined_services_text,
+            "products_txt": combined_products_text
         }
 
     async def _scrape_single_website_page(self, url: str, context: str = "") -> Dict[str, Any]:

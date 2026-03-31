@@ -3527,7 +3527,8 @@ async def _do_complete_analysis(client_id: str, job_id: str):
 
     # Raccogli documenti caricati (raw-data folder)
     raw_docs = ""
-    products_csv = "Non disponibili"
+    scraped_products = all_data.get("products_txt") or ""
+    products_csv = scraped_products if scraped_products else "Non disponibili"
     services_txt = all_data.get("services_txt") or "Non disponibili"
 
     raw_files = list((CLIENTS_DIR / client_id / "raw_data").glob("*")) if (CLIENTS_DIR / client_id / "raw_data").exists() else []
@@ -3538,7 +3539,11 @@ async def _do_complete_analysis(client_id: str, job_id: str):
             # Cerca CSV (prodotti Shopify, listini, etc.) — qualsiasi CSV viene trattato come dati prodotto
             if file_name_lower.endswith('.csv'):
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    products_csv = f.read()[:10000]  # Limite 10K caratteri per CSV
+                    csv_content = f.read()[:10000]  # Limite 10K caratteri per CSV
+                    if products_csv == "Non disponibili":
+                        products_csv = csv_content
+                    else:
+                        products_csv += f"\n\n--- Dati extra ({file_path.name}) ---\n{csv_content}"
                     print(f"✅ Trovato CSV prodotti: {file_path.name}")
 
             # Cerca TXT servizi
@@ -3568,26 +3573,41 @@ async def _do_complete_analysis(client_id: str, job_id: str):
         except Exception as e:
             print(f"⚠️ Errore processamento file {file_path.name}: {e}")
 
-    # 🔥 ESTRAI SERVIZI dalle pagine scrappate (Trattamenti Viso/Corpo/Epilazione)
-    if services_txt == "Non disponibili" and isinstance(site_content, dict):
+    # 🔥 ESTRAI PRODOTTI e SERVIZI dalle pagine scrappate
+    if isinstance(site_content, dict):
         pages_data = site_content.get("pages", [])
         services_pages = []
+        products_pages = []
 
         for page in pages_data:
             if isinstance(page, dict) and "url" in page:
                 url = page["url"]
-                # Cerca pagine che contengono "trattament", "serviz", "epilazione", "service", "menu", "pizza", "ristorant" nell'URL
-                if any(keyword in url.lower() for keyword in ["trattament", "serviz", "epilazione", "service", "treatment", "menu", "pizza", "ristorant", "food", "carta", "lista"]):
-                    # Estrai il contenuto
+                # Cerca pagine Prodotti/Menu o Servizi
+                if any(keyword in url.lower() for keyword in ["menu", "pizza", "ristorant", "food", "carta", "lista", "prodott", "shop", "store", "catalog", "listino"]):
+                    if "data" in page and isinstance(page["data"], dict):
+                        raw_text = page["data"].get("raw_text", "")
+                        if raw_text:
+                            products_pages.append(f"--- PRODOTTI/MENU DA: {url} ---\n{raw_text}")
+                            print(f"✅ Estratti prodotti da pagina web: {url}")
+                            
+                elif any(keyword in url.lower() for keyword in ["trattament", "serviz", "epilazione", "service", "treatment"]):
                     if "data" in page and isinstance(page["data"], dict):
                         raw_text = page["data"].get("raw_text", "")
                         if raw_text:
                             services_pages.append(f"--- SERVIZI DA: {url} ---\n{raw_text}")
                             print(f"✅ Estratti servizi da pagina web: {url}")
 
-        if services_pages:
+        if services_pages and services_txt == "Non disponibili":
             services_txt = "\n\n".join(services_pages)[:15000]  # Limite 15K caratteri per servizi
             print(f"✅ TOTALE SERVIZI ESTRATTI: {len(services_pages)} pagine web")
+            
+        if products_pages:
+            products_text_from_scraping = "\n\n".join(products_pages)[:15000]
+            if products_csv == "Non disponibili":
+                products_csv = products_text_from_scraping
+            else:
+                products_csv += "\n\n" + products_text_from_scraping
+            print(f"✅ TOTALE PRODOTTI/MENU ESTRATTI: {len(products_pages)} pagine web")
 
     # 1. Flatten Instagram Comments for easier Review Mining
     flattened_ig = []
