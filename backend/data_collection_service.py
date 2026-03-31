@@ -251,7 +251,7 @@ class DataCollectionService:
 
 Estrai TUTTE le informazioni rilevanti per un media buyer.
 
-⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu (es. Leggimenu, Menudigitale, Flazio, Linktree, etc.), NON analizzare il fornitore del software o del servizio. Il cliente NON vende menu digitali; il cliente usa quel link per mostrare la sua offerta reale. Concentrati esclusivamente sui piatti, pizze, prodotti, servizi, prezzi e descrizioni dell'attività reale presenti nel link.
+⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu o QR code (es. Qromo, Leggimenu, Menudigitale, Flazio, Linktree, Gloriafood, TheFork, Deliverect, Orderlord, Tillster, etc.), NON analizzare il fornitore del software o del servizio. Il cliente NON vende menu digitali né software per ristoranti; il cliente USA quella piattaforma per mostrare la sua offerta reale. Concentrati esclusivamente sui piatti, pizze, prodotti, servizi, prezzi e descrizioni dell'attività reale presenti nel link. Se la pagina mostra un menu di cibo, elenca i piatti, le categorie, i prezzi e gli ingredienti — NON descrivere la tecnologia del menu.
 
 COMPONENTI RICHIESTI:
 1. Prodotti/Servizi principali con relativi prezzi o offerte
