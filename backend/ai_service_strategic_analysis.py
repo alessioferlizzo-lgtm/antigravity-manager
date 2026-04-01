@@ -42,9 +42,12 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
                 val_str = str(val)
             input_text += f"\n--- {req.upper()} ---\n{val_str}\n"
 
-    # Prepend anti-hallucination directive to EVERY task
-    final_prompt = f"{ANTI_HALLUCINATION_DIRECTIVE}\n\n{system_prompt_template}\n\n{input_text}"
-    messages = [{"role": "user", "content": final_prompt}]
+    # Anti-hallucination as SYSTEM message (stronger enforcement than user message)
+    final_prompt = f"{system_prompt_template}\n\n{input_text}"
+    messages = [
+        {"role": "system", "content": ANTI_HALLUCINATION_DIRECTIVE},
+        {"role": "user", "content": final_prompt}
+    ]
     
     # 2. Select AI Model Map
     model_map = {
