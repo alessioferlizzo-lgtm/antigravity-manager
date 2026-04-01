@@ -642,21 +642,20 @@ Rispondi SOLO con JSON:
         instagram_comments: str = "",
         products_csv: str = "",
         services_txt: str = "",
-        competitor_data: str = ""
+        competitor_data: str = "",
+        progress_callback=None
     ) -> Dict[str, Any]:
         """
         🔥 NUOVO SISTEMA - Metodologia Francesco Agostinis
 
-        Genera analisi strategica completa in 14 sezioni seguendo ESATTAMENTE
+        Genera analisi strategica completa in 18 sezioni seguendo ESATTAMENTE
         i prompt della guida "Strategie Di Marketing Avanzate Con Gemini Per Meta Ads"
-
-        Sostituisce completamente il vecchio sistema generico.
         """
         from .ai_service_strategic_analysis import generate_complete_strategic_analysis
         return await generate_complete_strategic_analysis(
             self, client_info, site_url, site_content, social_data, ads_data,
             raw_docs, google_reviews, instagram_comments, products_csv, services_txt,
-            competitor_data
+            competitor_data, progress_callback=progress_callback
         )
 
 ai_service = AIService()

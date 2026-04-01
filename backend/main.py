@@ -3512,7 +3512,9 @@ async def _do_complete_analysis(client_id: str, job_id: str):
     print(f"{'='*80}\n")
 
     # Raccogli TUTTI i dati
+    _progress("Raccolta dati: sito web, social, recensioni, competitor…")
     all_data = await data_collector.collect_all_data(client_id, metadata)
+    _progress("Dati raccolti. Preparazione analisi strategica…")
 
     site_url = all_data.get("site_url", "")
     if not site_url:
@@ -3666,6 +3668,7 @@ async def _do_complete_analysis(client_id: str, job_id: str):
     metadata["raw_data_snapshot"] = raw_data_snapshot
 
     print(f"🧠 Avvio analisi completa...")
+    _progress("Avvio generazione 18 sezioni strategiche…")
     complete_analysis = await ai_service.generate_complete_analysis(
         client_info=client_info,
         site_url=site_url,
@@ -3677,7 +3680,8 @@ async def _do_complete_analysis(client_id: str, job_id: str):
         instagram_comments=instagram_comments_text,
         products_csv=products_csv,
         services_txt=services_txt,
-        competitor_data=competitor_text
+        competitor_data=competitor_text,
+        progress_callback=_progress
     )
 
     # Backup dell'analisi completa originale per la rigenerazione
@@ -3711,13 +3715,13 @@ async def _do_complete_analysis(client_id: str, job_id: str):
     storage_service.save_metadata(client_id, metadata)
     print("✅ Metadata aggiornato con SWOT, Obiettivi e Strategia")
 
-    # Salva in Supabase (14 sezioni + bonus)
+    # Salva in Supabase — con fallback se alcune colonne non esistono ancora
     try:
         supabase = _get_sb()
         if not supabase:
             print("⚠️  Supabase non configurato - analisi NON salvata nel database")
         else:
-            supabase.table("client_complete_analysis").upsert({
+            upsert_data = {
                 "client_id": client_id,
                 "brand_identity": complete_analysis.get("brand_identity", {}),
                 "brand_values": complete_analysis.get("brand_values", {}),
@@ -3737,12 +3741,27 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                 "ad_copy_creation": complete_analysis.get("ad_copy_creation", {}),
                 "video_scripts": complete_analysis.get("video_scripts", {}),
                 "franzcopy_scaling": complete_analysis.get("franzcopy_scaling", {}),
-                # NUOVE SEZIONI
                 "swot": complete_analysis.get("swot", {}),
                 "objectives": complete_analysis.get("objectives", {}),
                 "strategy": complete_analysis.get("strategy", ""),
-            }).execute()
-            print("✅ Analisi salvata in Supabase")
+            }
+            try:
+                supabase.table("client_complete_analysis").upsert(upsert_data).execute()
+                print("✅ Analisi salvata in Supabase (tutte le colonne)")
+            except Exception as col_err:
+                # Se fallisce (colonne mancanti), riprova con solo le colonne originali
+                err_msg = str(col_err).lower()
+                if "column" in err_msg or "undefined" in err_msg or "400" in err_msg:
+                    print(f"⚠️  Alcune colonne Supabase mancanti ({col_err}). Riprovo senza colonne nuove…")
+                    for key in ["service_vertical", "ad_copy_creation", "video_scripts", "franzcopy_scaling"]:
+                        upsert_data.pop(key, None)
+                    try:
+                        supabase.table("client_complete_analysis").upsert(upsert_data).execute()
+                        print("✅ Analisi salvata in Supabase (colonne base)")
+                    except Exception as e2:
+                        print(f"❌ Errore salvataggio Supabase anche con colonne base: {e2}")
+                else:
+                    print(f"❌ Errore salvataggio Supabase: {col_err}")
     except Exception as e:
         print(f"❌ Errore salvataggio Supabase: {e}")
 

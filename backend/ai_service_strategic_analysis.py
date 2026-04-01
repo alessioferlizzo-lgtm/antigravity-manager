@@ -96,16 +96,22 @@ async def generate_complete_strategic_analysis(
     instagram_comments: str = "",
     products_csv: str = "",
     services_txt: str = "",
-    competitor_data: str = ""
+    competitor_data: str = "",
+    progress_callback=None
 ) -> Dict[str, Any]:
-    
+
+    def _report(msg: str):
+        if progress_callback:
+            progress_callback(msg)
+        print(f"[Workflow Engine] {msg}")
+
     # 1. Load the Master Workflow JSON
     workflow_path = os.path.join(os.path.dirname(__file__), "master_workflows", "agostinis_meta_ads.json")
     with open(workflow_path, "r", encoding="utf-8") as f:
         workflow = json.loads(f.read())
-        
-    print(f"[Workflow Engine] Loaded Master Workflow: {workflow.get('workflow_name')}")
-    
+
+    _report(f"Workflow caricato: {workflow.get('workflow_name')}")
+
     # 2. Initialize the Global Context
     context = {
         "client_info": client_info,
@@ -116,32 +122,30 @@ async def generate_complete_strategic_analysis(
         "raw_docs": raw_docs,
         "google_reviews": google_reviews,
         "instagram_comments": instagram_comments,
-        "products_csv": products_csv, # Pass the entire CSV
+        "products_csv": products_csv,
         "services_txt": services_txt,
-        "competitor_data": competitor_data  # Real competitor names/links from Sorgenti
+        "competitor_data": competitor_data
     }
-    
+
     # 3. Sequential Execution loop (guarantees context inheritance)
     results = {}
-    
-    for task in workflow["tasks"]:
+    total_tasks = len(workflow["tasks"])
+
+    for i, task in enumerate(workflow["tasks"], 1):
         step_id = task["step_id"]
+        task_name = task.get("title", step_id)
+        _report(f"[{i}/{total_tasks}] {task_name}…")
         try:
-            # Run the task
             task_result = await run_workflow_task(service, task, context)
-            
-            # Save to results
             results[step_id] = task_result
-            
-            # INJECT into context so downstream tasks can use it
             context[step_id] = task_result
-            
+
         except Exception as e:
             print(f"[Workflow Engine] Error executing task {step_id}: {e}")
             results[step_id] = {"error": str(e)}
             context[step_id] = {}
 
-    print(f"[Workflow Engine] All {len(workflow['tasks'])} tasks executed successfully.")
+    _report(f"Tutte le {total_tasks} sezioni generate. Salvataggio…")
 
     # 4. Passthrough — I prompt chiedono già lo schema JSON esatto che i renderer React si aspettano.
     #    L'unica mappatura necessaria è step_id → frontend key dove differiscono.

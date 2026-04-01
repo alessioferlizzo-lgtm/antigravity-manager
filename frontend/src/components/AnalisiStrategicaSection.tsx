@@ -1098,7 +1098,40 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
     const [expandedMacros, setExpandedMacros] = useState<Set<number>>(new Set([0]));
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [generationStatus, setGenerationStatus] = useState<string>("");
+    const [generationError, setGenerationError] = useState<string>("");
     const [sectionLoading, setSectionLoading] = useState<Record<string, boolean>>({});
+
+    // ── Polling helper (riusabile da mount e da generate) ────────────────────
+    const pollJob = async (jobId: string) => {
+        const maxWait = 40 * 60 * 1000; // 40 minuti max (18 task sequenziali)
+        const pollStart = Date.now();
+
+        while (Date.now() - pollStart < maxWait) {
+            await new Promise(r => setTimeout(r, 4000));
+            try {
+                const statusRes = await fetch(`${apiUrl}/clients/${clientId}/analysis/status/${jobId}`);
+                if (!statusRes.ok) continue;
+                const jobData = await statusRes.json();
+
+                if (jobData.progress) setGenerationStatus(jobData.progress);
+
+                if (jobData.status === "done") {
+                    setAnalysis(jobData.analysis);
+                    localStorage.removeItem(`analysis_job_${clientId}`);
+                    return "done";
+                }
+                if (jobData.status === "error") {
+                    console.error("Analisi fallita:", jobData.error);
+                    setGenerationError(jobData.error || "Errore sconosciuto durante l'analisi");
+                    localStorage.removeItem(`analysis_job_${clientId}`);
+                    return "error";
+                }
+            } catch { /* retry */ }
+        }
+        setGenerationError("Timeout: l'analisi ha impiegato troppo tempo. Riprova.");
+        localStorage.removeItem(`analysis_job_${clientId}`);
+        return "timeout";
+    };
 
     // ── Fetch on mount ─────────────────────────────────────────────────────────
     useEffect(() => {
@@ -1113,74 +1146,68 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                 const data = await res.json();
                 if (data && typeof data === "object" && Object.keys(data).length > 0) {
                     setAnalysis(data);
+                    setLoading(false);
+                    return;
                 }
             }
         } catch (e) { /* ignore */ }
+
+        // Se non c'è analisi salvata, controlla se c'è un job in corso (es. dopo refresh)
+        const savedJobId = localStorage.getItem(`analysis_job_${clientId}`);
+        if (savedJobId) {
+            setGenerating(true);
+            setGenerationStatus("Ripresa analisi in corso (riconnessione dopo refresh)…");
+            setLoading(false);
+            const result = await pollJob(savedJobId);
+            setGenerating(false);
+            setGenerationStatus("");
+            if (result === "done") return;
+        }
+
         setLoading(false);
     };
 
     const generateAnalysis = async () => {
         setGenerating(true);
         setAnalysis(null);
-        setGenerationStatus("Raccolta dati: sito web, social, recensioni e competitor…");
-
-        const steps = [
-            "🔍 Analisi sito web e contenuti…",
-            "📸 Elaborazione dati Instagram…",
-            "⭐ Analisi recensioni Google…",
-            "📊 Lettura Meta Ads delle inserzioni competitor…",
-            "🏢 Generazione Brand Identity…",
-            "🧠 Creazione Customer Personas…",
-            "📈 Matrice contenuti e angoli…",
-            "⚔️ Battlecard competitor…",
-            "📅 Roadmap stagionale…",
-        ];
-        let step = 0;
-        const interval = setInterval(() => {
-            step = (step + 1) % steps.length;
-            setGenerationStatus(steps[step]);
-        }, 15000);
+        setGenerationError("");
+        setGenerationStatus("Avvio raccolta dati…");
 
         try {
-            // 1. Avvia il job in background — Railway risponde subito
+            // 1. Avvia il job in background
             const startRes = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`, { method: "POST" });
             if (!startRes.ok) {
-                console.error("Errore avvio analisi:", startRes.status);
-                clearInterval(interval);
+                const err = await startRes.text().catch(() => "");
+                setGenerationError(`Errore avvio analisi (${startRes.status}): ${err}`);
                 setGenerating(false);
                 setGenerationStatus("");
                 return;
             }
             const { job_id } = await startRes.json();
 
-            // 2. Polling ogni 5s finché il job non è done/error
-            const maxWait = 20 * 60 * 1000; // 20 minuti max
-            const pollStart = Date.now();
+            // Salva job_id in localStorage — se l'utente fa refresh, il polling riprende
+            localStorage.setItem(`analysis_job_${clientId}`, job_id);
 
-            while (Date.now() - pollStart < maxWait) {
-                await new Promise(r => setTimeout(r, 5000));
+            // 2. Polling
+            const result = await pollJob(job_id);
+            if (result !== "done") {
+                // Ricarica da Supabase come fallback — il job potrebbe aver salvato prima di crashare
                 try {
-                    const statusRes = await fetch(`${apiUrl}/clients/${clientId}/analysis/status/${job_id}`);
-                    if (!statusRes.ok) continue;
-                    const jobData = await statusRes.json();
-
-                    if (jobData.progress) setGenerationStatus(jobData.progress);
-
-                    if (jobData.status === "done") {
-                        setAnalysis(jobData.analysis);
-                        break;
+                    const fallbackRes = await fetch(`${apiUrl}/clients/${clientId}/analysis/complete`);
+                    if (fallbackRes.ok) {
+                        const data = await fallbackRes.json();
+                        if (data && typeof data === "object" && Object.keys(data).length > 0) {
+                            setAnalysis(data);
+                            setGenerationError("");
+                        }
                     }
-                    if (jobData.status === "error") {
-                        console.error("Analisi fallita:", jobData.error);
-                        break;
-                    }
-                } catch { /* retry */ }
+                } catch { /* ignore */ }
             }
         } catch (e) {
             console.error("Errore rete:", e);
+            setGenerationError(`Errore di rete: ${e}`);
         }
 
-        clearInterval(interval);
         setGenerating(false);
         setGenerationStatus("");
     };
@@ -1261,10 +1288,15 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                         </ul>
                     </div>
                     <div style={{ background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.2)", borderRadius: 8, padding: "10px 16px", marginBottom: 24, fontSize: 12, color: "var(--orange)", maxWidth: 560, margin: "0 auto 24px" }}>
-                        ⏱️ Tempo stimato: <strong>4-8 minuti</strong> • AI parallele orchestrate per velocità massima
+                        ⏱️ Tempo stimato: <strong>8-15 minuti</strong> • 18 sezioni generate in sequenza
                     </div>
+                    {generationError && (
+                        <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "12px 16px", marginBottom: 24, fontSize: 13, color: "#ef4444", maxWidth: 560, margin: "0 auto 24px", textAlign: "left" }}>
+                            <strong>Errore:</strong> {generationError}
+                        </div>
+                    )}
                     <button className="btn btn-primary" style={{ fontSize: 15, padding: "16px 20px", fontWeight: 700, whiteSpace: "normal", height: "auto", minHeight: 48, maxWidth: "100%", wordWrap: "break-word" }} onClick={generateAnalysis} disabled={generating}>
-                        {generating ? (<><div className="spinner" style={{ width: 14, height: 14 }} />{generationStatus || "Generazione in corso…"}</>) : (<><SparklesIcon style={{ width: 16, height: 16, flexShrink: 0 }} />🚀 Genera Analisi Strategica Completa</>)}
+                        {generating ? (<><div className="spinner" style={{ width: 14, height: 14 }} />{generationStatus || "Generazione in corso…"}</>) : (<><SparklesIcon style={{ width: 16, height: 16, flexShrink: 0 }} />{generationError ? "Riprova Analisi" : "Genera Analisi Strategica Completa"}</>)}
                     </button>
                 </div>
             </div>
