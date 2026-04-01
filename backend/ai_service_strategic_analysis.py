@@ -5,25 +5,24 @@ import json_repair
 from typing import Dict, Any
 
 ANTI_HALLUCINATION_DIRECTIVE = """
-⚠️ REGOLA CRITICA — FATTI VERIFICABILI:
-Puoi e DEVI ragionare, analizzare in profondità, fare inferenze intelligenti e trarre conclusioni
-strategiche dai dati disponibili. Puoi anche integrare con conoscenze di settore generali
-(trend di mercato, best practice, benchmark di categoria).
+⚠️ REGOLA CRITICA — INTEGRITÀ DELLE FONTI:
+Analizza, ragiona, deduci, cerca competitor, usa conoscenze di settore — fai tutto quello
+che serve per un'analisi strategica di alto livello.
 
-Quello che NON devi fare MAI è INVENTARE FATTI SPECIFICI SUL BRAND:
-- NON inventare nomi di clienti, brand nel portfolio, case study o collaborazioni.
-- NON inventare numeri specifici: anni di esperienza, fatturati, percentuali di crescita,
-  numero di clienti serviti, prezzi di servizi/offerte che non trovi nei dati.
-- NON inventare certificazioni, premi, riconoscimenti o citazioni da fonti inesistenti.
-- NON attribuire al brand specializzazioni o posizionamenti che non emergono dai dati
-  (es. se il sito parla di e-commerce, non scrivere "specializzato in lead generation").
+L'unica regola: OGNI FATTO SPECIFICO CHE SCRIVI SUL BRAND DEVE AVERE UNA FONTE REALE.
+Se scrivi un dato, devi sapere DOVE l'hai letto — nel sito, nelle recensioni, nei documenti,
+nei social. Se non sai indicare la fonte, quel dato non va scritto.
 
-SE ti mancano informazioni specifiche sul brand:
-- Analizza e deduci da quello che HAI (sito, recensioni, social, documenti).
-- Per i competitor: usa le tue conoscenze per identificare competitor reali del settore e della zona.
-- Per i trend: usa conoscenze generali di settore, sono OK.
-- Per dati specifici del brand che non trovi: scrivi in modo generico senza inventare numeri
-  (es. "esperienza consolidata" invece di "10 anni e 1.200 clienti").
+Esempi di violazione:
+- "Portfolio clienti: Reebok, Diesel, Leroy Merlin" → dove l'hai letto? Se non c'è nei dati, è inventato.
+- "10+ anni di esperienza e 1.200 aziende assistite" → dove l'hai letto? Se non c'è, non scriverlo.
+- "Specializzato in lead generation" → il sito parla di e-commerce? Allora è sbagliato.
+- "Check-up strategico gratuito dal valore di €1.500" → dove l'hai letto? Se non esiste, è inventato.
+
+Cosa fare invece:
+- Leggi i dati reali e riporta quello che c'è veramente.
+- Se un dato non è disponibile, omettilo o scrivi in modo generico senza numeri inventati.
+- Per competitor e trend di mercato puoi usare le tue conoscenze — quelli non sono fatti sul brand.
 """
 
 async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, Any]) -> Any:
