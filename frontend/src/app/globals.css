@@ -42,6 +42,10 @@
   --border:    #e5e7eb;
   --border-mid:#d1d5db;
   --gray-mid:  #e5e5ea;
+
+  /* Composite / Missing Fallbacks */
+  --text-header: var(--text-primary);
+  --lime-deep:   var(--lime);
 }
 
 
@@ -624,13 +628,18 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
 .form-field input,
 .form-field select,
 .form-field textarea {
-  background: #f9fafb; border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 12px; font-size: 14px;
-  color: #000; outline: none; font-family: inherit;
+  background: rgba(0, 0, 0, 0.15); 
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px; 
+  padding: 8px 12px; 
+  font-size: 14px;
+  color: #ffffff; 
+  outline: none; 
+  font-family: inherit;
 }
 .form-field input:focus,
 .form-field select:focus,
-.form-field textarea:focus { border-color: var(--orange); background: #ffffff; }
+.form-field textarea:focus { border-color: var(--orange); background: rgba(0, 0, 0, 0.25); }
 
 .checkbox-field label { display: flex; align-items: center; gap: 8px; cursor: pointer; height: 100%; color: #8e8e93; transition: color 0.2s; }
 .checkbox-field label span { font-size: 13px; font-weight: 500; text-transform: none; }
@@ -1685,25 +1694,39 @@ h6 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacin
    15. INPUTS
    ══════════════════════════════════════════════════════════════ */
 .input {
-  width: 100%; background: #ffffff;
-  border: 1px solid var(--border-mid); border-radius: 8px;
-  padding: 10px 14px; font-size: 14px; color: #000000;
-  font-family: inherit; outline: none;
+  width: 100%; 
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1); 
+  border-radius: 8px;
+  padding: 10px 14px; 
+  font-size: 14px; 
+  color: #ffffff;
+  font-family: inherit; 
+  outline: none;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 }
-.input::placeholder { color: #8e8e93; }
-.input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(242,144,26,0.15); background: #ffffff; }
-.input:hover:not(:focus) { border-color: rgba(0,0,0,0.25); }
+.input::placeholder { color: rgba(255, 255, 255, 0.35); }
+.input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(242, 144, 26, 0.15); background: rgba(0, 0, 0, 0.35); }
+.input:hover:not(:focus) { border-color: rgba(255, 255, 255, 0.2); }
 
 textarea.input { resize: vertical; }
 
 /* DatePicker */
 .custom-datepicker {
-  width: 100%; background: #ffffff;
-  border: 1px solid var(--border-mid); border-radius: 8px;
-  padding: 9px 12px; color: #000000; font-size: 13px;
-  outline: none; font-family: inherit; cursor: pointer;
+  width: 100%; 
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1); 
+  border-radius: 8px;
+  padding: 9px 12px; 
+  color: #ffffff; 
+  font-size: 13px;
+  outline: none; 
+  font-family: inherit; 
+  cursor: pointer;
   transition: border-color 0.15s;
 }
 .custom-datepicker:focus { border-color: var(--orange); }

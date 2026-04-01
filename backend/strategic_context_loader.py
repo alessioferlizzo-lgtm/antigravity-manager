@@ -180,6 +180,27 @@ Font Principali: {fonts if fonts else 'Non definiti'}
 {self._format_json_section(analysis["visual_brief"], max_chars=1500)}
 """)
 
+            # Sezione 15: Ad Copy Creation
+            if analysis.get("ad_copy_creation"):
+                context_parts.append(f"""
+【15】 COPY ADS (Angles, Hook, Primary Text per segmento)
+{self._format_json_section(analysis["ad_copy_creation"], max_chars=3000)}
+""")
+
+            # Sezione 16: Video Scripts
+            if analysis.get("video_scripts"):
+                context_parts.append(f"""
+【16】 SCRIPT VIDEO (TikTok/Reels — 6 script con timing e visual)
+{self._format_json_section(analysis["video_scripts"], max_chars=2000)}
+""")
+
+            # Sezione 17: FranzCopy Scaling
+            if analysis.get("franzcopy_scaling"):
+                context_parts.append(f"""
+【17】 FRANZCOPY — VARIANTI COPY (6 formule × Best Bet ads)
+{self._format_json_section(analysis["franzcopy_scaling"], max_chars=2500)}
+""")
+
         else:
             context_parts.append("""
 ⚠️ ATTENZIONE: Analisi Strategica non ancora generata per questo cliente.

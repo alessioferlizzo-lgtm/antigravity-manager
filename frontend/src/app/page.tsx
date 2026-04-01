@@ -50,7 +50,7 @@ function FormatText({ text }: { text: string }) {
   const renderInline = (s: string) => {
     const parts = s.split(/\*\*(.*?)\*\*/g);
     return parts.map((p, j) =>
-      j % 2 === 1 ? <strong key={j} style={{ color: "#111827", fontWeight: 700 }}>{p}</strong> : <span key={j}>{p}</span>
+      j % 2 === 1 ? <strong key={j} style={{ color: "var(--orange)", fontWeight: 700 }}>{p}</strong> : <span key={j}>{p}</span>
     );
   };
   return (
@@ -63,7 +63,7 @@ function FormatText({ text }: { text: string }) {
         const nm = t.match(/^(\d+)[.)]\s+(.+)$/);
         if (nm) return <div key={i} style={{ display: "flex", gap: 7 }}><span style={{ color: "#ff9e1c", fontWeight: 700, fontSize: 11, minWidth: 16 }}>{nm[1]}.</span><span>{renderInline(nm[2])}</span></div>;
         const hm = t.match(/^#{1,3}\s+(.+)$/);
-        if (hm) return <p key={i} style={{ fontWeight: 700, color: "#111827", fontSize: 13 }}>{renderInline(hm[1])}</p>;
+        if (hm) return <p key={i} style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: 13 }}>{renderInline(hm[1])}</p>;
         return <p key={i} style={{ lineHeight: 1.75 }}>{renderInline(t)}</p>;
       })}
     </div>
@@ -879,7 +879,7 @@ export default function Dashboard() {
             <div className="client-list-avatar" style={{ width: 26, height: 26, borderRadius: 6, background: avatarColor(clients.find(c => c.id === value)?.name || ""), fontSize: 10 }}>
               {initials(clients.find(c => c.id === value)?.name || "")}
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{clients.find(c => c.id === value)?.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{clients.find(c => c.id === value)?.name}</span>
           </div>
         )}
       </div>

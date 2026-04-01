@@ -3726,6 +3726,7 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                 "customer_personas": complete_analysis.get("customer_personas", []),
                 "content_matrix": complete_analysis.get("content_matrix", []),
                 "product_vertical": complete_analysis.get("product_vertical", []),
+                "service_vertical": complete_analysis.get("service_vertical", []),
                 "brand_voice": complete_analysis.get("brand_voice", {}),
                 "objections": complete_analysis.get("objections", {}),
                 "reviews_voc": complete_analysis.get("reviews_voc", {}),
@@ -3733,6 +3734,9 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                 "seasonal_roadmap": complete_analysis.get("seasonal_roadmap", {}),
                 "psychographic_analysis": complete_analysis.get("psychographic_analysis", {}),
                 "visual_brief": complete_analysis.get("visual_brief", {}),
+                "ad_copy_creation": complete_analysis.get("ad_copy_creation", {}),
+                "video_scripts": complete_analysis.get("video_scripts", {}),
+                "franzcopy_scaling": complete_analysis.get("franzcopy_scaling", {}),
                 # NUOVE SEZIONI
                 "swot": complete_analysis.get("swot", {}),
                 "objectives": complete_analysis.get("objectives", {}),
@@ -3819,7 +3823,11 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
     with open(workflow_path, "r", encoding="utf-8") as f:
         workflow = json.load(f)
     
-    task = next((t for t in workflow["tasks"] if t["step_id"] == step_id), None)
+    # Mappatura frontend key → workflow step_id (dove differiscono)
+    FRONTEND_TO_STEP = {"objections": "objections_management"}
+    workflow_step_id = FRONTEND_TO_STEP.get(step_id, step_id)
+
+    task = next((t for t in workflow["tasks"] if t["step_id"] == workflow_step_id), None)
     if not task:
         raise HTTPException(status_code=404, detail=f"Step {step_id} non trovato")
 
@@ -3831,18 +3839,17 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
         **(metadata.get("analysis_completa_raw", {}))
     }
 
-    print(f"♻️ Rigenerazione {step_id}...")
+    print(f"♻️ Rigenerazione {step_id} (workflow: {workflow_step_id})...")
     new_result = await run_workflow_task(ai_service, task, context)
 
-    # Aggiorna il backup raw
+    # Aggiorna il backup raw (usa workflow_step_id per il context chaining)
     if "analysis_completa_raw" not in metadata:
         metadata["analysis_completa_raw"] = {}
-    metadata["analysis_completa_raw"][step_id] = new_result
+    metadata["analysis_completa_raw"][workflow_step_id] = new_result
 
-    # Salva anche nell'analisi completa in Supabase
+    # Salva anche nell'analisi completa in Supabase (usa step_id = frontend key)
     storage_service.save_metadata(client_id, metadata)
 
-    # Aggiorna l'analisi completa in Supabase
     try:
         existing_analysis = storage_service.get_complete_analysis(client_id) or {}
         existing_analysis[step_id] = new_result

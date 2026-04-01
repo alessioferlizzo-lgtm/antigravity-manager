@@ -143,143 +143,15 @@ async def generate_complete_strategic_analysis(
 
     print(f"[Workflow Engine] All {len(workflow['tasks'])} tasks executed successfully.")
 
-    # 4. Final Adapter - Map to exactly what React expects
-
-    def safe_dict(val, fallback=None):
-        """Garantisce che val sia sempre un dict, evitando AttributeError su str/list/None."""
-        if isinstance(val, dict):
-            return val
-        if isinstance(val, list):
-            # Se è già una lista di dict, restituisci un wrapper
-            return {"_list": val}
-        return fallback or {}
-
-    def safe_list(val):
-        """Garantisce che val sia sempre una lista."""
-        if isinstance(val, list):
-            return val
-        if isinstance(val, dict):
-            # Prova i campi comuni
-            for key in ["items", "data", "results", "_list"]:
-                if key in val and isinstance(val[key], list):
-                    return val[key]
-            return [val] if val else []
-        return []
-
-    # Extract keys safely — tutto passa sempre per safe_dict
-    brand_identity_data    = safe_dict(results.get("brand_identity"))
-    brand_values_data      = safe_dict(results.get("brand_values"))
-    product_portfolio_data = safe_dict(results.get("product_portfolio"))
-    product_vertical_data  = safe_dict(results.get("product_vertical"))
-    service_vertical_data  = safe_dict(results.get("service_vertical"))
-    reasons_to_buy_data    = safe_dict(results.get("reasons_to_buy"))
-    customer_personas_data = results.get("customer_personas", {})  # gestito separatamente
-    psychographic_data     = safe_dict(results.get("psychographic_analysis"))
-    brand_voice_data       = safe_dict(results.get("brand_voice"))
-    content_matrix_data    = safe_dict(results.get("content_matrix"))
-    objections_data        = safe_dict(results.get("objections_management"))
-    reviews_voc_data       = safe_dict(results.get("reviews_voc"))
-    battlecards_data       = safe_dict(results.get("battlecards"))
-    seasonal_roadmap_data  = safe_dict(results.get("seasonal_roadmap"))
-    visual_brief_data      = safe_dict(results.get("visual_brief"))
-    
-    # Customer personas - handle both list and dict formats from AI
-    personas_raw = customer_personas_data
-    if isinstance(personas_raw, list):
-        personas_list = personas_raw
-    elif isinstance(personas_raw, dict):
-        personas_list = personas_raw.get("personas", [])
-        if not personas_list and personas_raw:
-            personas_list = [personas_raw]
-    else:
-        personas_list = []
-        
-    # Clean out any error objects that might have slipped through
-    personas_list = [p for p in personas_list if isinstance(p, dict) and "error" not in p]
-
-    # Clean UI shapes
-    final_output = {
-        "brand_identity": {
-            "mission": brand_identity_data.get("mission", ""),
-            "positioning": brand_identity_data.get("positioning", ""),
-            "statement": brand_identity_data.get("statement", ""),
-            "tone_of_voice": brand_identity_data.get("tone_of_voice", "")
-        },
-        "brand_values": {
-            "brand_pillars": [
-                {"name": "Inclusività", "content": brand_values_data.get("inclusivity", "")},
-                {"name": "Sostenibilità", "content": brand_values_data.get("sustainability", "")},
-                {"name": "Materiali/Premium", "content": brand_values_data.get("formulas_materials", "")}
-            ]
-        },
-        "brand_voice": {
-            "brand_persona": brand_voice_data.get("brand_persona", ""),
-            "communication_pillars": brand_voice_data.get("communication_pillars", ""),
-            "glossary": brand_voice_data.get("glossary", []),
-            "dos_donts": brand_voice_data.get("dos_donts", [])
-        },
-        "product_portfolio": {
-            "products": product_portfolio_data.get("core_products", []) + product_portfolio_data.get("pre_during_products", []) + product_portfolio_data.get("post_treatment_products", []) + product_portfolio_data.get("lifestyle_products", [])
-        },
-        "product_vertical": {
-            "products": product_vertical_data.get("products", [])
-        },
-        "service_vertical": {
-            "services": service_vertical_data.get("services", [])
-        },
-        "reasons_to_buy": {
-            "rational": reasons_to_buy_data.get("rational_motives", []),
-            "emotional": reasons_to_buy_data.get("emotional_motives", [])
-        },
-        "objections": {
-            "price": objections_data.get("price_value", []),
-            "subscription": objections_data.get("mechanics_subscription", []),
-            "performance": objections_data.get("product_performance", []),
-            "ethics": objections_data.get("ethics_sustainability", [])
-        },
-        "customer_personas": personas_list,
-        "psychographic_analysis": {
-            "level_1_primary": psychographic_data.get("level_1_primary", []),
-            "level_2_secondary": psychographic_data.get("level_2_secondary", []),
-            "level_3_tertiary": psychographic_data.get("level_3_tertiary", [])
-        },
-        "content_matrix": content_matrix_data.get("matrix", []),
-        "reviews_voc": {
-            "golden_hooks": reviews_voc_data.get("golden_hooks", reviews_voc_data.get("hooks", [])),
-            "sentiment_analysis": reviews_voc_data.get("sentiment_analysis", reviews_voc_data.get("sentiment", "")),
-            "key_vocabulary": reviews_voc_data.get("key_vocabulary", reviews_voc_data.get("recurring_keywords", reviews_voc_data.get("vocabulary", []))),
-            "pain_points": reviews_voc_data.get("pain_points_leverage", reviews_voc_data.get("pain_points", [])),
-            "conclusion": reviews_voc_data.get("practical_conclusion", reviews_voc_data.get("conclusion", ""))
-        },
-        "battlecards": (
-            # Nuovo formato: array diretto
-            battlecards_data.get("battlecards", None)
-            or battlecards_data.get("_list", None)
-            # Legacy: dict con chiavi fisse
-            or [v for v in [
-                battlecards_data.get("direct_competitor"),
-                battlecards_data.get("retail_giant"),
-                battlecards_data.get("secret_habit"),
-                battlecards_data.get("ultimate_solution"),
-            ] if v]
-        ),
-        "seasonal_roadmap": (
-            # Nuovo formato potrebbe essere lista
-            seasonal_roadmap_data.get("quarters", None)
-            or seasonal_roadmap_data.get("_list", None)
-            # Legacy: dict con chiavi Q1-Q4
-            or {k: seasonal_roadmap_data[k] for k in [
-                "q1_recovery", "q2_pre_summer", "q3_lifestyle", "q4_monetization",
-                "execution_tips"
-            ] if k in seasonal_roadmap_data}
-            or seasonal_roadmap_data
-        ),
-        "visual_brief": {
-            "color_palette": visual_brief_data.get("color_palette", []),
-            "visual_style": visual_brief_data.get("visual_style", ""),
-            "mood_board": visual_brief_data.get("mood_board", ""),
-            "ad_formats": visual_brief_data.get("ad_formats", "")
-        }
+    # 4. Passthrough — I prompt chiedono già lo schema JSON esatto che i renderer React si aspettano.
+    #    L'unica mappatura necessaria è step_id → frontend key dove differiscono.
+    STEP_TO_FRONTEND_KEY = {
+        "objections_management": "objections",
     }
-    
+
+    final_output = {}
+    for step_id, data in results.items():
+        frontend_key = STEP_TO_FRONTEND_KEY.get(step_id, step_id)
+        final_output[frontend_key] = data
+
     return final_output

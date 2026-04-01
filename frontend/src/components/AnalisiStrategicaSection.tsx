@@ -89,6 +89,18 @@ function BrandIdentityRenderer({ data }: { data: any }) {
                     {data.mission_transformation && <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(99,102,241,0.06)", borderRadius: 8, fontSize: 13, color: "#4f46e5" }}><strong>Trasformazione:</strong> {data.mission_transformation}</div>}
                 </SCard>
             )}
+            {data.vision && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🔮 Vision</div>
+                    <MD text={data.vision} />
+                </SCard>
+            )}
+            {data.unique_value_proposition && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>💎 Proposta di Valore Unica</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, fontStyle: "italic", color: "#ffffff" }}>"{data.unique_value_proposition}"</div>
+                </SCard>
+            )}
             {data.tone_of_voice && (
                 <SCard>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🗣️ Tono di Voce</div>
@@ -106,12 +118,18 @@ function BrandIdentityRenderer({ data }: { data: any }) {
             {data.positioning && (
                 <SCard>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>📊 Posizionamento</div>
-                    {data.positioning.market_tier && <Chip label={data.positioning.market_tier} color="#10b981" />}
-                    {data.positioning.segment && <p style={{ marginTop: 8, marginBottom: 8 }}>{data.positioning.segment}</p>}
-                    {Array.isArray(data.positioning.differentiators) && (
-                        <ul style={{ paddingLeft: 18, margin: 0 }}>
-                            {data.positioning.differentiators.map((d: string, i: number) => <li key={i} style={{ marginBottom: 4 }}>{d}</li>)}
-                        </ul>
+                    {typeof data.positioning === "string" ? (
+                        <MD text={data.positioning} />
+                    ) : (
+                        <>
+                            {data.positioning.market_tier && <Chip label={data.positioning.market_tier} color="#10b981" />}
+                            {data.positioning.segment && <p style={{ marginTop: 8, marginBottom: 8 }}>{data.positioning.segment}</p>}
+                            {Array.isArray(data.positioning.differentiators) && (
+                                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                                    {data.positioning.differentiators.map((d: string, i: number) => <li key={i} style={{ marginBottom: 4 }}>{d}</li>)}
+                                </ul>
+                            )}
+                        </>
                     )}
                 </SCard>
             )}
@@ -145,9 +163,19 @@ function BrandValuesRenderer({ data }: { data: any }) {
                     <div key={i} style={{ borderLeft: `4px solid ${col}`, paddingLeft: 14, paddingBottom: 10 }}>
                         <div style={{ fontWeight: 700, color: col, fontSize: 14, marginBottom: 6 }}>{p.name || p.pillar || `Pilastro ${i + 1}`}</div>
                         <MD text={p.description || p.content || ""} />
+                        {p.how_it_manifests && (
+                            <div style={{ marginTop: 6, padding: "6px 10px", background: "rgba(16,185,129,0.06)", borderRadius: 6, fontSize: 12 }}>
+                                <strong style={{ color: "#10b981" }}>Come si manifesta: </strong>{p.how_it_manifests}
+                            </div>
+                        )}
+                        {p.communication_angle && (
+                            <div style={{ marginTop: 6, padding: "6px 10px", background: "rgba(245,158,11,0.06)", borderRadius: 6, fontSize: 12 }}>
+                                <strong style={{ color: "#f59e0b" }}>Angolo comunicativo: </strong>{p.communication_angle}
+                            </div>
+                        )}
                         {Array.isArray(p.evidence) && p.evidence.length > 0 && (
                             <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
-                                <strong>Evidenze: </strong>{p.evidence.join(" • ")}
+                                <strong>Evidenze: </strong>{typeof p.evidence === "string" ? p.evidence : p.evidence.join(" • ")}
                             </div>
                         )}
                         {p.customer_impact && <div style={{ marginTop: 6, padding: "6px 10px", background: `${col}10`, borderRadius: 6, fontSize: 12, color: col }}>👤 {p.customer_impact}</div>}
@@ -186,6 +214,7 @@ function ProductPortfolioRenderer({ data }: { data: any }) {
                         </div>
                     </div>
                     <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                        {/* Nested structure (product_vertical / service_vertical) */}
                         {item.technical_analysis && (
                             <div>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase" }}>🔬 Analisi Tecnica</div>
@@ -197,13 +226,24 @@ function ProductPortfolioRenderer({ data }: { data: any }) {
                         {item.marketing_strategy && (
                             <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", marginBottom: 6, textTransform: "uppercase" }}>🎯 Strategia</div>
-                                {item.marketing_strategy.customer_problem && <div style={{ padding: "6px 10px", background: "rgba(239,68,68,0.06)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>❗ <strong>Problema cliente:</strong> {item.marketing_strategy.customer_problem}</div>}
+                                {(item.marketing_strategy.customer_problem || item.marketing_strategy.customer_problem_solved) && <div style={{ padding: "6px 10px", background: "rgba(239,68,68,0.06)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>❗ <strong>Problema cliente:</strong> {item.marketing_strategy.customer_problem || item.marketing_strategy.customer_problem_solved}</div>}
                                 {Array.isArray(item.marketing_strategy.reasons_to_buy) && (
                                     <ul style={{ paddingLeft: 18, margin: "0 0 8px" }}>
                                         {item.marketing_strategy.reasons_to_buy.map((r: string, j: number) => <li key={j} style={{ marginBottom: 4 }}>{r}</li>)}
                                     </ul>
                                 )}
                                 {item.marketing_strategy.usp && <div style={{ padding: "6px 10px", background: "rgba(16,185,129,0.06)", borderRadius: 6, fontSize: 13 }}>⭐ <strong>USP:</strong> {item.marketing_strategy.usp}</div>}
+                            </div>
+                        )}
+                        {/* Flat structure (product_portfolio) */}
+                        {!item.technical_analysis && !item.marketing_strategy && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                {item.description && <MD text={item.description} />}
+                                {item.benefit && <div style={{ padding: "6px 10px", background: "rgba(14,165,233,0.06)", borderRadius: 6, fontSize: 13 }}>💡 <strong>Beneficio:</strong> {item.benefit}</div>}
+                                {item.usp && <div style={{ padding: "6px 10px", background: "rgba(16,185,129,0.06)", borderRadius: 6, fontSize: 13 }}>⭐ <strong>USP:</strong> {item.usp}</div>}
+                                {item.marketing_angle && <div style={{ padding: "6px 10px", background: "rgba(245,158,11,0.06)", borderRadius: 6, fontSize: 13 }}>🎯 <strong>Angolo:</strong> {item.marketing_angle}</div>}
+                                {item.role && <Chip label={item.role} color="#6366f1" />}
+                                {item.price_positioning && <Chip label={item.price_positioning} color="#f59e0b" />}
                             </div>
                         )}
                         {Array.isArray(item.marketing_hooks) && item.marketing_hooks.length > 0 && (
@@ -232,7 +272,9 @@ function ReasonsToByRenderer({ data }: { data: any }) {
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#0ea5e9", marginBottom: 10 }}>🧠 Razionali (Logica)</div>
                 {(Array.isArray(rational) ? rational : [rational]).map((r: any, i: number) => (
                     <div key={i} style={{ padding: "8px 12px", background: "rgba(14,165,233,0.06)", border: "1px solid rgba(14,165,233,0.2)", borderRadius: 8, marginBottom: 8, fontSize: 13 }}>
-                        {typeof r === "string" ? r : r.description || r.reason || JSON.stringify(r)}
+                        <div style={{ fontWeight: 600 }}>{typeof r === "string" ? r : r.motive || r.description || r.reason || JSON.stringify(r)}</div>
+                        {r.supporting_evidence && <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-muted)" }}>📌 {r.supporting_evidence}</div>}
+                        {r.copy_example && <div style={{ marginTop: 4, fontStyle: "italic", fontSize: 12, color: "#0ea5e9" }}>"{r.copy_example}"</div>}
                     </div>
                 ))}
             </div>
@@ -240,7 +282,9 @@ function ReasonsToByRenderer({ data }: { data: any }) {
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#ec4899", marginBottom: 10 }}>❤️ Emotivi (Cuore)</div>
                 {(Array.isArray(emotional) ? emotional : [emotional]).map((e: any, i: number) => (
                     <div key={i} style={{ padding: "8px 12px", background: "rgba(236,72,153,0.06)", border: "1px solid rgba(236,72,153,0.2)", borderRadius: 8, marginBottom: 8, fontSize: 13 }}>
-                        {typeof e === "string" ? e : e.description || e.reason || JSON.stringify(e)}
+                        <div style={{ fontWeight: 600 }}>{typeof e === "string" ? e : e.motive || e.description || e.reason || JSON.stringify(e)}</div>
+                        {e.psychological_trigger && <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-muted)" }}>🧠 {e.psychological_trigger}</div>}
+                        {e.copy_example && <div style={{ marginTop: 4, fontStyle: "italic", fontSize: 12, color: "#ec4899" }}>"{e.copy_example}"</div>}
                     </div>
                 ))}
             </div>
@@ -286,6 +330,22 @@ function PersonasRenderer({ data }: { data: any }) {
 function ContentMatrixRenderer({ data }: { data: any }) {
     const rows = Array.isArray(data) ? data : data?.matrix || data?.rows || [];
     if (!rows.length) return <GenericValue value={data} />;
+
+    const getPaid = (row: any) => {
+        const v = row.paid_ads || row.paid || row.paid_strategy;
+        if (!v) return "—";
+        if (typeof v === "string") return v;
+        if (typeof v === "object") return [v.idea, v.format && `[${v.format}]`, v.cta && `CTA: ${v.cta}`].filter(Boolean).join(" · ");
+        return String(v);
+    };
+    const getOrganic = (row: any) => {
+        const v = row.organic_social || row.organic || row.organic_strategy;
+        if (!v) return "—";
+        if (typeof v === "string") return v;
+        if (typeof v === "object") return [v.idea, v.format && `[${v.format}]`, v.caption_angle && `Angle: ${v.caption_angle}`].filter(Boolean).join(" · ");
+        return String(v);
+    };
+
     return (
         <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -299,10 +359,10 @@ function ContentMatrixRenderer({ data }: { data: any }) {
                 <tbody>
                     {rows.map((row: any, i: number) => (
                         <tr key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "rgba(255,255,255,0.04)" : "transparent" }}>
-                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "#ffffff", verticalAlign: "top", minWidth: 120 }}>{row.icp || row.persona || row.target || `ICP ${i + 1}`}</td>
+                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "#ffffff", verticalAlign: "top", minWidth: 120 }}>{row.icp || row.persona || row.target || row.target_audience || `ICP ${i + 1}`}</td>
                             <td style={{ padding: "10px 12px", fontStyle: "italic", verticalAlign: "top", color: "#6366f1" }}>"{row.hook || row.hook_principale || row.headline || "—"}"</td>
-                            <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{row.paid_ads || row.paid || row.paid_strategy || "—"}</td>
-                            <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{row.organic_social || row.organic || row.organic_strategy || "—"}</td>
+                            <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{getPaid(row)}</td>
+                            <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{getOrganic(row)}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -361,6 +421,14 @@ function BrandVoiceRenderer({ data }: { data: any }) {
                 <SCard>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 8 }}>😀 Emoji Strategy</div>
                     <MD text={typeof data.emoji_strategy === "string" ? data.emoji_strategy : JSON.stringify(data.emoji_strategy)} />
+                </SCard>
+            )}
+            {Array.isArray(data.signature_phrases) && data.signature_phrases.length > 0 && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#ec4899", textTransform: "uppercase", marginBottom: 8 }}>✍️ Frasi Signature</div>
+                    {data.signature_phrases.map((p: string, i: number) => (
+                        <div key={i} style={{ padding: "6px 12px", background: "rgba(236,72,153,0.06)", border: "1px solid rgba(236,72,153,0.2)", borderRadius: 6, marginBottom: 6, fontStyle: "italic", fontSize: 13 }}>"{p}"</div>
+                    ))}
                 </SCard>
             )}
         </div>
@@ -647,8 +715,10 @@ function PsychographicRenderer({ data }: { data: any }) {
     );
 }
 
-function VisualBriefRenderer({ data }: { data: any }) {
-    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+function VisualBriefRenderer({ data: rawData }: { data: any }) {
+    if (!rawData || typeof rawData !== "object") return <GenericValue value={rawData} />;
+    // Support both flat and nested visual_identity structures
+    const data = rawData.visual_identity ? { ...rawData, ...rawData.visual_identity } : rawData;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {data.color_palette && (
@@ -676,8 +746,22 @@ function VisualBriefRenderer({ data }: { data: any }) {
                     <MD text={typeof (data.visual_style || data.style) === "string" ? (data.visual_style || data.style) : JSON.stringify(data.visual_style || data.style)} />
                 </SCard>
             )}
+            {data.typography_direction && <SCard><div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", marginBottom: 8 }}>🔤 Tipografia</div><MD text={typeof data.typography_direction === "string" ? data.typography_direction : JSON.stringify(data.typography_direction)} /></SCard>}
             {data.mood_board && <SCard><div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 8 }}>🌟 Mood Board</div><GenericValue value={data.mood_board} /></SCard>}
+            {data.what_to_avoid && <SCard><div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>🚫 Da Evitare</div><MD text={typeof data.what_to_avoid === "string" ? data.what_to_avoid : JSON.stringify(data.what_to_avoid)} /></SCard>}
             {data.ad_formats && <SCard><div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>📐 Formati Consigliati</div><GenericValue value={data.ad_formats} /></SCard>}
+            {data.dos_visivi && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>✅ DO Visivi</div>
+                    <GenericValue value={data.dos_visivi} />
+                </SCard>
+            )}
+            {data.donts_visivi && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>❌ DON'T Visivi</div>
+                    <GenericValue value={data.donts_visivi} />
+                </SCard>
+            )}
         </div>
     );
 }
@@ -757,6 +841,191 @@ function ServiceVerticalRenderer({ data }: { data: any }) {
     );
 }
 
+function AdCopyRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    const ads = data.ads || [];
+    const deepDive = data.deep_dive_table || [];
+    const angleMatrix = data.angle_matrix || [];
+    const bestBets = data.best_bets || [];
+    const testRoadmap = data.test_roadmap;
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {deepDive.length > 0 && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", marginBottom: 10 }}>📊 Deep Dive Analitico</div>
+                    <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead><tr style={{ background: "rgba(99,102,241,0.08)" }}>
+                                {["Segmento", "Pain", "Desire", "Awareness", "Trigger", "Obiezione → Soluzione"].map(h => <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6366f1", borderBottom: "2px solid rgba(99,102,241,0.2)" }}>{h}</th>)}
+                            </tr></thead>
+                            <tbody>{deepDive.map((row: any, i: number) => (
+                                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                                    <td style={{ padding: "8px 10px", fontWeight: 600 }}>{row.segment}</td>
+                                    <td style={{ padding: "8px 10px", color: "#ef4444" }}>{row.pain}</td>
+                                    <td style={{ padding: "8px 10px", color: "#10b981" }}>{row.desire}</td>
+                                    <td style={{ padding: "8px 10px" }}><Chip label={row.awareness_level} color="#8b5cf6" /></td>
+                                    <td style={{ padding: "8px 10px" }}>{row.emotional_trigger}</td>
+                                    <td style={{ padding: "8px 10px", fontSize: 11 }}>{row.objection_solution}</td>
+                                </tr>
+                            ))}</tbody>
+                        </table>
+                    </div>
+                </SCard>
+            )}
+            {angleMatrix.length > 0 && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 10 }}>🎯 Matrice Angles</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {angleMatrix.map((a: any, i: number) => (
+                            <div key={i} style={{ padding: "8px 12px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, fontSize: 12 }}>
+                                <strong>{a.segment}</strong> × <Chip label={a.angle} color="#f59e0b" />
+                                {a.rationale && <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-muted)" }}>{a.rationale}</div>}
+                            </div>
+                        ))}
+                    </div>
+                </SCard>
+            )}
+            {ads.length > 0 && ads.map((ad: any, i: number) => {
+                const isBestBet = bestBets.some((b: any) => b.ad_id === ad.id);
+                return (
+                    <div key={i} style={{ border: `1px solid ${isBestBet ? "rgba(16,185,129,0.5)" : "var(--border)"}`, borderRadius: 12, overflow: "hidden", position: "relative" }}>
+                        {isBestBet && <div style={{ position: "absolute", top: 10, right: 10, background: "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4 }}>BEST BET</div>}
+                        <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "12px 16px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>{ad.id || `Ad #${i + 1}`}</span>
+                            {ad.segment && <Chip label={ad.segment} color="#0ea5e9" />}
+                            {ad.angle && <Chip label={ad.angle} color="#f59e0b" />}
+                        </div>
+                        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                            {ad.hook && (
+                                <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "10px 14px" }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: 4 }}>HOOK (Scroll Stopper)</div>
+                                    <div style={{ fontSize: 16, fontWeight: 700, color: "#ffffff" }}>{ad.hook}</div>
+                                </div>
+                            )}
+                            {ad.primary_text && (
+                                <div>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>PRIMARY TEXT</div>
+                                    <MD text={ad.primary_text} />
+                                </div>
+                            )}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                                {ad.headline_a && <div style={{ padding: "8px 12px", background: "rgba(99,102,241,0.06)", borderRadius: 6 }}><div style={{ fontSize: 10, fontWeight: 700, color: "#6366f1", marginBottom: 2 }}>HEADLINE A</div><div style={{ fontSize: 13, fontWeight: 600 }}>{ad.headline_a}</div></div>}
+                                {ad.headline_b && <div style={{ padding: "8px 12px", background: "rgba(139,92,246,0.06)", borderRadius: 6 }}><div style={{ fontSize: 10, fontWeight: 700, color: "#8b5cf6", marginBottom: 2 }}>HEADLINE B</div><div style={{ fontSize: 13, fontWeight: 600 }}>{ad.headline_b}</div></div>}
+                            </div>
+                            {ad.description && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Description: <strong>{ad.description}</strong></div>}
+                        </div>
+                    </div>
+                );
+            })}
+            {testRoadmap && (
+                <SCard>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 10 }}>🗺️ Test Roadmap</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+                        {testRoadmap.week_1_2 && <div><strong style={{ color: "#0ea5e9" }}>Sett. 1-2 (Validazione):</strong> {testRoadmap.week_1_2}</div>}
+                        {testRoadmap.week_3_4 && <div><strong style={{ color: "#f59e0b" }}>Sett. 3-4 (Iterazione):</strong> {testRoadmap.week_3_4}</div>}
+                        {testRoadmap.scale_signals && <div><strong style={{ color: "#10b981" }}>Scala:</strong> {testRoadmap.scale_signals}</div>}
+                    </div>
+                </SCard>
+            )}
+        </div>
+    );
+}
+
+function VideoScriptsRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    const scripts = data.scripts || (Array.isArray(data) ? data : []);
+    if (!scripts.length) return <GenericValue value={data} />;
+    const formatColors: Record<string, string> = { "ASMR/Sensoriale": "#ec4899", "Problema/Soluzione": "#ef4444", "Skit Comico": "#f59e0b" };
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {scripts.map((script: any, i: number) => {
+                const fmtColor = Object.entries(formatColors).find(([k]) => (script.format || "").toLowerCase().includes(k.toLowerCase()))?.[1] || "#6366f1";
+                return (
+                    <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+                        <div style={{ background: `linear-gradient(135deg, ${fmtColor}20, ${fmtColor}08)`, borderLeft: `4px solid ${fmtColor}`, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>🎬 {script.id || `Script ${i + 1}`}</span>
+                                <Chip label={script.format} color={fmtColor} />
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {script.target_persona && <Chip label={script.target_persona} color="#0ea5e9" />}
+                                {script.duration && <Chip label={script.duration} color="#64748b" />}
+                            </div>
+                        </div>
+                        {script.product_focus && <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>Prodotto: <strong style={{ color: "#fff" }}>{script.product_focus}</strong></div>}
+                        {Array.isArray(script.scenes) && script.scenes.length > 0 && (
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                    <thead><tr style={{ background: "rgba(255,255,255,0.04)" }}>
+                                        <th style={{ padding: "8px 12px", textAlign: "left", width: "12%", color: fmtColor }}>Timing</th>
+                                        <th style={{ padding: "8px 12px", textAlign: "left", width: "38%", color: fmtColor }}>Visual / Azione</th>
+                                        <th style={{ padding: "8px 12px", textAlign: "left", width: "35%", color: fmtColor }}>Audio / Voiceover</th>
+                                        <th style={{ padding: "8px 12px", textAlign: "left", width: "15%", color: fmtColor }}>Text Overlay</th>
+                                    </tr></thead>
+                                    <tbody>{script.scenes.map((scene: any, j: number) => (
+                                        <tr key={j} style={{ borderBottom: "1px solid var(--border)" }}>
+                                            <td style={{ padding: "8px 12px", fontWeight: 700, color: fmtColor, verticalAlign: "top" }}>{scene.timing}</td>
+                                            <td style={{ padding: "8px 12px", verticalAlign: "top" }}>{scene.visual}</td>
+                                            <td style={{ padding: "8px 12px", verticalAlign: "top" }}>{scene.audio}</td>
+                                            <td style={{ padding: "8px 12px", verticalAlign: "top", fontStyle: "italic", color: "#64748b" }}>{scene.text_overlay || "—"}</td>
+                                        </tr>
+                                    ))}</tbody>
+                                </table>
+                            </div>
+                        )}
+                        {(script.cta || script.production_notes) && (
+                            <div style={{ padding: "10px 16px", background: "rgba(255,255,255,0.03)", borderTop: "1px solid var(--border)", display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12 }}>
+                                {script.cta && <div><strong style={{ color: "#10b981" }}>CTA:</strong> {script.cta}</div>}
+                                {script.production_notes && <div style={{ color: "var(--text-muted)" }}><strong>Note:</strong> {script.production_notes}</div>}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function FranzCopyRenderer({ data }: { data: any }) {
+    if (!data || typeof data !== "object") return <GenericValue value={data} />;
+    const scaledAds = data.scaled_ads || (Array.isArray(data) ? data : []);
+    if (!scaledAds.length) return <GenericValue value={data} />;
+    const formulaColors = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {scaledAds.map((group: any, gi: number) => (
+                <div key={gi}>
+                    <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "12px 16px", borderRadius: "12px 12px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>🔄 Varianti di: {group.original_ad_id || `Ad #${gi + 1}`}</span>
+                    </div>
+                    {group.original_hook && <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--text-muted)", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid var(--border)" }}>Hook originale: <em>"{group.original_hook}"</em></div>}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 0" }}>
+                        {(group.variants || []).map((v: any, vi: number) => {
+                            const col = formulaColors[vi % formulaColors.length];
+                            return (
+                                <div key={vi} style={{ border: `1px solid ${col}40`, borderRadius: 10, overflow: "hidden" }}>
+                                    <div style={{ background: `${col}12`, padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <Chip label={v.formula} color={col} />
+                                        {v.why_this_formula && <span style={{ fontSize: 11, color: "var(--text-muted)", maxWidth: "60%" }}>{v.why_this_formula}</span>}
+                                    </div>
+                                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                                        {v.hook && <div style={{ background: "rgba(239,68,68,0.06)", padding: "6px 10px", borderRadius: 6 }}><span style={{ fontSize: 10, fontWeight: 700, color: "#ef4444" }}>HOOK: </span><strong>{v.hook}</strong></div>}
+                                        {v.primary_text && <div style={{ fontSize: 13 }}><MD text={v.primary_text} /></div>}
+                                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                            {v.headline && <div style={{ padding: "4px 10px", background: `${col}10`, borderRadius: 4, fontSize: 12 }}><strong>Headline:</strong> {v.headline}</div>}
+                                            {v.description && <div style={{ padding: "4px 10px", background: "rgba(255,255,255,0.04)", borderRadius: 4, fontSize: 12 }}><strong>Desc:</strong> {v.description}</div>}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  MACRO-AREAS CONFIG
 // ══════════════════════════════════════════════════════════════════════════════
@@ -798,6 +1067,22 @@ const MACRO_AREAS = [
         sections: [
             { key: "battlecards", label: "11. Competitor Battlecards", Renderer: BattlecardsRenderer },
             { key: "seasonal_roadmap", label: "12. Roadmap Stagionale (12 mesi)", Renderer: SeasonalRoadmapRenderer },
+        ],
+    },
+    {
+        title: "🎨 Visual & Creatività",
+        color: "#ec4899",
+        sections: [
+            { key: "visual_brief", label: "14. Visual Brief (Art Direction)", Renderer: VisualBriefRenderer },
+            { key: "video_scripts", label: "16. Script Video (TikTok/Reels)", Renderer: VideoScriptsRenderer },
+        ],
+    },
+    {
+        title: "✍️ Copy & Ads",
+        color: "#ef4444",
+        sections: [
+            { key: "ad_copy_creation", label: "15. Creazione Copy Ads (4 Fasi)", Renderer: AdCopyRenderer },
+            { key: "franzcopy_scaling", label: "17. FranzCopy — Varianti con Formule", Renderer: FranzCopyRenderer },
         ],
     },
 ];

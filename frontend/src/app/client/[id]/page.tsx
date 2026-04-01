@@ -118,7 +118,7 @@ function FormatText({ text }: { text: any }) {
         const parts = s.split(/\*\*(.*?)\*\*/g);
         return parts.map((p, j) =>
             j % 2 === 1
-                ? <strong key={j} style={{ color: "var(--navy)", fontWeight: 700 }}>{p}</strong>
+                ? <strong key={j} style={{ color: "var(--orange)", fontWeight: 700 }}>{p}</strong>
                 : <span key={j}>{p}</span>
         );
     };
@@ -138,7 +138,7 @@ function FormatText({ text }: { text: any }) {
                     const fontSize = level === 1 ? 20 : (level === 2 ? 17 : 14);
                     const marginTop = level === 1 ? 24 : (level === 2 ? 18 : 12);
                     return (
-                        <p key={i} style={{ fontWeight: 800, color: "var(--navy)", fontSize, marginTop, marginBottom: 8, letterSpacing: "-0.01em" }}>
+                        <p key={i} style={{ fontWeight: 800, color: "var(--lime)", fontSize, marginTop, marginBottom: 8, letterSpacing: "-0.01em" }}>
                             {renderInline(hm[2])}
                         </p>
                     );
@@ -849,7 +849,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         {/* Documenti */}
                         <div className="card" style={{ marginBottom: 16 }}>
                             <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                                <DocumentIcon style={{ width: 16, height: 16, color: "var(--navy)" }} />Documenti Caricati
+                                <DocumentIcon style={{ width: 16, height: 16, color: "var(--lime)" }} />Documenti Caricati
                             </span>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                                 {files.map((f, i) => (
@@ -871,7 +871,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         {/* Links */}
                         <div className="card" style={{ marginBottom: 16 }}>
                             <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                                <LinkIcon style={{ width: 16, height: 16, color: "var(--navy)" }} />Link e Fonti Esterne
+                                <LinkIcon style={{ width: 16, height: 16, color: "var(--orange)" }} />Link e Fonti Esterne
                             </span>
                             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                 {(client.links || []).map((l: any, i: number) => {
@@ -937,7 +937,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                  {(client.competitors || []).map((c: any, i: number) => (
                                      <div key={i} style={{ background: "rgba(0,0,0,0.02)", borderRadius: 12, padding: 16, border: "1px solid var(--border)" }}>
                                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                             <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-header)" }}>{c.name || "Senza Nome"}</span>
+                                             <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>{c.name || "Senza Nome"}</span>
                                              <button className="icon-btn" style={{ color: "var(--red)" }} onClick={() => removeCompetitor(i)}>
                                                  <TrashIcon style={{ width: 14, height: 14 }} />
                                              </button>
@@ -1121,7 +1121,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                                 <div>
                                     <label className="label" style={{ fontSize: 10, opacity: 0.6, marginBottom: 4, display: "block" }}>Nome Cliente</label>
-                                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-header)" }}>{client.name}</div>
+                                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{client.name}</div>
                                 </div>
                                 <div>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -1133,7 +1133,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                     {editing.industry ? (
                                         <input 
                                             className="input" 
-                                            style={{ fontSize: 14, fontWeight: 600, color: "var(--lime-deep)", height: 32, padding: "4px 8px" }}
+                                            style={{ fontSize: 14, fontWeight: 600, color: "var(--lime)", height: 32, padding: "4px 8px" }}
                                             value={client.industry || ""} 
                                             onChange={e => setClient({ ...client, industry: e.target.value })}
                                             onBlur={e => patchIndustry(e.target.value)}
@@ -1141,7 +1141,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                         />
                                     ) : (
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--lime-deep)" }}>{client.industry || "Non definito"}</div>
+                                            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--lime)" }}>{client.industry || "Non definito"}</div>
                                             {!client.industry && (
                                                 <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", fontSize: 10 }} onClick={extractIndustry} title="Estrai settore dall'analisi esistente">
                                                     <SparklesIcon style={{ width: 12, height: 12 }} /> Estrai dall&apos;Analisi
@@ -1175,7 +1175,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                         </label>
                                     )}
                                     {logoUrl && (
-                                        <label style={{ fontSize: 12, color: "var(--navy)", cursor: "pointer", textDecoration: "underline" }}>
+                                        <label style={{ fontSize: 12, color: "var(--lime)", cursor: "pointer", textDecoration: "underline" }}>
                                             Cambia<input type="file" style={{ display: "none" }} accept="image/*" onChange={handleLogoUpload} />
                                         </label>
                                     )}
@@ -1210,7 +1210,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         <div className="card" style={{ marginBottom: 16 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                                 <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <IdentificationIcon style={{ width: 16, height: 16, color: "var(--navy)" }} />Tono di Voce
+                                    <IdentificationIcon style={{ width: 16, height: 16, color: "var(--lime)" }} />Tono di Voce
                                 </span>
                                 <button className="btn btn-ghost btn-sm" onClick={() => toggleEdit("tone")}>
                                     {editing.tone ? <><EyeIcon style={{ width: 14, height: 14 }} />Anteprima</> : <><PencilSquareIcon style={{ width: 14, height: 14 }} />Modifica</>}
@@ -1378,7 +1378,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                         <span style={{ fontSize: 14 }}>📡</span>
-                                        <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-dark-primary)" }}>Live Meta Ads</span>
+                                        <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>Live Meta Ads</span>
                                         {liveLoading && <div className="spinner" />}
                                         {!liveLoading && liveMetrics && (
                                             <span style={{ fontSize: 10, color: "#10b981", fontWeight: 600, background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: 99 }}>● LIVE</span>
@@ -1442,7 +1442,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         {showReportForm && (
                             <div className="card" style={{ marginBottom: 20 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                                    <p style={{ fontWeight: 700, fontSize: 14, color: "var(--text-dark-primary)", margin: 0 }}>📊 Inserisci Dati Periodo</p>
+                                    <p style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)", margin: 0 }}>📊 Inserisci Dati Periodo</p>
                                     {client.ad_account_id && (
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                             <select
