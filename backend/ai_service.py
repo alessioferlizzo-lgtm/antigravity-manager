@@ -46,6 +46,35 @@ class AIService:
             "HTTP-Referer": "https://antigravity-app.com",
             "X-Title": "Antigravity App"
         }
+        # Cost tracking per sessione — accumulato per operazione
+        self._current_cost_tracker = None  # Set by start_cost_tracking()
+
+    def start_cost_tracking(self, operation: str = "unknown"):
+        """Inizia a tracciare i costi per un'operazione (es. 'analisi_strategica', 'copy', 'grafica')."""
+        self._current_cost_tracker = {
+            "operation": operation,
+            "total_cost_usd": 0.0,
+            "total_prompt_tokens": 0,
+            "total_completion_tokens": 0,
+            "calls": 0,
+            "models_used": [],
+        }
+
+    def stop_cost_tracking(self) -> dict:
+        """Ferma il tracking e restituisce i costi accumulati."""
+        result = self._current_cost_tracker or {}
+        self._current_cost_tracker = None
+        return result
+
+    def _track_cost(self, model: str, prompt_tokens: int, completion_tokens: int, total_cost: float):
+        """Aggiunge il costo di una singola chiamata al tracker corrente."""
+        if self._current_cost_tracker:
+            self._current_cost_tracker["total_cost_usd"] += total_cost
+            self._current_cost_tracker["total_prompt_tokens"] += prompt_tokens
+            self._current_cost_tracker["total_completion_tokens"] += completion_tokens
+            self._current_cost_tracker["calls"] += 1
+            if model not in self._current_cost_tracker["models_used"]:
+                self._current_cost_tracker["models_used"].append(model)
 
     def _truncate_text(self, text: str, max_chars: int = 200000) -> str:
         """Tronca il testo se troppo lungo per evitare 400 Bad Request (limite cautelativo 200k chars)"""
@@ -99,12 +128,21 @@ class AIService:
                     usage = result.get("usage", {})
                     prompt_tokens = usage.get("prompt_tokens", 0)
                     completion_tokens = usage.get("completion_tokens", 0)
+                    total_cost = result.get("total_cost") or usage.get("total_cost") or 0.0
+                    try:
+                        total_cost = float(total_cost)
+                    except (ValueError, TypeError):
+                        total_cost = 0.0
 
                     print(f"\n--- 🧠 CHIAMATA AI OPENROUTER ---")
                     print(f"Modello Richiesto: {model}")
                     print(f"Modello Risposto: {model_used}")
                     print(f"Token: {prompt_tokens} (prompt) + {completion_tokens} (completion) = {prompt_tokens + completion_tokens}")
+                    if total_cost > 0:
+                        print(f"💰 Costo: ${total_cost:.4f}")
                     print(f"-----------------------------\n")
+
+                    self._track_cost(model_used, prompt_tokens, completion_tokens, total_cost)
 
                     choice = result["choices"][0]
                     finish_reason = choice.get("finish_reason", "")

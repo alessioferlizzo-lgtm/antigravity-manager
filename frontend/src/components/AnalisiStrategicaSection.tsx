@@ -1100,6 +1100,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
     const [generationStatus, setGenerationStatus] = useState<string>("");
     const [generationError, setGenerationError] = useState<string>("");
     const [sectionLoading, setSectionLoading] = useState<Record<string, boolean>>({});
+    const [aiCosts, setAiCosts] = useState<{ costs: any[]; total_usd: number } | null>(null);
 
     // ── Polling helper (riusabile da mount e da generate) ────────────────────
     const pollJob = async (jobId: string) => {
@@ -1118,6 +1119,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                 if (jobData.status === "done") {
                     setAnalysis(jobData.analysis);
                     localStorage.removeItem(`analysis_job_${clientId}`);
+                    fetchCosts();
                     return "done";
                 }
                 if (jobData.status === "error") {
@@ -1133,9 +1135,17 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
         return "timeout";
     };
 
+    const fetchCosts = async () => {
+        try {
+            const res = await fetch(`${apiUrl}/clients/${clientId}/ai-costs`);
+            if (res.ok) setAiCosts(await res.json());
+        } catch { /* ignore */ }
+    };
+
     // ── Fetch on mount ─────────────────────────────────────────────────────────
     useEffect(() => {
         fetchAnalysis();
+        fetchCosts();
     }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchAnalysis = async () => {
@@ -1243,6 +1253,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
             console.error(`[Regenerate] Network Error:`, e);
         }
         setSectionLoading(prev => ({ ...prev, [stepId]: false }));
+        fetchCosts();
     };
 
     const toggleMacro = (i: number) => {
@@ -1273,18 +1284,18 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
             <div style={{ maxWidth: "100%" }}>
                 <h1 className="page-title" style={{ marginBottom: 6 }}>Analisi Strategica</h1>
                 <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 24 }}>
-                    Analisi completa in 14 sezioni — Brand, Prodotti, Personas, Competitive Intelligence
+                    Analisi completa in 18 sezioni — Brand, Prodotti, Personas, Competitive Intelligence, Visual, Copy & Ads
                 </p>
                 <div className="card" style={{ textAlign: "center", padding: "60px 24px" }}>
                     <DocumentTextIcon style={{ width: 52, height: 52, color: "var(--text-muted)", margin: "0 auto 16px" }} />
                     <h3 style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>Nessuna analisi generata</h3>
                     <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 520, margin: "0 auto 24px" }}>
-                        Genera l&apos;analisi strategica completa in 14 sezioni basata sulla metodologia Francesco Agostinis per Meta Ads.
+                        Genera l&apos;analisi strategica completa in 18 sezioni basata sulla metodologia Francesco Agostinis per Meta Ads.
                     </p>
                     <div style={{ background: "rgba(149,191,71,0.05)", border: "1px solid rgba(149,191,71,0.2)", borderRadius: 12, padding: 20, marginBottom: 24, textAlign: "left", maxWidth: 560, margin: "0 auto 24px" }}>
                         <p style={{ fontSize: 12, fontWeight: 700, color: "var(--lime)", marginBottom: 10 }}>✨ Cosa verrà generato:</p>
                         <ul style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.9, paddingLeft: 20, margin: 0 }}>
-                            {["Brand Identity & Posizionamento completo", "10 Customer Personas dettagliate (ICP)", "Competitor Battlecards", "Matrice contenuti Paid & Organic", "Voice of Customer da recensioni reali", "Roadmap stagionale 12 mesi", "+ altre 8 sezioni strategiche"].map(l => <li key={l}>{l}</li>)}
+                            {["Brand Identity & Posizionamento completo", "10 Customer Personas dettagliate (ICP)", "Competitor Battlecards", "Matrice contenuti Paid & Organic", "Voice of Customer da recensioni reali", "Roadmap stagionale 12 mesi", "Copy Ads, Script Video, FranzCopy", "+ altre 5 sezioni strategiche"].map(l => <li key={l}>{l}</li>)}
                         </ul>
                     </div>
                     <div style={{ background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.2)", borderRadius: 8, padding: "10px 16px", marginBottom: 24, fontSize: 12, color: "var(--orange)", maxWidth: 560, margin: "0 auto 24px" }}>
@@ -1331,6 +1342,12 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                         <span>{filledCount}/{allSections.length} sezioni complete</span>
                         <span style={{ color: "var(--border)" }}>•</span>
                         <span>Metodologia Francesco Agostinis</span>
+                        {aiCosts && aiCosts.total_usd > 0 && (
+                            <>
+                                <span style={{ color: "var(--border)" }}>•</span>
+                                <span style={{ color: "#f59e0b" }}>Costo AI: ${aiCosts.total_usd.toFixed(2)}</span>
+                            </>
+                        )}
                     </p>
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={generateAnalysis} disabled={generating}>

@@ -3511,6 +3511,9 @@ async def _do_complete_analysis(client_id: str, job_id: str):
     print(f"🚀 ANALISI STRATEGICA COMPLETA: {client_info['name']}")
     print(f"{'='*80}\n")
 
+    # Avvia cost tracking per questa operazione
+    ai_service.start_cost_tracking("analisi_strategica")
+
     # Raccogli TUTTI i dati
     _progress("Raccolta dati: sito web, social, recensioni, competitor…")
     all_data = await data_collector.collect_all_data(client_id, metadata)
@@ -3765,11 +3768,31 @@ async def _do_complete_analysis(client_id: str, job_id: str):
     except Exception as e:
         print(f"❌ Errore salvataggio Supabase: {e}")
 
+    # Stop cost tracking e salva
+    cost_data = ai_service.stop_cost_tracking()
+    if cost_data and cost_data.get("total_cost_usd", 0) > 0:
+        print(f"💰 Costo totale analisi: ${cost_data['total_cost_usd']:.4f} ({cost_data['calls']} chiamate AI)")
+        # Salva nel metadata del client
+        if "ai_costs" not in metadata:
+            metadata["ai_costs"] = []
+        from datetime import datetime
+        metadata["ai_costs"].append({
+            "operation": cost_data["operation"],
+            "cost_usd": round(cost_data["total_cost_usd"], 4),
+            "prompt_tokens": cost_data["total_prompt_tokens"],
+            "completion_tokens": cost_data["total_completion_tokens"],
+            "calls": cost_data["calls"],
+            "models": cost_data["models_used"],
+            "date": datetime.now().isoformat()
+        })
+        storage_service.save_metadata(client_id, metadata)
+
     # Marca il job come completato nel registry
     _analysis_jobs[job_id] = {
         "status": "done",
         "analysis": complete_analysis,
-        "progress": "Analisi completata!"
+        "progress": "Analisi completata!",
+        "cost": cost_data
     }
     print(f"✅ Job {job_id} completato")
 
@@ -3782,6 +3805,42 @@ async def get_analysis_job_status(client_id: str, job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job non trovato")
     return job
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  AI COSTS — Costi AI per client e globali
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/clients/{client_id}/ai-costs")
+async def get_client_ai_costs(client_id: str):
+    """Restituisce lo storico dei costi AI per un client."""
+    metadata = storage_service.get_metadata(client_id)
+    costs = metadata.get("ai_costs", [])
+    total = sum(c.get("cost_usd", 0) for c in costs)
+    return {"client_id": client_id, "costs": costs, "total_usd": round(total, 4)}
+
+
+@app.get("/ai-costs/summary")
+async def get_ai_costs_summary():
+    """Restituisce il riepilogo costi AI di tutti i client."""
+    all_clients = storage_service.list_clients()
+    summary = []
+    grand_total = 0.0
+    for client in all_clients:
+        cid = client.get("id", "")
+        meta = storage_service.get_metadata(cid)
+        costs = meta.get("ai_costs", [])
+        client_total = sum(c.get("cost_usd", 0) for c in costs)
+        if costs:
+            summary.append({
+                "client_id": cid,
+                "client_name": meta.get("name", cid),
+                "total_usd": round(client_total, 4),
+                "operations": len(costs),
+                "last_operation": costs[-1].get("date", "") if costs else ""
+            })
+        grand_total += client_total
+    return {"clients": summary, "grand_total_usd": round(grand_total, 4)}
 
 
 @app.get("/clients/{client_id}/analysis/complete")
@@ -3859,7 +3918,25 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
     }
 
     print(f"♻️ Rigenerazione {step_id} (workflow: {workflow_step_id})...")
+    ai_service.start_cost_tracking(f"rigenera_{step_id}")
     new_result = await run_workflow_task(ai_service, task, context)
+    cost_data = ai_service.stop_cost_tracking()
+
+    # Salva costo
+    if cost_data and cost_data.get("total_cost_usd", 0) > 0:
+        print(f"💰 Costo rigenerazione {step_id}: ${cost_data['total_cost_usd']:.4f}")
+        if "ai_costs" not in metadata:
+            metadata["ai_costs"] = []
+        from datetime import datetime
+        metadata["ai_costs"].append({
+            "operation": cost_data["operation"],
+            "cost_usd": round(cost_data["total_cost_usd"], 4),
+            "prompt_tokens": cost_data["total_prompt_tokens"],
+            "completion_tokens": cost_data["total_completion_tokens"],
+            "calls": cost_data["calls"],
+            "models": cost_data["models_used"],
+            "date": datetime.now().isoformat()
+        })
 
     # Aggiorna il backup raw (usa workflow_step_id per il context chaining)
     if "analysis_completa_raw" not in metadata:
@@ -3880,7 +3957,8 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
     return {
         "step_id": step_id,
         "new_data": new_result,
-        "analysis_step": new_result  # Compatibilità frontend
+        "analysis_step": new_result,
+        "cost": cost_data
     }
 
 

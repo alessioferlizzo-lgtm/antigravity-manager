@@ -1097,7 +1097,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                  </span>
                              </div>
                              <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.6 }}>
-                                 Dopo aver aggiunto link, competitor e documenti, vai alla sezione <strong>Analisi Strategica</strong> per generare l'analisi completa in 14 sezioni.
+                                 Dopo aver aggiunto link, competitor e documenti, vai alla sezione <strong>Analisi Strategica</strong> per generare l'analisi completa in 18 sezioni.
                              </p>
                              <p style={{ fontSize: 12, color: "rgba(149,191,71,0.8)", background: "rgba(149,191,71,0.1)", padding: "8px 12px", borderRadius: 6, marginBottom: 0 }}>
                                  💡 L'analisi raccoglierà automaticamente dati da sito web, social, recensioni Google e competitor.
