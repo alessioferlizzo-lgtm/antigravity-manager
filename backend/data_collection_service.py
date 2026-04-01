@@ -254,11 +254,12 @@ Estrai TUTTE le informazioni rilevanti per un media buyer.
 ⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu o QR code (es. Qromo, Leggimenu, Menudigitale, Flazio, Linktree, Gloriafood, TheFork, Deliverect, Orderlord, Tillster, etc.), NON analizzare il fornitore del software o del servizio. Il cliente NON vende menu digitali né software per ristoranti; il cliente USA quella piattaforma per mostrare la sua offerta reale. Concentrati esclusivamente sui piatti, pizze, prodotti, servizi, prezzi e descrizioni dell'attività reale presenti nel link. Se la pagina mostra un menu di cibo, elenca i piatti, le categorie, i prezzi e gli ingredienti — NON descrivere la tecnologia del menu.
 
 COMPONENTI RICHIESTI:
-1. Prodotti/Servizi principali con relativi prezzi o offerte
-2. Angoli di attacco (Pain points risolti, promesse, trasformazione)
-3. Elementi di trust (Anni di esperienza, certificazioni, premi)
-4. Linguaggio e terminologia specifica usata dal brand
-5. Obiezioni prevenute o gestite nel testo
+1. **raw_text**: COPIA il testo visibile della pagina il più fedelmente possibile — titoli, sottotitoli, paragrafi, CTA, footer. Questo è il dato PIÙ IMPORTANTE: deve contenere le PAROLE ESATTE usate dal brand, senza riformulare o tradurre. Se la pagina dice "Aiuto business locali ed e-commerce", scrivi esattamente quello, non "specializzato in lead generation".
+2. Prodotti/Servizi principali con relativi prezzi o offerte
+3. Angoli di attacco (Pain points risolti, promesse, trasformazione)
+4. Elementi di trust (Anni di esperienza, certificazioni, premi) — SOLO quelli che trovi scritti nella pagina
+5. Linguaggio e terminologia specifica usata dal brand
+6. Obiezioni prevenute o gestite nel testo
 
 Rispondi con un JSON strutturato con queste chiavi."""
 
