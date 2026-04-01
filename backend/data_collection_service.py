@@ -846,42 +846,25 @@ Rispondi in JSON:
         else:
             print("⚠️ Nessun competitor fornito nelle Sorgenti. Ricerca online...")
             # STEP 1b: Fallback to finding competitors
-            search_prompt = f"""Trova i COMPETITOR DIRETTI di {client_name} ({industry}) in {location} e in tutta Italia.
+            search_prompt = f"""Trova i 3 COMPETITOR DIRETTI PIÙ RILEVANTI di {client_name} ({industry}) in {location}.
 
-CERCA:
+Cerca i 3 competitor più importanti — quelli che un cliente confronterebbe direttamente con {client_name}.
+Preferisci competitor locali nella zona {location}, ma se non ce ne sono abbastanza includi quelli nazionali più noti.
 
-### 1. COMPETITOR LOCALI (zona {location})
-Trova 3-5 competitor diretti nella stessa zona.
-Per ognuno:
+Per ognuno fornisci:
 - Nome
-- Indirizzo
-- Telefono
 - Sito web
-- Instagram
-- Google Maps link
-
-### 2. COMPETITOR TOP ITALIA
-Trova i 5-10 competitor PIÙ GRANDI in Italia nello stesso settore.
-Quelli con:
-- Più recensioni Google
-- Più follower Instagram
-- Più presenza online
-
-Per ognuno fornisci stesse info.
+- Google Maps link (se disponibile)
 
 Formato JSON:
 {{
   "local_competitors": [
     {{
       "name": "...",
-      "address": "...",
-      "phone": "...",
       "website": "...",
-      "instagram": "...",
       "google_maps": "..."
     }}
-  ],
-  "top_italy_competitors": [...]
+  ]
 }}"""
 
             try:
@@ -899,7 +882,7 @@ Formato JSON:
                     print("❌ Competitor non trovati tramite ricerca")
                 else:
                     competitors = json.loads(json_match.group())
-                    all_competitors = competitors.get("local_competitors", []) + competitors.get("top_italy_competitors", [])
+                    all_competitors = competitors.get("local_competitors", [])[:3]
             except Exception as e:
                 print(f"⚠️ Errore ricerca competitor: {e}")
 
@@ -941,92 +924,60 @@ Formato JSON:
 
             url_context = (f"Link disponibili per {comp_name}:\n" + "\n".join(url_lines)) if url_lines else f"Cerca informazioni su '{comp_name}' online."
 
-            reviews_prompt = f"""Raccogli TUTTE le recensioni Google disponibili per "{comp_name}".
+            # Prompt unificato: recensioni + ads in una sola chiamata
+            ads_section = ""
+            if ads_library_url:
+                ads_section = f"""
+
+INOLTRE analizza le inserzioni pubblicitarie ATTIVE usando la Libreria ADS Meta: {ads_library_url}
+Per le ADS fornisci: temi principali, offerte in corso, formato prevalente, tono, pain point target.
+Includi nel JSON un campo "ads_analysis" con queste info."""
+
+            unified_prompt = f"""Analizza il competitor "{comp_name}" per un'analisi competitiva.
 {url_context}
 
-Fornisci:
-- Numero totale recensioni
-- Media stelle
-- Tutte le recensioni 5 stelle (testo completo)
-- Tutte le recensioni 1-3 stelle (testo completo)
+COMPITI:
+1. Raccogli le recensioni Google: numero totale, media stelle, le migliori (5 stelle) e le peggiori (1-3 stelle)
+{ads_section}
 
-JSON:
+JSON richiesto:
 {{
   "total": 0,
   "avg_rating": 0,
   "reviews_5star": [{{"text": "..."}}],
-  "reviews_low": [{{"text": "...", "stars": 2}}]
+  "reviews_low": [{{"text": "...", "stars": 2}}],
+  "ads_analysis": {{}}
 }}"""
-
-            # ── ANALISI ADS (se disponibile libreria ADS) ──────────────────
-            ads_analysis = {}
-            if ads_library_url:
-                ads_prompt = f"""Analizza le inserzioni pubblicitarie ATTIVE di "{comp_name}" usando questa Libreria ADS Meta:
-{ads_library_url}
-
-Studia le inserzioni e fornisci:
-1. Temi principali delle inserzioni (cosa comunicano)
-2. Offerte/promozioni in corso
-3. Formato prevalente (video, immagine, carosello)
-4. Tono e stile comunicativo
-5. Pain point/bisogno che cercano di risolvere
-6. Eventuale landing page o CTA principale
-
-JSON:
-{{
-  "active_ads_count": 0,
-  "main_themes": ["..."],
-  "current_offers": ["..."],
-  "ad_formats": ["..."],
-  "tone_style": "...",
-  "target_pain_point": "...",
-  "main_cta": "...",
-  "insights": "Analisi critica delle strategie pubblicitarie del competitor"
-}}"""
-                try:
-                    ads_result = await self.ai_service._call_ai(
-                        model="perplexity/sonar-pro",
-                        messages=[{"role": "user", "content": ads_prompt}],
-                        temperature=0.1,
-                        max_tokens=4000
-                    )
-                    import re as _re, json as _json
-                    ads_match = _re.search(r'\{.*\}', ads_result, _re.DOTALL)
-                    ads_analysis = _json.loads(ads_match.group()) if ads_match else {"raw": ads_result[:500]}
-                    print(f"      ✅ ADS analisi completata per {comp_name}")
-                except Exception as e:
-                    print(f"      ⚠️ Errore analisi ADS {comp_name}: {e}")
-                    ads_analysis = {"error": str(e)}
 
             try:
-                comp_reviews = await self.ai_service._call_ai(
+                comp_result = await self.ai_service._call_ai(
                     model="perplexity/sonar-pro",
-                    messages=[{"role": "user", "content": reviews_prompt}],
+                    messages=[{"role": "user", "content": unified_prompt}],
                     temperature=0.1,
                     max_tokens=8000
                 )
                 import re
                 import json
-                json_match = re.search(r'\{.*\}', comp_reviews, re.DOTALL)
-                reviews_data = json.loads(json_match.group()) if json_match else {}
+                json_match = re.search(r'\{.*\}', comp_result, re.DOTALL)
+                result_data = json.loads(json_match.group()) if json_match else {}
+                ads_analysis = result_data.pop("ads_analysis", {})
                 return {
                     "name": comp_name,
                     "info": comp,
-                    "reviews": reviews_data,
+                    "reviews": result_data,
                     "ads_analysis": ads_analysis
                 }
             except Exception as e:
-                print(f"      ⚠️ Errore recensioni competitor {comp_name}: {e}")
+                print(f"      ⚠️ Errore analisi competitor {comp_name}: {e}")
                 return {
                     "name": comp_name,
                     "info": comp,
                     "reviews": {"error": str(e), "total": 0},
-                    "ads_analysis": ads_analysis
+                    "ads_analysis": {}
                 }
 
-        # Esegui i comp tasks in parallelo
-        limited_competitors = all_competitors[0:10]
-        comp_tasks = [fetch_comp_reviews(c) for c in limited_competitors]
+        # Esegui i comp tasks in parallelo — tutti quelli delle Sorgenti, max 3 auto-trovati
+        comp_tasks = [fetch_comp_reviews(c) for c in all_competitors]
         competitor_data = await asyncio.gather(*comp_tasks)
 
         total_comp_reviews = sum(c.get("reviews", {}).get("total", 0) for c in competitor_data if c.get("reviews"))
