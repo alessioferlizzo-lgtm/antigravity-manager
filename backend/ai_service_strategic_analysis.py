@@ -5,24 +5,22 @@ import json_repair
 from typing import Dict, Any
 
 ANTI_HALLUCINATION_DIRECTIVE = """
-⚠️ REGOLA CRITICA — INTEGRITÀ DELLE FONTI:
-Analizza, ragiona, deduci, cerca competitor, usa conoscenze di settore — fai tutto quello
-che serve per un'analisi strategica di alto livello.
+⚠️ REGOLE CRITICHE PER L'ANALISI:
 
-L'unica regola: OGNI FATTO SPECIFICO CHE SCRIVI SUL BRAND DEVE AVERE UNA FONTE REALE.
-Se scrivi un dato, devi sapere DOVE l'hai letto — nel sito, nelle recensioni, nei documenti,
-nei social. Se non sai indicare la fonte, quel dato non va scritto.
+1. INTEGRITÀ DEI FATTI — Ogni dato specifico sul brand (numeri, clienti, fatturati, anni di esperienza,
+   prezzi, offerte) deve provenire dai dati forniti. Se non lo trovi nei dati, NON scriverlo.
+   Meglio dire "consulente di marketing digitale" che inventare "10 anni di esperienza e 1.200 clienti".
 
-Esempi di violazione:
-- "Portfolio clienti: Reebok, Diesel, Leroy Merlin" → dove l'hai letto? Se non c'è nei dati, è inventato.
-- "10+ anni di esperienza e 1.200 aziende assistite" → dove l'hai letto? Se non c'è, non scriverlo.
-- "Specializzato in lead generation" → il sito parla di e-commerce? Allora è sbagliato.
-- "Check-up strategico gratuito dal valore di €1.500" → dove l'hai letto? Se non esiste, è inventato.
+2. USA LE PAROLE DEL BRAND — NON tradurre la terminologia del brand in gergo tecnico diverso.
+   Se il sito dice "aiuto e-commerce a ottenere clienti", NON scrivere "specializzato in lead generation".
+   Se il sito dice "strategie pubblicitarie su misura", NON tradurre in "funnel di conversione B2B".
+   Il posizionamento, il settore e il vocabolario devono riflettere come il brand si presenta REALMENTE.
 
-Cosa fare invece:
-- Leggi i dati reali e riporta quello che c'è veramente.
-- Se un dato non è disponibile, omettilo o scrivi in modo generico senza numeri inventati.
-- Per competitor e trend di mercato puoi usare le tue conoscenze — quelli non sono fatti sul brand.
+3. NON ALLUNGARE CON INVENZIONI — Se i dati sono pochi, scrivi un'analisi più breve ma vera.
+   Non inventare fatti per raggiungere una lunghezza target.
+
+4. ANALISI STRATEGICHE SÌ — Puoi fare inferenze, analisi competitive, suggerimenti strategici,
+   identificare trend di settore. Questo è il tuo lavoro. Ma i FATTI sul brand devono essere reali.
 """
 
 async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, Any]) -> Any:
