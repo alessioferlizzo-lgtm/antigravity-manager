@@ -4,12 +4,28 @@ import asyncio
 import json_repair
 from typing import Dict, Any
 
+ANTI_HALLUCINATION_DIRECTIVE = """
+⚠️ REGOLA ASSOLUTA — ZERO ALLUCINAZIONI:
+- SCRIVI SOLO informazioni che trovi ESPLICITAMENTE nei dati forniti sotto.
+- NON inventare MAI: numeri, statistiche, anni di esperienza, nomi di clienti, fatturati,
+  percentuali, portfolio clienti, premi, certificazioni, offerte, prezzi o qualsiasi dato specifico
+  che NON appare nei materiali forniti.
+- Se un'informazione non è presente nei dati, scrivi "Dato non disponibile nelle fonti fornite"
+  oppure ometti quel punto. MAI riempire con dati inventati.
+- Quando citi un fatto specifico (es. "10 anni di esperienza", "portfolio di 500 clienti",
+  "specializzato in lead generation"), DEVI poterlo trovare LETTERALMENTE nei dati sotto.
+  Se non lo trovi, NON scriverlo.
+- È MEGLIO un'analisi più corta e onesta che un'analisi lunga piena di informazioni false.
+- Basa il posizionamento, il settore e la specializzazione SOLO su quello che emerge dai dati reali
+  (sito web, recensioni, social, documenti caricati), NON su assunzioni o generalizzazioni.
+"""
+
 async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, Any]) -> Any:
     """Executes a single step of the dynamic workflow."""
     step_id = task["step_id"]
     model_choice = task.get("recommended_model", "claude")
     system_prompt_template = task["system_prompt"]
-    
+
     # 1. Gather Required Inputs
     input_text = ""
     for req in task.get("required_inputs", []):
@@ -21,7 +37,8 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
                 val_str = str(val)
             input_text += f"\n--- {req.upper()} ---\n{val_str}\n"
 
-    final_prompt = f"{system_prompt_template}\n\n{input_text}"
+    # Prepend anti-hallucination directive to EVERY task
+    final_prompt = f"{ANTI_HALLUCINATION_DIRECTIVE}\n\n{system_prompt_template}\n\n{input_text}"
     messages = [{"role": "user", "content": final_prompt}]
     
     # 2. Select AI Model Map
