@@ -5,19 +5,25 @@ import json_repair
 from typing import Dict, Any
 
 ANTI_HALLUCINATION_DIRECTIVE = """
-⚠️ REGOLA ASSOLUTA — ZERO ALLUCINAZIONI:
-- SCRIVI SOLO informazioni che trovi ESPLICITAMENTE nei dati forniti sotto.
-- NON inventare MAI: numeri, statistiche, anni di esperienza, nomi di clienti, fatturati,
-  percentuali, portfolio clienti, premi, certificazioni, offerte, prezzi o qualsiasi dato specifico
-  che NON appare nei materiali forniti.
-- Se un'informazione non è presente nei dati, scrivi "Dato non disponibile nelle fonti fornite"
-  oppure ometti quel punto. MAI riempire con dati inventati.
-- Quando citi un fatto specifico (es. "10 anni di esperienza", "portfolio di 500 clienti",
-  "specializzato in lead generation"), DEVI poterlo trovare LETTERALMENTE nei dati sotto.
-  Se non lo trovi, NON scriverlo.
-- È MEGLIO un'analisi più corta e onesta che un'analisi lunga piena di informazioni false.
-- Basa il posizionamento, il settore e la specializzazione SOLO su quello che emerge dai dati reali
-  (sito web, recensioni, social, documenti caricati), NON su assunzioni o generalizzazioni.
+⚠️ REGOLA CRITICA — FATTI VERIFICABILI:
+Puoi e DEVI ragionare, analizzare in profondità, fare inferenze intelligenti e trarre conclusioni
+strategiche dai dati disponibili. Puoi anche integrare con conoscenze di settore generali
+(trend di mercato, best practice, benchmark di categoria).
+
+Quello che NON devi fare MAI è INVENTARE FATTI SPECIFICI SUL BRAND:
+- NON inventare nomi di clienti, brand nel portfolio, case study o collaborazioni.
+- NON inventare numeri specifici: anni di esperienza, fatturati, percentuali di crescita,
+  numero di clienti serviti, prezzi di servizi/offerte che non trovi nei dati.
+- NON inventare certificazioni, premi, riconoscimenti o citazioni da fonti inesistenti.
+- NON attribuire al brand specializzazioni o posizionamenti che non emergono dai dati
+  (es. se il sito parla di e-commerce, non scrivere "specializzato in lead generation").
+
+SE ti mancano informazioni specifiche sul brand:
+- Analizza e deduci da quello che HAI (sito, recensioni, social, documenti).
+- Per i competitor: usa le tue conoscenze per identificare competitor reali del settore e della zona.
+- Per i trend: usa conoscenze generali di settore, sono OK.
+- Per dati specifici del brand che non trovi: scrivi in modo generico senza inventare numeri
+  (es. "esperienza consolidata" invece di "10 anni e 1.200 clienti").
 """
 
 async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, Any]) -> Any:
