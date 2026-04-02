@@ -2751,21 +2751,16 @@ async def google_calendar_install():
     if not GOOGLE_CAL_CLIENT_ID or not GOOGLE_CAL_CLIENT_SECRET:
         raise HTTPException(status_code=500, detail="Google Calendar non configurato. Aggiungi GOOGLE_CALENDAR_CLIENT_ID e GOOGLE_CALENDAR_CLIENT_SECRET nel .env")
 
-    from google_auth_oauthlib.flow import Flow
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": GOOGLE_CAL_CLIENT_ID,
-                "client_secret": GOOGLE_CAL_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [GOOGLE_CAL_REDIRECT_URI],
-            }
-        },
-        scopes=GOOGLE_CAL_SCOPES,
-    )
-    flow.redirect_uri = GOOGLE_CAL_REDIRECT_URI
-    auth_url, _ = flow.authorization_url(prompt="consent", access_type="offline")
+    from urllib.parse import urlencode
+    params = {
+        "client_id": GOOGLE_CAL_CLIENT_ID,
+        "redirect_uri": GOOGLE_CAL_REDIRECT_URI,
+        "response_type": "code",
+        "scope": " ".join(GOOGLE_CAL_SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    auth_url = f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}"
     return RedirectResponse(auth_url)
 
 
