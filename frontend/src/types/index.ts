@@ -36,4 +36,5 @@ export interface Task {
   reminder_at?: string;
   completed_at?: string | null;
   created_at?: string;
+  gcal_event_id?: string;
 }

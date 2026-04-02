@@ -184,6 +184,39 @@ export default function TasksSection({
   /* ─── AI sort ─── */
   const [aiSortOrderIds, setAiSortOrderIds] = useState<string[] | null>(null);
 
+  /* ─── Google Calendar ─── */
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalSyncing, setGcalSyncing] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${API}/google-calendar/status`).then(r => r.json()).then(d => setGcalConnected(d.connected)).catch(() => {});
+  }, []);
+
+  const syncToCalendar = async (taskId: string) => {
+    if (!gcalConnected) {
+      window.open(`${API}/google-calendar/install`, "_blank");
+      return;
+    }
+    setGcalSyncing(taskId);
+    try {
+      const res = await fetch(`${API}/tasks/${taskId}/calendar`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, gcal_event_id: data.event_id } : t));
+      }
+    } catch { /* ignore */ }
+    setGcalSyncing(null);
+  };
+
+  const unsyncFromCalendar = async (taskId: string) => {
+    setGcalSyncing(taskId);
+    try {
+      await fetch(`${API}/tasks/${taskId}/calendar`, { method: "DELETE" });
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, gcal_event_id: undefined } : t));
+    } catch { /* ignore */ }
+    setGcalSyncing(null);
+  };
+
   /* ─── Request notification permission on mount ─── */
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -1205,6 +1238,9 @@ export default function TasksSection({
                     onToggleFlag={toggleFlag}
                     onDelete={id => setDeleteConfirmId(id)}
                     onSubtaskToggle={toggleSubtask}
+                    onCalendarSync={syncToCalendar}
+                    onCalendarUnsync={unsyncFromCalendar}
+                    calendarSyncing={gcalSyncing === task.id}
                     onDragStart={onDragStart}
                     onDragEnter={onDragEnter}
                     onDrop={onDrop}
@@ -1238,6 +1274,9 @@ export default function TasksSection({
                     onToggleFlag={toggleFlag}
                     onDelete={id => setDeleteConfirmId(id)}
                     onSubtaskToggle={toggleSubtask}
+                    onCalendarSync={syncToCalendar}
+                    onCalendarUnsync={unsyncFromCalendar}
+                    calendarSyncing={gcalSyncing === task.id}
                     completing={completingIds.has(task.id)}
                     hidden={hiddenIds.has(task.id)}
                     deleteConfirm={deleteConfirmId === task.id}
@@ -1317,6 +1356,9 @@ interface TaskCardProps {
   onToggleFlag: (t: Task) => void;
   onDelete: (id: string) => void;
   onSubtaskToggle: (t: Task, stId: string) => void;
+  onCalendarSync?: (id: string) => void;
+  onCalendarUnsync?: (id: string) => void;
+  calendarSyncing?: boolean;
   onDragStart?: (id: string) => void;
   onDragEnter?: (id: string) => void;
   onDrop?: (id: string) => void;
@@ -1335,6 +1377,7 @@ interface TaskCardProps {
 
 function TaskCard({
   task, onComplete, onOpen, onToggleFlag, onDelete, onSubtaskToggle,
+  onCalendarSync, onCalendarUnsync, calendarSyncing,
   onDragStart, onDragEnter, onDrop, onDragEnd,
   dragOver, completing, hidden, deleteConfirm, onDeleteConfirm, onDeleteCancel,
   dragRef, style, dragHandleProps, isDragging
@@ -1437,6 +1480,28 @@ function TaskCard({
 
         {/* Right actions */}
         <div className="task-card-actions">
+          {/* Google Calendar sync */}
+          {onCalendarSync && (
+            <button
+              className="task-action-btn"
+              title={task.gcal_event_id ? "Rimuovi da Google Calendar" : "Aggiungi a Google Calendar"}
+              onClick={e => {
+                e.stopPropagation();
+                if (task.gcal_event_id) {
+                  onCalendarUnsync?.(task.id);
+                } else {
+                  onCalendarSync(task.id);
+                }
+              }}
+              style={{ color: task.gcal_event_id ? "#4285f4" : undefined }}
+            >
+              {calendarSyncing ? (
+                <div className="spinner" style={{ width: 12, height: 12 }} />
+              ) : (
+                <CalendarIcon width={14} />
+              )}
+            </button>
+          )}
           {totalSubtasks > 0 && (
             <button
               className="task-action-btn"

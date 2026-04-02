@@ -8,3 +8,5 @@ json_repair
 fal_client
 Pillow
 supabase==2.28.2
+google-auth-oauthlib
+google-api-python-client

@@ -2694,6 +2694,251 @@ async def get_shopify_status(client_id: str):
         return {"connected": False, "shop": shop, "error": "Connessione fallita"}
 
 
+# ══════════════════════════════════════════════════════════════════════
+#  GOOGLE CALENDAR INTEGRATION
+# ══════════════════════════════════════════════════════════════════════
+
+GOOGLE_CAL_CLIENT_ID = os.getenv("GOOGLE_CALENDAR_CLIENT_ID", "")
+GOOGLE_CAL_CLIENT_SECRET = os.getenv("GOOGLE_CALENDAR_CLIENT_SECRET", "")
+GOOGLE_CAL_REDIRECT_URI = os.getenv("GOOGLE_CALENDAR_REDIRECT_URI", "https://operative.alessioferlizzo.com/api/google-calendar/callback")
+GOOGLE_CAL_SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+
+# Token stored globally (one Google account per app instance)
+_GCAL_TOKEN_FILE = Path(__file__).parent.parent / "google_calendar_token.json"
+
+def _load_gcal_credentials():
+    """Load Google Calendar credentials from token file."""
+    if not _GCAL_TOKEN_FILE.exists():
+        return None
+    try:
+        from google.oauth2.credentials import Credentials
+        creds = Credentials.from_authorized_user_file(str(_GCAL_TOKEN_FILE), GOOGLE_CAL_SCOPES)
+        if creds and creds.expired and creds.refresh_token:
+            from google.auth.transport.requests import Request
+            creds.refresh(Request())
+            _save_gcal_credentials(creds)
+        return creds
+    except Exception as e:
+        print(f"⚠️ Errore caricamento credenziali Google Calendar: {e}")
+        return None
+
+def _save_gcal_credentials(creds):
+    """Save Google Calendar credentials to token file."""
+    with open(_GCAL_TOKEN_FILE, "w") as f:
+        f.write(creds.to_json())
+
+def _get_gcal_service():
+    """Get authenticated Google Calendar service."""
+    creds = _load_gcal_credentials()
+    if not creds:
+        return None
+    from googleapiclient.discovery import build
+    return build("calendar", "v3", credentials=creds)
+
+
+@app.get("/google-calendar/status")
+async def google_calendar_status():
+    """Controlla se Google Calendar è connesso."""
+    creds = _load_gcal_credentials()
+    if creds and creds.valid:
+        return {"connected": True}
+    return {"connected": False}
+
+
+@app.get("/google-calendar/install")
+async def google_calendar_install():
+    """Avvia il flusso OAuth per Google Calendar."""
+    if not GOOGLE_CAL_CLIENT_ID or not GOOGLE_CAL_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="Google Calendar non configurato. Aggiungi GOOGLE_CALENDAR_CLIENT_ID e GOOGLE_CALENDAR_CLIENT_SECRET nel .env")
+
+    from google_auth_oauthlib.flow import Flow
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": GOOGLE_CAL_CLIENT_ID,
+                "client_secret": GOOGLE_CAL_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [GOOGLE_CAL_REDIRECT_URI],
+            }
+        },
+        scopes=GOOGLE_CAL_SCOPES,
+    )
+    flow.redirect_uri = GOOGLE_CAL_REDIRECT_URI
+    auth_url, _ = flow.authorization_url(prompt="consent", access_type="offline")
+    return RedirectResponse(auth_url)
+
+
+@app.get("/google-calendar/callback")
+async def google_calendar_callback(code: str = ""):
+    """Callback OAuth Google Calendar — salva il token."""
+    if not code:
+        raise HTTPException(status_code=400, detail="Codice autorizzazione mancante")
+
+    from google_auth_oauthlib.flow import Flow
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": GOOGLE_CAL_CLIENT_ID,
+                "client_secret": GOOGLE_CAL_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [GOOGLE_CAL_REDIRECT_URI],
+            }
+        },
+        scopes=GOOGLE_CAL_SCOPES,
+    )
+    flow.redirect_uri = GOOGLE_CAL_REDIRECT_URI
+    flow.fetch_token(code=code)
+    _save_gcal_credentials(flow.credentials)
+    print("✅ Google Calendar connesso!")
+    # Redirect al frontend
+    frontend_url = os.getenv("FRONTEND_URL", "https://operative.alessioferlizzo.com")
+    return RedirectResponse(f"{frontend_url}?gcal=connected")
+
+
+@app.delete("/google-calendar")
+async def google_calendar_disconnect():
+    """Disconnetti Google Calendar."""
+    if _GCAL_TOKEN_FILE.exists():
+        _GCAL_TOKEN_FILE.unlink()
+    return {"connected": False}
+
+
+def _task_to_gcal_event(task: dict) -> dict:
+    """Converte una task in un evento Google Calendar."""
+    summary = task.get("title", "Task senza titolo")
+    if task.get("client_name"):
+        summary = f"[{task['client_name']}] {summary}"
+
+    description_parts = []
+    if task.get("notes"):
+        description_parts.append(task["notes"])
+    if task.get("priority"):
+        description_parts.append(f"Priorità: {task['priority']}")
+    if task.get("task_type"):
+        description_parts.append(f"Tipo: {task['task_type']}")
+    if task.get("subtasks"):
+        subtask_lines = []
+        for st in task["subtasks"]:
+            check = "✅" if st.get("done") else "⬜"
+            subtask_lines.append(f"{check} {st.get('text', '')}")
+        description_parts.append("Subtask:\n" + "\n".join(subtask_lines))
+    description = "\n\n".join(description_parts)
+
+    due_date = task.get("due_date", "")
+    due_time = task.get("due_time", "")
+    estimated = task.get("estimated_time", "")
+
+    # Calcola durata dall'estimated_time
+    duration_minutes = 60  # default 1 ora
+    if estimated:
+        est_map = {"15m": 15, "30m": 30, "45m": 45, "1h": 60, "1h30": 90, "2h": 120, "3h": 180, "4h": 240, "1g": 480}
+        duration_minutes = est_map.get(estimated, 60)
+
+    event = {"summary": summary, "description": description}
+
+    if due_date and due_time:
+        start_dt = f"{due_date}T{due_time}:00"
+        # Calcola fine
+        from datetime import datetime as dt, timedelta
+        start = dt.fromisoformat(start_dt)
+        end = start + timedelta(minutes=duration_minutes)
+        event["start"] = {"dateTime": start_dt, "timeZone": "Europe/Rome"}
+        event["end"] = {"dateTime": end.isoformat(), "timeZone": "Europe/Rome"}
+    elif due_date:
+        # Evento giornata intera
+        event["start"] = {"date": due_date}
+        from datetime import datetime as dt, timedelta
+        end_date = (dt.strptime(due_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        event["end"] = {"date": end_date}
+    else:
+        # Nessuna data — usa oggi
+        from datetime import datetime as dt
+        today = dt.now().strftime("%Y-%m-%d")
+        event["start"] = {"date": today}
+        from datetime import timedelta
+        end_date = (dt.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        event["end"] = {"date": end_date}
+
+    # Reminder
+    reminder_at = task.get("reminder_at", "")
+    if reminder_at:
+        reminder_map = {"at_time": 0, "5min": 5, "15min": 15, "30min": 30, "1h": 60, "1d": 1440, "2d": 2880, "1w": 10080}
+        minutes = reminder_map.get(reminder_at)
+        if minutes is not None:
+            event["reminders"] = {"useDefault": False, "overrides": [{"method": "popup", "minutes": minutes}]}
+
+    # Colore basato su priorità
+    color_map = {"alta": "11", "media": "5", "bassa": "7"}  # Rosso, Giallo, Ciano
+    if task.get("priority") in color_map:
+        event["colorId"] = color_map[task["priority"]]
+
+    return event
+
+
+@app.post("/tasks/{task_id}/calendar")
+async def sync_task_to_calendar(task_id: str):
+    """Sincronizza una task su Google Calendar. Crea o aggiorna l'evento."""
+    service = _get_gcal_service()
+    if not service:
+        raise HTTPException(status_code=401, detail="Google Calendar non connesso. Collegalo prima.")
+
+    tasks = storage_service.get_tasks()
+    task = next((t for t in tasks if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task non trovata")
+
+    event = _task_to_gcal_event(task)
+    existing_event_id = task.get("gcal_event_id")
+
+    try:
+        if existing_event_id:
+            # Aggiorna evento esistente
+            result = service.events().update(calendarId="primary", eventId=existing_event_id, body=event).execute()
+            print(f"📅 Evento aggiornato: {result.get('htmlLink')}")
+        else:
+            # Crea nuovo evento
+            result = service.events().insert(calendarId="primary", body=event).execute()
+            print(f"📅 Evento creato: {result.get('htmlLink')}")
+
+        # Salva l'event ID nella task
+        task["gcal_event_id"] = result["id"]
+        storage_service.save_tasks(tasks)
+
+        return {"synced": True, "event_id": result["id"], "event_link": result.get("htmlLink", "")}
+    except Exception as e:
+        print(f"❌ Errore sync Google Calendar: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/tasks/{task_id}/calendar")
+async def unsync_task_from_calendar(task_id: str):
+    """Rimuove una task da Google Calendar."""
+    service = _get_gcal_service()
+    if not service:
+        raise HTTPException(status_code=401, detail="Google Calendar non connesso")
+
+    tasks = storage_service.get_tasks()
+    task = next((t for t in tasks if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task non trovata")
+
+    event_id = task.get("gcal_event_id")
+    if not event_id:
+        return {"synced": False}
+
+    try:
+        service.events().delete(calendarId="primary", eventId=event_id).execute()
+        print(f"📅 Evento rimosso dal calendario")
+    except Exception as e:
+        print(f"⚠️ Errore rimozione evento (potrebbe essere già cancellato): {e}")
+
+    task.pop("gcal_event_id", None)
+    storage_service.save_tasks(tasks)
+    return {"synced": False}
+
+
 # ── VAULT ENDPOINTS ──
 class VaultSaveRequest(BaseModel):
     title: str
