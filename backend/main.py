@@ -2770,31 +2770,51 @@ async def google_calendar_install():
 
 
 @app.get("/google-calendar/callback")
-async def google_calendar_callback(code: str = ""):
+async def google_calendar_callback(code: str = "", error: str = ""):
     """Callback OAuth Google Calendar — salva il token."""
+    if error:
+        raise HTTPException(status_code=400, detail=f"Google OAuth error: {error}")
     if not code:
         raise HTTPException(status_code=400, detail="Codice autorizzazione mancante")
 
-    from google_auth_oauthlib.flow import Flow
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": GOOGLE_CAL_CLIENT_ID,
-                "client_secret": GOOGLE_CAL_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [GOOGLE_CAL_REDIRECT_URI],
-            }
-        },
-        scopes=GOOGLE_CAL_SCOPES,
-    )
-    flow.redirect_uri = GOOGLE_CAL_REDIRECT_URI
-    flow.fetch_token(code=code)
-    _save_gcal_credentials(flow.credentials)
-    print("✅ Google Calendar connesso!")
-    # Redirect al frontend
-    frontend_url = os.getenv("FRONTEND_URL", "https://operative.alessioferlizzo.com")
-    return RedirectResponse(f"{frontend_url}?gcal=connected")
+    try:
+        # Scambia il code per un access token direttamente via HTTP
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": GOOGLE_CAL_CLIENT_ID,
+                    "client_secret": GOOGLE_CAL_CLIENT_SECRET,
+                    "redirect_uri": GOOGLE_CAL_REDIRECT_URI,
+                    "grant_type": "authorization_code",
+                },
+            )
+            token_data = token_resp.json()
+
+        if "error" in token_data:
+            raise HTTPException(status_code=400, detail=f"Token exchange failed: {token_data}")
+
+        # Salva il token
+        from google.oauth2.credentials import Credentials
+        creds = Credentials(
+            token=token_data["access_token"],
+            refresh_token=token_data.get("refresh_token"),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=GOOGLE_CAL_CLIENT_ID,
+            client_secret=GOOGLE_CAL_CLIENT_SECRET,
+            scopes=GOOGLE_CAL_SCOPES,
+        )
+        _save_gcal_credentials(creds)
+        print("✅ Google Calendar connesso!")
+
+        frontend_url = os.getenv("FRONTEND_URL", "https://operative.alessioferlizzo.com")
+        return RedirectResponse(f"{frontend_url}?gcal=connected")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Errore callback Google Calendar: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.delete("/google-calendar")
