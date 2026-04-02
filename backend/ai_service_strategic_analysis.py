@@ -29,13 +29,7 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
     model_choice = task.get("recommended_model", "claude")
     system_prompt_template = task["system_prompt"]
 
-    # 1. Gather Required Inputs — con limiti per ridurre costi token
-    # Dati grezzi (scraping) possono essere enormi; output AI precedenti sono più compatti
-    RAW_DATA_KEYS = {"site_content", "social_data", "ads_data", "raw_docs",
-                     "google_reviews", "instagram_comments", "competitor_data"}
-    MAX_RAW_CHARS = 15000   # Dati grezzi: max 15K caratteri
-    MAX_AI_CHARS = 8000     # Output AI precedenti: max 8K caratteri
-
+    # 1. Gather Required Inputs
     input_text = ""
     for req in task.get("required_inputs", []):
         if req in context and context[req]:
@@ -44,10 +38,6 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
                 val_str = json.dumps(val, indent=2, ensure_ascii=False)
             else:
                 val_str = str(val)
-            # Tronca per risparmiare token
-            max_chars = MAX_RAW_CHARS if req in RAW_DATA_KEYS else MAX_AI_CHARS
-            if len(val_str) > max_chars:
-                val_str = val_str[:max_chars] + "\n... [troncato]"
             input_text += f"\n--- {req.upper()} ---\n{val_str}\n"
 
     # Anti-hallucination as SYSTEM message (stronger enforcement than user message)
