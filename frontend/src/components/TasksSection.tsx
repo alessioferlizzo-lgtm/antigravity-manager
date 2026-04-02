@@ -194,7 +194,9 @@ export default function TasksSection({
 
   const syncToCalendar = async (taskId: string) => {
     if (!gcalConnected) {
-      window.open(`${API}/google-calendar/install`, "_blank");
+      // Salva la task da sincronizzare e manda alla stessa finestra
+      localStorage.setItem("gcal_pending_task", taskId);
+      window.location.href = `${API}/google-calendar/install`;
       return;
     }
     setGcalSyncing(taskId);
@@ -207,6 +209,23 @@ export default function TasksSection({
     } catch { /* ignore */ }
     setGcalSyncing(null);
   };
+
+  // Dopo il ritorno da OAuth, controlla se c'è una task da sincronizzare
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gcal") === "connected") {
+      setGcalConnected(true);
+      // Pulisci l'URL
+      window.history.replaceState({}, "", window.location.pathname);
+      // Sincronizza la task pendente
+      const pendingTask = localStorage.getItem("gcal_pending_task");
+      if (pendingTask) {
+        localStorage.removeItem("gcal_pending_task");
+        // Piccolo delay per assicurarsi che lo state sia aggiornato
+        setTimeout(() => syncToCalendar(pendingTask), 500);
+      }
+    }
+  }, []);
 
   const unsyncFromCalendar = async (taskId: string) => {
     setGcalSyncing(taskId);
