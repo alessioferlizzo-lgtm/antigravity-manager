@@ -228,7 +228,16 @@ export default function TasksSection({
       const pendingTask = localStorage.getItem("gcal_pending_task");
       if (pendingTask) {
         localStorage.removeItem("gcal_pending_task");
-        setTimeout(() => syncToCalendar(pendingTask), 500);
+        // Chiama l'API direttamente — NON passare da syncToCalendar
+        // perché la closure ha ancora gcalConnected=false e causerebbe loop
+        fetch(`${API}/tasks/${pendingTask}/calendar`, { method: "POST" })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data) {
+              setTasks(prev => prev.map(t => t.id === pendingTask ? { ...t, gcal_event_id: data.event_id } : t));
+            }
+          })
+          .catch(() => {});
       }
     }
   }, []);
