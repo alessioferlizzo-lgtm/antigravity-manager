@@ -2701,7 +2701,7 @@ async def get_shopify_status(client_id: str):
 GOOGLE_CAL_CLIENT_ID = os.getenv("GOOGLE_CALENDAR_CLIENT_ID", "")
 GOOGLE_CAL_CLIENT_SECRET = os.getenv("GOOGLE_CALENDAR_CLIENT_SECRET", "")
 GOOGLE_CAL_REDIRECT_URI = os.getenv("GOOGLE_CALENDAR_REDIRECT_URI", "https://antigravity-backend-production-41ee.up.railway.app/google-calendar/callback")
-GOOGLE_CAL_SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+GOOGLE_CAL_SCOPES = ["https://www.googleapis.com/auth/tasks"]
 
 # Token stored globally (one Google account per app instance)
 _GCAL_TOKEN_FILE = Path(__file__).parent.parent / "google_calendar_token.json"
@@ -2728,12 +2728,12 @@ def _save_gcal_credentials(creds):
         f.write(creds.to_json())
 
 def _get_gcal_service():
-    """Get authenticated Google Calendar service."""
+    """Get authenticated Google Tasks service."""
     creds = _load_gcal_credentials()
     if not creds:
         return None
     from googleapiclient.discovery import build
-    return build("calendar", "v3", credentials=creds)
+    return build("tasks", "v1", credentials=creds)
 
 
 @app.get("/google-calendar/status")
@@ -2820,81 +2820,45 @@ async def google_calendar_disconnect():
     return {"connected": False}
 
 
-def _task_to_gcal_event(task: dict) -> dict:
-    """Converte una task in un evento Google Calendar."""
-    summary = task.get("title", "Task senza titolo")
+def _task_to_gtask(task: dict) -> dict:
+    """Converte una task interna in una Google Task."""
+    title = task.get("title", "Task senza titolo")
     if task.get("client_name"):
-        summary = f"[{task['client_name']}] {summary}"
+        title = f"[{task['client_name']}] {title}"
 
-    description_parts = []
+    notes_parts = []
     if task.get("notes"):
-        description_parts.append(task["notes"])
+        notes_parts.append(task["notes"])
     if task.get("priority"):
-        description_parts.append(f"Priorità: {task['priority']}")
-    if task.get("task_type"):
-        description_parts.append(f"Tipo: {task['task_type']}")
+        notes_parts.append(f"Priorità: {task['priority']}")
+    if task.get("estimated_time"):
+        notes_parts.append(f"Tempo stimato: {task['estimated_time']}")
     if task.get("subtasks"):
         subtask_lines = []
         for st in task["subtasks"]:
             check = "✅" if st.get("done") else "⬜"
             subtask_lines.append(f"{check} {st.get('text', '')}")
-        description_parts.append("Subtask:\n" + "\n".join(subtask_lines))
-    description = "\n\n".join(description_parts)
+        notes_parts.append("Subtask:\n" + "\n".join(subtask_lines))
 
+    gtask = {"title": title, "notes": "\n\n".join(notes_parts)}
+
+    # Google Tasks vuole due come RFC 3339 (solo data, mezzanotte UTC)
     due_date = task.get("due_date", "")
-    due_time = task.get("due_time", "")
-    estimated = task.get("estimated_time", "")
+    if due_date:
+        gtask["due"] = f"{due_date}T00:00:00.000Z"
 
-    # Calcola durata dall'estimated_time
-    duration_minutes = 60  # default 1 ora
-    if estimated:
-        est_map = {"15m": 15, "30m": 30, "45m": 45, "1h": 60, "1h30": 90, "2h": 120, "3h": 180, "4h": 240, "1g": 480}
-        duration_minutes = est_map.get(estimated, 60)
-
-    event = {"summary": summary, "description": description}
-
-    if due_date and due_time:
-        start_dt = f"{due_date}T{due_time}:00"
-        # Calcola fine
-        from datetime import datetime as dt, timedelta
-        start = dt.fromisoformat(start_dt)
-        end = start + timedelta(minutes=duration_minutes)
-        event["start"] = {"dateTime": start_dt, "timeZone": "Europe/Rome"}
-        event["end"] = {"dateTime": end.isoformat(), "timeZone": "Europe/Rome"}
-    elif due_date:
-        # Evento giornata intera
-        event["start"] = {"date": due_date}
-        from datetime import datetime as dt, timedelta
-        end_date = (dt.strptime(due_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
-        event["end"] = {"date": end_date}
+    # Status
+    if task.get("status") == "done":
+        gtask["status"] = "completed"
     else:
-        # Nessuna data — usa oggi
-        from datetime import datetime as dt
-        today = dt.now().strftime("%Y-%m-%d")
-        event["start"] = {"date": today}
-        from datetime import timedelta
-        end_date = (dt.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-        event["end"] = {"date": end_date}
+        gtask["status"] = "needsAction"
 
-    # Reminder
-    reminder_at = task.get("reminder_at", "")
-    if reminder_at:
-        reminder_map = {"at_time": 0, "5min": 5, "15min": 15, "30min": 30, "1h": 60, "1d": 1440, "2d": 2880, "1w": 10080}
-        minutes = reminder_map.get(reminder_at)
-        if minutes is not None:
-            event["reminders"] = {"useDefault": False, "overrides": [{"method": "popup", "minutes": minutes}]}
-
-    # Colore basato su priorità
-    color_map = {"alta": "11", "media": "5", "bassa": "7"}  # Rosso, Giallo, Ciano
-    if task.get("priority") in color_map:
-        event["colorId"] = color_map[task["priority"]]
-
-    return event
+    return gtask
 
 
 @app.post("/tasks/{task_id}/calendar")
 async def sync_task_to_calendar(task_id: str):
-    """Sincronizza una task su Google Calendar. Crea o aggiorna l'evento."""
+    """Sincronizza una task su Google Tasks."""
     service = _get_gcal_service()
     if not service:
         raise HTTPException(status_code=401, detail="Google Calendar non connesso. Collegalo prima.")
@@ -2904,32 +2868,29 @@ async def sync_task_to_calendar(task_id: str):
     if not task:
         raise HTTPException(status_code=404, detail="Task non trovata")
 
-    event = _task_to_gcal_event(task)
-    existing_event_id = task.get("gcal_event_id")
+    gtask = _task_to_gtask(task)
+    existing_task_id = task.get("gcal_event_id")
 
     try:
-        if existing_event_id:
-            # Aggiorna evento esistente
-            result = service.events().update(calendarId="primary", eventId=existing_event_id, body=event).execute()
-            print(f"📅 Evento aggiornato: {result.get('htmlLink')}")
+        if existing_task_id:
+            result = service.tasks().update(tasklist="@default", task=existing_task_id, body=gtask).execute()
+            print(f"📋 Google Task aggiornata: {result['id']}")
         else:
-            # Crea nuovo evento
-            result = service.events().insert(calendarId="primary", body=event).execute()
-            print(f"📅 Evento creato: {result.get('htmlLink')}")
+            result = service.tasks().insert(tasklist="@default", body=gtask).execute()
+            print(f"📋 Google Task creata: {result['id']}")
 
-        # Salva l'event ID nella task
         task["gcal_event_id"] = result["id"]
         storage_service.save_tasks(tasks)
 
-        return {"synced": True, "event_id": result["id"], "event_link": result.get("htmlLink", "")}
+        return {"synced": True, "event_id": result["id"]}
     except Exception as e:
-        print(f"❌ Errore sync Google Calendar: {e}")
+        print(f"❌ Errore sync Google Tasks: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.delete("/tasks/{task_id}/calendar")
 async def unsync_task_from_calendar(task_id: str):
-    """Rimuove una task da Google Calendar."""
+    """Rimuove una task da Google Tasks."""
     service = _get_gcal_service()
     if not service:
         raise HTTPException(status_code=401, detail="Google Calendar non connesso")
@@ -2939,15 +2900,15 @@ async def unsync_task_from_calendar(task_id: str):
     if not task:
         raise HTTPException(status_code=404, detail="Task non trovata")
 
-    event_id = task.get("gcal_event_id")
-    if not event_id:
+    gtask_id = task.get("gcal_event_id")
+    if not gtask_id:
         return {"synced": False}
 
     try:
-        service.events().delete(calendarId="primary", eventId=event_id).execute()
-        print(f"📅 Evento rimosso dal calendario")
+        service.tasks().delete(tasklist="@default", task=gtask_id).execute()
+        print(f"📋 Google Task rimossa")
     except Exception as e:
-        print(f"⚠️ Errore rimozione evento (potrebbe essere già cancellato): {e}")
+        print(f"⚠️ Errore rimozione Google Task: {e}")
 
     task.pop("gcal_event_id", None)
     storage_service.save_tasks(tasks)
