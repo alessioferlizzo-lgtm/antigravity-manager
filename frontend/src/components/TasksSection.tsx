@@ -205,8 +205,17 @@ export default function TasksSection({
       if (res.ok) {
         const data = await res.json();
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, gcal_event_id: data.event_id } : t));
+      } else if (res.status === 401) {
+        // Token scaduto o scope sbagliato — forza re-auth
+        setGcalConnected(false);
+        localStorage.setItem("gcal_pending_task", taskId);
+        window.location.href = `${API}/google-calendar/install`;
+        return;
+      } else {
+        const err = await res.json().catch(() => ({ detail: "Errore sync" }));
+        alert(`Errore Google Tasks: ${err.detail || "Errore sconosciuto"}`);
       }
-    } catch { /* ignore */ }
+    } catch (e) { console.error("Errore sync calendar:", e); }
     setGcalSyncing(null);
   };
 

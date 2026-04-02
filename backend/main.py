@@ -2707,10 +2707,19 @@ GOOGLE_CAL_SCOPES = ["https://www.googleapis.com/auth/tasks"]
 _GCAL_TOKEN_FILE = Path(__file__).parent.parent / "google_calendar_token.json"
 
 def _load_gcal_credentials():
-    """Load Google Calendar credentials from token file."""
+    """Load Google Tasks credentials from token file."""
     if not _GCAL_TOKEN_FILE.exists():
         return None
     try:
+        import json as _json
+        with open(_GCAL_TOKEN_FILE, "r") as f:
+            token_data = _json.load(f)
+        # Se il token ha lo scope vecchio (calendar), cancellalo e forza re-auth
+        saved_scopes = token_data.get("scopes", [])
+        if saved_scopes and "https://www.googleapis.com/auth/tasks" not in saved_scopes:
+            print("⚠️ Token con scope vecchio (calendar), cancello per re-auth con Tasks scope")
+            _GCAL_TOKEN_FILE.unlink()
+            return None
         from google.oauth2.credentials import Credentials
         creds = Credentials.from_authorized_user_file(str(_GCAL_TOKEN_FILE), GOOGLE_CAL_SCOPES)
         if creds and creds.expired and creds.refresh_token:
@@ -2719,7 +2728,7 @@ def _load_gcal_credentials():
             _save_gcal_credentials(creds)
         return creds
     except Exception as e:
-        print(f"⚠️ Errore caricamento credenziali Google Calendar: {e}")
+        print(f"⚠️ Errore caricamento credenziali Google: {e}")
         return None
 
 def _save_gcal_credentials(creds):
