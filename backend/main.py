@@ -2700,7 +2700,7 @@ async def get_shopify_status(client_id: str):
 
 GOOGLE_CAL_CLIENT_ID = os.getenv("GOOGLE_CALENDAR_CLIENT_ID", "")
 GOOGLE_CAL_CLIENT_SECRET = os.getenv("GOOGLE_CALENDAR_CLIENT_SECRET", "")
-GOOGLE_CAL_REDIRECT_URI = os.getenv("GOOGLE_CALENDAR_REDIRECT_URI", "https://operative.alessioferlizzo.com/api/google-calendar/callback")
+GOOGLE_CAL_REDIRECT_URI = os.getenv("GOOGLE_CALENDAR_REDIRECT_URI", "https://antigravity-backend-production-41ee.up.railway.app/google-calendar/callback")
 GOOGLE_CAL_SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
 # Token stored globally (one Google account per app instance)
