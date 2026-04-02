@@ -1521,12 +1521,23 @@ function TaskCard({
                   onCalendarSync(task.id);
                 }
               }}
-              style={{ color: task.gcal_event_id ? "#4285f4" : undefined }}
+              style={{
+                color: task.gcal_event_id ? "#4285f4" : undefined,
+                background: task.gcal_event_id ? "rgba(66,133,244,0.15)" : undefined,
+                borderRadius: 6,
+                padding: "2px 6px",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
             >
               {calendarSyncing ? (
                 <div className="spinner" style={{ width: 12, height: 12 }} />
               ) : (
-                <CalendarIcon width={14} />
+                <>
+                  <CalendarIcon width={14} />
+                  {task.gcal_event_id && <span style={{ fontSize: 10, fontWeight: 600 }}>GCal</span>}
+                </>
               )}
             </button>
           )}

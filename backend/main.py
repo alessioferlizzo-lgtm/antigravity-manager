@@ -2832,6 +2832,10 @@ async def google_calendar_disconnect():
 def _task_to_gtask(task: dict) -> dict:
     """Converte una task interna in una Google Task."""
     title = task.get("title", "Task senza titolo")
+    # Google Tasks non supporta orari — lo mettiamo nel titolo
+    due_time = task.get("due_time", "")
+    if due_time:
+        title = f"⏰ {due_time} — {title}"
     if task.get("client_name"):
         title = f"[{task['client_name']}] {title}"
 
@@ -2842,6 +2846,8 @@ def _task_to_gtask(task: dict) -> dict:
         notes_parts.append(f"Priorità: {task['priority']}")
     if task.get("estimated_time"):
         notes_parts.append(f"Tempo stimato: {task['estimated_time']}")
+    if due_time:
+        notes_parts.append(f"Orario: {due_time}")
     if task.get("subtasks"):
         subtask_lines = []
         for st in task["subtasks"]:
@@ -2851,12 +2857,10 @@ def _task_to_gtask(task: dict) -> dict:
 
     gtask = {"title": title, "notes": "\n\n".join(notes_parts)}
 
-    # Google Tasks vuole due come RFC 3339 (solo data, mezzanotte UTC)
     due_date = task.get("due_date", "")
     if due_date:
         gtask["due"] = f"{due_date}T00:00:00.000Z"
 
-    # Status
     if task.get("status") == "done":
         gtask["status"] = "completed"
     else:
