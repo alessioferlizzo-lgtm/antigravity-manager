@@ -188,13 +188,13 @@ export default function TasksSection({
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalSyncing, setGcalSyncing] = useState<string | null>(null);
 
+  // Check connessione Google al mount
   useEffect(() => {
     fetch(`${API}/google-calendar/status`).then(r => r.json()).then(d => setGcalConnected(d.connected)).catch(() => {});
   }, []);
 
   const syncToCalendar = async (taskId: string) => {
     if (!gcalConnected) {
-      // Salva la task da sincronizzare e manda alla stessa finestra
       localStorage.setItem("gcal_pending_task", taskId);
       window.location.href = `${API}/google-calendar/install`;
       return;
@@ -202,35 +202,32 @@ export default function TasksSection({
     setGcalSyncing(taskId);
     try {
       const res = await fetch(`${API}/tasks/${taskId}/calendar`, { method: "POST" });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, gcal_event_id: data.event_id } : t));
       } else if (res.status === 401) {
-        // Token scaduto o scope sbagliato — forza re-auth
         setGcalConnected(false);
         localStorage.setItem("gcal_pending_task", taskId);
         window.location.href = `${API}/google-calendar/install`;
         return;
       } else {
-        const err = await res.json().catch(() => ({ detail: "Errore sync" }));
-        alert(`Errore Google Tasks: ${err.detail || "Errore sconosciuto"}`);
+        alert(`Errore: ${data.detail || "Impossibile sincronizzare"}`);
       }
-    } catch (e) { console.error("Errore sync calendar:", e); }
+    } catch (e) {
+      alert("Errore di rete durante la sincronizzazione");
+    }
     setGcalSyncing(null);
   };
 
-  // Dopo il ritorno da OAuth, controlla se c'è una task da sincronizzare
+  // Dopo ritorno da OAuth → sincronizza la task pendente
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("gcal") === "connected") {
       setGcalConnected(true);
-      // Pulisci l'URL
       window.history.replaceState({}, "", window.location.pathname);
-      // Sincronizza la task pendente
       const pendingTask = localStorage.getItem("gcal_pending_task");
       if (pendingTask) {
         localStorage.removeItem("gcal_pending_task");
-        // Piccolo delay per assicurarsi che lo state sia aggiornato
         setTimeout(() => syncToCalendar(pendingTask), 500);
       }
     }
@@ -1510,36 +1507,41 @@ function TaskCard({
         <div className="task-card-actions">
           {/* Google Calendar sync */}
           {onCalendarSync && (
-            <button
-              className="task-action-btn"
-              title={task.gcal_event_id ? "Rimuovi da Google Calendar" : "Aggiungi a Google Calendar"}
-              onClick={e => {
-                e.stopPropagation();
-                if (task.gcal_event_id) {
-                  onCalendarUnsync?.(task.id);
-                } else {
-                  onCalendarSync(task.id);
+            task.gcal_event_id ? (
+              <button
+                className="task-action-btn"
+                title="Sincronizzata su Google — clicca per rimuovere"
+                onClick={e => { e.stopPropagation(); onCalendarUnsync?.(task.id); }}
+                style={{
+                  background: "#c7ef00",
+                  color: "#003366",
+                  borderRadius: 4,
+                  padding: "2px 8px",
+                  fontWeight: 700,
+                  fontSize: 11,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {calendarSyncing
+                  ? <div className="spinner" style={{ width: 12, height: 12 }} />
+                  : <><CalendarIcon width={12} /> Google</>
                 }
-              }}
-              style={{
-                color: task.gcal_event_id ? "#4285f4" : undefined,
-                background: task.gcal_event_id ? "rgba(66,133,244,0.15)" : undefined,
-                borderRadius: 6,
-                padding: "2px 6px",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              {calendarSyncing ? (
-                <div className="spinner" style={{ width: 12, height: 12 }} />
-              ) : (
-                <>
-                  <CalendarIcon width={14} />
-                  {task.gcal_event_id && <span style={{ fontSize: 10, fontWeight: 600 }}>GCal</span>}
-                </>
-              )}
-            </button>
+              </button>
+            ) : (
+              <button
+                className="task-action-btn"
+                title="Aggiungi a Google Calendar"
+                onClick={e => { e.stopPropagation(); onCalendarSync(task.id); }}
+                style={{ opacity: 0.5 }}
+              >
+                {calendarSyncing
+                  ? <div className="spinner" style={{ width: 12, height: 12 }} />
+                  : <CalendarIcon width={14} />
+                }
+              </button>
+            )
           )}
           {totalSubtasks > 0 && (
             <button

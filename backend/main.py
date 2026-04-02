@@ -2695,145 +2695,169 @@ async def get_shopify_status(client_id: str):
 
 
 # ══════════════════════════════════════════════════════════════════════
-#  GOOGLE CALENDAR INTEGRATION
+#  GOOGLE TASKS INTEGRATION (attività su Google Calendar)
 # ══════════════════════════════════════════════════════════════════════
 
 GOOGLE_CAL_CLIENT_ID = os.getenv("GOOGLE_CALENDAR_CLIENT_ID", "")
 GOOGLE_CAL_CLIENT_SECRET = os.getenv("GOOGLE_CALENDAR_CLIENT_SECRET", "")
 GOOGLE_CAL_REDIRECT_URI = os.getenv("GOOGLE_CALENDAR_REDIRECT_URI", "https://antigravity-backend-production-41ee.up.railway.app/google-calendar/callback")
-GOOGLE_CAL_SCOPES = ["https://www.googleapis.com/auth/tasks"]
-
-# Token stored globally (one Google account per app instance)
 _GCAL_TOKEN_FILE = Path(__file__).parent.parent / "google_calendar_token.json"
 
-def _load_gcal_credentials():
-    """Load Google Tasks credentials from token file."""
+
+def _load_google_token() -> dict | None:
+    """Carica il token Google dal file JSON. Ritorna il dict raw."""
     if not _GCAL_TOKEN_FILE.exists():
         return None
     try:
-        import json as _json
         with open(_GCAL_TOKEN_FILE, "r") as f:
-            token_data = _json.load(f)
-        # Se il token ha lo scope sbagliato, cancellalo e forza re-auth
-        saved_scopes = token_data.get("scopes", [])
-        if saved_scopes and "https://www.googleapis.com/auth/tasks" not in saved_scopes:
-            print("⚠️ Token con scope vecchio (calendar), cancello per re-auth con Tasks scope")
-            _GCAL_TOKEN_FILE.unlink()
-            return None
-        from google.oauth2.credentials import Credentials
-        creds = Credentials.from_authorized_user_file(str(_GCAL_TOKEN_FILE), GOOGLE_CAL_SCOPES)
-        if creds and creds.expired and creds.refresh_token:
-            from google.auth.transport.requests import Request
-            creds.refresh(Request())
-            _save_gcal_credentials(creds)
-        return creds
-    except Exception as e:
-        print(f"⚠️ Errore caricamento credenziali Google: {e}")
+            return json.load(f)
+    except Exception:
         return None
 
-def _save_gcal_credentials(creds):
-    """Save Google Calendar credentials to token file."""
+
+def _save_google_token(token_data: dict):
+    """Salva il token Google come JSON."""
     with open(_GCAL_TOKEN_FILE, "w") as f:
-        f.write(creds.to_json())
+        json.dump(token_data, f, indent=2)
 
-def _get_gcal_service():
-    """Get authenticated Google Tasks service."""
-    creds = _load_gcal_credentials()
-    if not creds:
+
+async def _get_valid_access_token() -> str | None:
+    """Ritorna un access_token valido, facendo refresh se scaduto."""
+    token = _load_google_token()
+    if not token or "access_token" not in token:
         return None
-    from googleapiclient.discovery import build
-    return build("tasks", "v1", credentials=creds)
+
+    # Se abbiamo un refresh_token, facciamo sempre refresh per sicurezza
+    refresh_token = token.get("refresh_token")
+    if not refresh_token:
+        return token["access_token"]
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post("https://oauth2.googleapis.com/token", data={
+                "client_id": GOOGLE_CAL_CLIENT_ID,
+                "client_secret": GOOGLE_CAL_CLIENT_SECRET,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token",
+            })
+            data = resp.json()
+        if "access_token" in data:
+            token["access_token"] = data["access_token"]
+            _save_google_token(token)
+            return data["access_token"]
+    except Exception as e:
+        print(f"⚠️ Refresh token fallito: {e}")
+
+    return token["access_token"]
 
 
 @app.get("/google-calendar/status")
 async def google_calendar_status():
-    """Controlla se Google Calendar è connesso."""
-    creds = _load_gcal_credentials()
-    if creds and creds.valid:
+    """Controlla se Google è connesso (ha un token salvato)."""
+    token = _load_google_token()
+    if token and token.get("access_token"):
         return {"connected": True}
     return {"connected": False}
 
 
 @app.get("/google-calendar/install")
 async def google_calendar_install():
-    """Avvia il flusso OAuth per Google Calendar."""
+    """Avvia OAuth Google per permesso Tasks."""
     if not GOOGLE_CAL_CLIENT_ID or not GOOGLE_CAL_CLIENT_SECRET:
-        raise HTTPException(status_code=500, detail="Google Calendar non configurato. Aggiungi GOOGLE_CALENDAR_CLIENT_ID e GOOGLE_CALENDAR_CLIENT_SECRET nel .env")
+        raise HTTPException(status_code=500, detail="Google non configurato sul server")
 
     from urllib.parse import urlencode
     params = {
         "client_id": GOOGLE_CAL_CLIENT_ID,
         "redirect_uri": GOOGLE_CAL_REDIRECT_URI,
         "response_type": "code",
-        "scope": " ".join(GOOGLE_CAL_SCOPES),
+        "scope": "https://www.googleapis.com/auth/tasks",
         "access_type": "offline",
         "prompt": "consent",
     }
-    auth_url = f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}"
-    return RedirectResponse(auth_url)
+    return RedirectResponse(f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}")
 
 
 @app.get("/google-calendar/callback")
 async def google_calendar_callback(code: str = "", error: str = ""):
-    """Callback OAuth Google Calendar — salva il token."""
+    """Callback OAuth — scambia il code per access+refresh token."""
     if error:
-        raise HTTPException(status_code=400, detail=f"Google OAuth error: {error}")
+        raise HTTPException(status_code=400, detail=f"Errore Google: {error}")
     if not code:
-        raise HTTPException(status_code=400, detail="Codice autorizzazione mancante")
+        raise HTTPException(status_code=400, detail="Codice mancante")
 
     try:
-        # Scambia il code per un access token direttamente via HTTP
         async with httpx.AsyncClient() as client:
-            token_resp = await client.post(
-                "https://oauth2.googleapis.com/token",
-                data={
-                    "code": code,
-                    "client_id": GOOGLE_CAL_CLIENT_ID,
-                    "client_secret": GOOGLE_CAL_CLIENT_SECRET,
-                    "redirect_uri": GOOGLE_CAL_REDIRECT_URI,
-                    "grant_type": "authorization_code",
-                },
-            )
-            token_data = token_resp.json()
+            resp = await client.post("https://oauth2.googleapis.com/token", data={
+                "code": code,
+                "client_id": GOOGLE_CAL_CLIENT_ID,
+                "client_secret": GOOGLE_CAL_CLIENT_SECRET,
+                "redirect_uri": GOOGLE_CAL_REDIRECT_URI,
+                "grant_type": "authorization_code",
+            })
+            token_data = resp.json()
 
         if "error" in token_data:
-            raise HTTPException(status_code=400, detail=f"Token exchange failed: {token_data}")
+            print(f"❌ Token exchange error: {token_data}")
+            raise HTTPException(status_code=400, detail=f"Google error: {token_data.get('error_description', token_data['error'])}")
 
-        # Salva il token
-        from google.oauth2.credentials import Credentials
-        creds = Credentials(
-            token=token_data["access_token"],
-            refresh_token=token_data.get("refresh_token"),
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=GOOGLE_CAL_CLIENT_ID,
-            client_secret=GOOGLE_CAL_CLIENT_SECRET,
-            scopes=GOOGLE_CAL_SCOPES,
-        )
-        _save_gcal_credentials(creds)
-        print("✅ Google Calendar connesso!")
+        _save_google_token(token_data)
+        print(f"✅ Google Tasks connesso! Token salvato.")
 
         frontend_url = os.getenv("FRONTEND_URL", "https://operative.alessioferlizzo.com")
         return RedirectResponse(f"{frontend_url}?gcal=connected")
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Errore callback Google Calendar: {e}")
+        print(f"❌ Callback error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.delete("/google-calendar")
 async def google_calendar_disconnect():
-    """Disconnetti Google Calendar."""
+    """Disconnetti Google."""
     if _GCAL_TOKEN_FILE.exists():
         _GCAL_TOKEN_FILE.unlink()
     return {"connected": False}
 
 
-def _task_to_gtask(task: dict) -> dict:
-    """Converte una task interna in una Google Task (attività) con orario."""
-    from datetime import datetime as dt
+async def _call_tasks_api(method: str, path: str, body: dict | None = None) -> dict:
+    """Chiama Google Tasks API direttamente via HTTP."""
+    access_token = await _get_valid_access_token()
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Google non connesso")
 
-    title = task.get("title", "Task senza titolo")
+    url = f"https://tasks.googleapis.com/tasks/v1/{path}"
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+    async with httpx.AsyncClient() as client:
+        if method == "POST":
+            resp = await client.post(url, headers=headers, json=body)
+        elif method == "PUT":
+            resp = await client.put(url, headers=headers, json=body)
+        elif method == "DELETE":
+            resp = await client.delete(url, headers=headers)
+            return {}
+        else:
+            resp = await client.get(url, headers=headers)
+
+    if resp.status_code == 401:
+        raise HTTPException(status_code=401, detail="Token scaduto")
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+
+    return resp.json() if resp.text else {}
+
+
+@app.post("/tasks/{task_id}/calendar")
+async def sync_task_to_calendar(task_id: str):
+    """Crea un'attività su Google Tasks."""
+    tasks = storage_service.get_tasks()
+    task = next((t for t in tasks if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task non trovata")
+
+    title = task.get("title", "Task")
     if task.get("client_name"):
         title = f"[{task['client_name']}] {title}"
 
@@ -2844,80 +2868,38 @@ def _task_to_gtask(task: dict) -> dict:
         notes_parts.append(f"Priorità: {task['priority']}")
     if task.get("estimated_time"):
         notes_parts.append(f"Tempo stimato: {task['estimated_time']}")
-    if task.get("subtasks"):
-        subtask_lines = []
-        for st in task["subtasks"]:
-            check = "✅" if st.get("done") else "⬜"
-            subtask_lines.append(f"{check} {st.get('text', '')}")
-        notes_parts.append("Subtask:\n" + "\n".join(subtask_lines))
+    if task.get("due_time"):
+        notes_parts.append(f"Orario: {task['due_time']}")
 
-    gtask = {"title": title, "notes": "\n\n".join(notes_parts)}
+    gtask: dict = {"title": title, "notes": "\n".join(notes_parts)}
 
-    # Due date con orario reale (RFC 3339)
+    # Data scadenza con orario
     due_date = task.get("due_date", "")
     due_time = task.get("due_time", "")
-
     if due_date and due_time:
-        # Orario specifico — Europe/Rome offset (+02:00 CEST o +01:00 CET)
-        try:
-            naive = dt.fromisoformat(f"{due_date}T{due_time}:00")
-            import zoneinfo
-            rome = zoneinfo.ZoneInfo("Europe/Rome")
-            aware = naive.replace(tzinfo=rome)
-            gtask["due"] = aware.isoformat()
-        except Exception:
-            gtask["due"] = f"{due_date}T{due_time}:00+02:00"
+        gtask["due"] = f"{due_date}T{due_time}:00+02:00"
     elif due_date:
-        gtask["due"] = f"{due_date}T00:00:00.000Z"
+        gtask["due"] = f"{due_date}T00:00:00Z"
 
-    # Status
     if task.get("status") == "done":
         gtask["status"] = "completed"
     else:
         gtask["status"] = "needsAction"
 
-    return gtask
+    existing_id = task.get("gcal_event_id")
+    if existing_id:
+        result = await _call_tasks_api("PUT", f"lists/@default/tasks/{existing_id}", gtask)
+    else:
+        result = await _call_tasks_api("POST", "lists/@default/tasks", gtask)
 
-
-@app.post("/tasks/{task_id}/calendar")
-async def sync_task_to_calendar(task_id: str):
-    """Sincronizza una task su Google Calendar come attività con orario."""
-    service = _get_gcal_service()
-    if not service:
-        raise HTTPException(status_code=401, detail="Google Calendar non connesso. Collegalo prima.")
-
-    tasks = storage_service.get_tasks()
-    task = next((t for t in tasks if t["id"] == task_id), None)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task non trovata")
-
-    gtask = _task_to_gtask(task)
-    existing_task_id = task.get("gcal_event_id")
-
-    try:
-        if existing_task_id:
-            result = service.tasks().update(tasklist="@default", task=existing_task_id, body=gtask).execute()
-            print(f"📋 Attività aggiornata: {result['id']}")
-        else:
-            result = service.tasks().insert(tasklist="@default", body=gtask).execute()
-            print(f"📋 Attività creata: {result['id']}")
-
-        task["gcal_event_id"] = result["id"]
-        storage_service.save_tasks(tasks)
-
-        return {"synced": True, "event_id": result["id"]}
-    except Exception as e:
-        print(f"❌ Errore sync Google Tasks: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    task["gcal_event_id"] = result.get("id", existing_id)
+    storage_service.save_tasks(tasks)
+    return {"synced": True, "event_id": task["gcal_event_id"]}
 
 
 @app.delete("/tasks/{task_id}/calendar")
 async def unsync_task_from_calendar(task_id: str):
-    """Rimuove un'attività da Google Calendar."""
-    service = _get_gcal_service()
-    if not service:
-        raise HTTPException(status_code=401, detail="Google Calendar non connesso")
-
+    """Rimuove un'attività da Google Tasks."""
     tasks = storage_service.get_tasks()
     task = next((t for t in tasks if t["id"] == task_id), None)
     if not task:
@@ -2928,10 +2910,9 @@ async def unsync_task_from_calendar(task_id: str):
         return {"synced": False}
 
     try:
-        service.tasks().delete(tasklist="@default", task=gtask_id).execute()
-        print(f"📋 Attività rimossa dal calendario")
+        await _call_tasks_api("DELETE", f"lists/@default/tasks/{gtask_id}")
     except Exception as e:
-        print(f"⚠️ Errore rimozione attività: {e}")
+        print(f"⚠️ Errore rimozione: {e}")
 
     task.pop("gcal_event_id", None)
     storage_service.save_tasks(tasks)
