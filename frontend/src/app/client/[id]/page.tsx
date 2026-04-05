@@ -1272,7 +1272,6 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                     <span style={{ fontSize: 18 }}>🎨</span> Visual Brief (dall&apos;Analisi AI)
                                 </span>
 
-                                {/* Palette Colori */}
                                 {Array.isArray(vbData.color_palette) && vbData.color_palette.length > 0 && (
                                     <div style={{ marginBottom: 20 }}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#ec4899", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>🎨 Palette Colori dell&apos;Analisi</div>
@@ -1285,8 +1284,9 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                                     <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                                                         <div style={{ width: 52, height: 52, borderRadius: 10, background: hex, border: "2px solid rgba(255,255,255,0.12)", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }} />
                                                         <div style={{ textAlign: "center" }}>
-                                                            <div style={{ fontSize: 10, fontFamily: "monospace", fontWeight: 700, color: "var(--text-primary)" }}>{label}</div>
-                                                            {usage && <div style={{ fontSize: 9, color: "var(--text-muted)", maxWidth: 64, lineHeight: 1.3 }}>{usage}</div>}
+                                                            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{label}</div>
+                                                            {label !== hex && <div style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-primary)", opacity: 0.8, marginTop: 2 }}>{hex}</div>}
+                                                            {usage && <div style={{ fontSize: 9, color: "var(--text-muted)", maxWidth: 72, lineHeight: 1.3, marginTop: 4 }}>{usage}</div>}
                                                         </div>
                                                     </div>
                                                 );

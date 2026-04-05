@@ -209,8 +209,8 @@ function ProductPortfolioRenderer({ data }: { data: any }) {
                     <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{item.name}</span>
                         <div style={{ display: "flex", gap: 6 }}>
-                            {item.category && <Chip label={item.category} color="#94a3b8" />}
-                            {item.type && <Chip label={item.type === "service" ? "Servizio" : "Prodotto"} color={item.type === "service" ? "#6366f1" : "#10b981"} />}
+                            {item.category && <Chip label={item.category} color="#cbd5e1" />}
+                            {item.type && <Chip label={item.type === "service" ? "Servizio" : "Prodotto"} color={item.type === "service" ? "#818cf8" : "#34d399"} />}
                         </div>
                     </div>
                     <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -242,7 +242,7 @@ function ProductPortfolioRenderer({ data }: { data: any }) {
                                 {item.benefit && <div style={{ padding: "6px 10px", background: "rgba(14,165,233,0.06)", borderRadius: 6, fontSize: 13 }}>💡 <strong>Beneficio:</strong> {item.benefit}</div>}
                                 {item.usp && <div style={{ padding: "6px 10px", background: "rgba(16,185,129,0.06)", borderRadius: 6, fontSize: 13 }}>⭐ <strong>USP:</strong> {item.usp}</div>}
                                 {item.marketing_angle && <div style={{ padding: "6px 10px", background: "rgba(245,158,11,0.06)", borderRadius: 6, fontSize: 13 }}>🎯 <strong>Angolo:</strong> {item.marketing_angle}</div>}
-                                {item.role && <Chip label={item.role} color="#6366f1" />}
+                                {item.role && <Chip label={item.role} color="#818cf8" />}
                                 {item.price_positioning && <Chip label={item.price_positioning} color="#f59e0b" />}
                             </div>
                         )}
@@ -856,7 +856,7 @@ function AdCopyRenderer({ data }: { data: any }) {
                     <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                             <thead><tr style={{ background: "rgba(99,102,241,0.08)" }}>
-                                {["Segmento", "Pain", "Desire", "Awareness", "Trigger", "Obiezione → Soluzione"].map(h => <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6366f1", borderBottom: "2px solid rgba(99,102,241,0.2)" }}>{h}</th>)}
+                                {["Segmento", "Pain", "Desire", "Awareness", "Trigger", "Obiezione → Soluzione"].map(h => <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#818cf8", borderBottom: "2px solid rgba(129,140,248,0.2)" }}>{h}</th>)}
                             </tr></thead>
                             <tbody>{deepDive.map((row: any, i: number) => (
                                 <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
