@@ -986,46 +986,6 @@ function VideoScriptsRenderer({ data }: { data: any }) {
     );
 }
 
-function FranzCopyRenderer({ data }: { data: any }) {
-    if (!data || typeof data !== "object") return <GenericValue value={data} />;
-    const scaledAds = data.scaled_ads || (Array.isArray(data) ? data : []);
-    if (!scaledAds.length) return <GenericValue value={data} />;
-    const formulaColors = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {scaledAds.map((group: any, gi: number) => (
-                <div key={gi}>
-                    <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "12px 16px", borderRadius: "12px 12px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>🔄 Varianti di: {group.original_ad_id || `Ad #${gi + 1}`}</span>
-                    </div>
-                    {group.original_hook && <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--text-muted)", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid var(--border)" }}>Hook originale: <em>"{group.original_hook}"</em></div>}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 0" }}>
-                        {(group.variants || []).map((v: any, vi: number) => {
-                            const col = formulaColors[vi % formulaColors.length];
-                            return (
-                                <div key={vi} style={{ border: `1px solid ${col}40`, borderRadius: 10, overflow: "hidden" }}>
-                                    <div style={{ background: `${col}12`, padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <Chip label={v.formula} color={col} />
-                                        {v.why_this_formula && <span style={{ fontSize: 11, color: "var(--text-muted)", maxWidth: "60%" }}>{v.why_this_formula}</span>}
-                                    </div>
-                                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-                                        {v.hook && <div style={{ background: "rgba(239,68,68,0.06)", padding: "6px 10px", borderRadius: 6 }}><span style={{ fontSize: 10, fontWeight: 700, color: "#ef4444" }}>HOOK: </span><strong>{v.hook}</strong></div>}
-                                        {v.primary_text && <div style={{ fontSize: 13 }}><MD text={v.primary_text} /></div>}
-                                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                            {v.headline && <div style={{ padding: "4px 10px", background: `${col}10`, borderRadius: 4, fontSize: 12 }}><strong>Headline:</strong> {v.headline}</div>}
-                                            {v.description && <div style={{ padding: "4px 10px", background: "rgba(255,255,255,0.04)", borderRadius: 4, fontSize: 12 }}><strong>Desc:</strong> {v.description}</div>}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 //  MACRO-AREAS CONFIG
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1037,28 +997,28 @@ const MACRO_AREAS = [
         sections: [
             { key: "brand_identity", label: "1. Brand Identity & Posizionamento", Renderer: BrandIdentityRenderer },
             { key: "brand_values", label: "2. Valori del Brand (Brand Pillars)", Renderer: BrandValuesRenderer },
-            { key: "brand_voice", label: "8. Brand Voice & Communication", Renderer: BrandVoiceRenderer },
+            { key: "brand_voice", label: "3. Brand Voice & Communication", Renderer: BrandVoiceRenderer },
+            // visual_brief → spostato nella tab Identità del cliente
         ],
     },
     {
         title: "🛍️ Prodotti & Mercato",
         color: "#10b981",
         sections: [
-            { key: "product_portfolio", label: "3. Portafoglio Prodotti/Servizi", Renderer: ProductPortfolioRenderer },
-            { key: "product_vertical", label: "7. Analisi Verticale Prodotti", Renderer: ProductPortfolioRenderer },
-            { key: "service_vertical", label: "7b. Analisi Verticale Servizi", Renderer: ServiceVerticalRenderer },
-            { key: "reasons_to_buy", label: "4. Reasons to Buy (RTB)", Renderer: ReasonsToByRenderer },
-            { key: "objections", label: "9. Gestione Obiezioni", Renderer: ObjectionsRenderer },
+            { key: "product_portfolio", label: "4. Portafoglio Prodotti/Servizi", Renderer: ProductPortfolioRenderer },
+            { key: "product_vertical", label: "5. Analisi Verticale Prodotti", Renderer: ProductPortfolioRenderer },
+            { key: "service_vertical", label: "6. Analisi Verticale Servizi", Renderer: ServiceVerticalRenderer },
+            { key: "reasons_to_buy", label: "7. Reasons to Buy (RTB)", Renderer: ReasonsToByRenderer },
+            { key: "objections", label: "8. Gestione Obiezioni", Renderer: ObjectionsRenderer },
         ],
     },
+    // customer_personas e psychographic_analysis → spostati nella tab Buyer Personas
     {
-        title: "👥 Personas & Contenuti",
-        color: "#8b5cf6",
+        title: "🎯 VoC & Contenuti",
+        color: "#0ea5e9",
         sections: [
-            { key: "customer_personas", label: "5. Customer Personas (10 ICP)", Renderer: PersonasRenderer },
-            { key: "psychographic_analysis", label: "13. Analisi Psicografica (3 Livelli)", Renderer: PsychographicRenderer },
-            { key: "content_matrix", label: "6. Matrice Strategia Contenuti", Renderer: ContentMatrixRenderer },
-            { key: "reviews_voc", label: "10. Voice of Customer (Recensioni)", Renderer: ReviewsVoCRenderer },
+            { key: "reviews_voc", label: "9. Voice of Customer (Recensioni)", Renderer: ReviewsVoCRenderer },
+            { key: "content_matrix", label: "10. Matrice Contenuti (Paid & Organic)", Renderer: ContentMatrixRenderer },
         ],
     },
     {
@@ -1070,19 +1030,10 @@ const MACRO_AREAS = [
         ],
     },
     {
-        title: "🎨 Visual & Creatività",
-        color: "#ec4899",
-        sections: [
-            { key: "visual_brief", label: "14. Visual Brief (Art Direction)", Renderer: VisualBriefRenderer },
-            { key: "video_scripts", label: "16. Script Video (TikTok/Reels)", Renderer: VideoScriptsRenderer },
-        ],
-    },
-    {
-        title: "✍️ Copy & Ads",
+        title: "✍️ Mappa Strategica Copy",
         color: "#ef4444",
         sections: [
-            { key: "ad_copy_creation", label: "15. Creazione Copy Ads (4 Fasi)", Renderer: AdCopyRenderer },
-            { key: "franzcopy_scaling", label: "17. FranzCopy — Varianti con Formule", Renderer: FranzCopyRenderer },
+            { key: "ad_copy_creation", label: "13. Deep Dive & Matrice Angles", Renderer: AdCopyRenderer },
         ],
     },
 ];
@@ -1284,7 +1235,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
             <div style={{ maxWidth: "100%" }}>
                 <h1 className="page-title" style={{ marginBottom: 6 }}>Analisi Strategica</h1>
                 <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 24 }}>
-                    Analisi completa in 18 sezioni — Brand, Prodotti, Personas, Competitive Intelligence, Visual, Copy & Ads
+                    Analisi completa in 13 sezioni — Brand, Prodotti, VoC, Competitive Intelligence, Mappa Angles
                 </p>
                 <div className="card" style={{ textAlign: "center", padding: "60px 24px" }}>
                     <DocumentTextIcon style={{ width: 52, height: 52, color: "var(--text-muted)", margin: "0 auto 16px" }} />
@@ -1295,11 +1246,11 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                     <div style={{ background: "rgba(149,191,71,0.05)", border: "1px solid rgba(149,191,71,0.2)", borderRadius: 12, padding: 20, marginBottom: 24, textAlign: "left", maxWidth: 560, margin: "0 auto 24px" }}>
                         <p style={{ fontSize: 12, fontWeight: 700, color: "var(--lime)", marginBottom: 10 }}>✨ Cosa verrà generato:</p>
                         <ul style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.9, paddingLeft: 20, margin: 0 }}>
-                            {["Brand Identity & Posizionamento completo", "10 Customer Personas dettagliate (ICP)", "Competitor Battlecards", "Matrice contenuti Paid & Organic", "Voice of Customer da recensioni reali", "Roadmap stagionale 12 mesi", "Copy Ads, Script Video, FranzCopy", "+ altre 5 sezioni strategiche"].map(l => <li key={l}>{l}</li>)}
+                            {["Brand Identity, Valori & Brand Voice", "Portafoglio Prodotti & Servizi (con analisi verticale)", "Reasons to Buy & Gestione Obiezioni", "Voice of Customer da recensioni reali", "Matrice Contenuti Paid & Organic", "Competitor Battlecards", "Roadmap Stagionale 12 mesi", "Deep Dive Segmenti & Matrice Angles", "+ Visual Brief & Personas → nelle schede dedicate"].map(l => <li key={l}>{l}</li>)}
                         </ul>
                     </div>
                     <div style={{ background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.2)", borderRadius: 8, padding: "10px 16px", marginBottom: 24, fontSize: 12, color: "var(--orange)", maxWidth: 560, margin: "0 auto 24px" }}>
-                        ⏱️ Tempo stimato: <strong>8-15 minuti</strong> • 18 sezioni generate in sequenza
+                        ⏱️ Tempo stimato: <strong>6-12 minuti</strong> • 13 sezioni generate in sequenza
                     </div>
                     {generationError && (
                         <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "12px 16px", marginBottom: 24, fontSize: 13, color: "#ef4444", maxWidth: 560, margin: "0 auto 24px", textAlign: "left" }}>

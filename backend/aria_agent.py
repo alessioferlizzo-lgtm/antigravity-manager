@@ -27,6 +27,7 @@ from datetime import datetime
 from .ai_service import AIService
 from .storage_service import StorageService, CLIENTS_DIR
 from .aria_memory import aria_memory
+from .knowledge_loader import get_full_knowledge
 
 
 # ── Tool definitions (Claude tool_use format) ──────────────────────────────
@@ -65,7 +66,7 @@ ARIA_TOOLS = [
             "properties": {
                 "client_id": {"type": "string"},
                 "research_context": {"type": "string", "description": "Testo dell'analisi di mercato da cui partire"},
-                "funnel_stage": {"type": "string", "enum": ["discovery", "interest", "decision", "action"], "description": "Fase del funnel"},
+                "funnel_stage": {"type": "string", "enum": ["unaware", "problem_aware", "solution_aware", "product_aware", "most_aware"], "description": "Livello di consapevolezza del target"},
                 "count": {"type": "integer", "description": "Numero di angoli da generare", "default": 5}
             },
             "required": ["client_id", "research_context"]
@@ -73,13 +74,15 @@ ARIA_TOOLS = [
     },
     {
         "name": "generate_copy",
-        "description": "Genera copy (testo pubblicitario) per Meta Ads, email o social. Incorpora automaticamente il vocabolario appreso e i feedback precedenti.",
+        "description": "Genera copy (testo pubblicitario) per Meta Ads, email o social. Incorpora framework copy, livello di consapevolezza del target, vocabolario appreso e feedback precedenti. Di default usa l'Inspirational Stair di Borzacchiello salvo indicazione diversa.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "client_id": {"type": "string"},
                 "angle": {"type": "object", "description": "L'angolo comunicativo da sviluppare"},
                 "format": {"type": "string", "description": "Formato output: 'headline', 'body_copy', 'full_ad', 'email'"},
+                "framework": {"type": "string", "description": "Framework copy da usare: INSPIRATIONAL_STAIR (default) | PAS | AIDA | BAB | FAB | 4C | 4U | 5_OBIEZIONI | 3_MOTIVI | ACCA | SSS | HOOK_BODY_CTA | E_QUINDI"},
+                "awareness_level": {"type": "string", "description": "Livello di consapevolezza del target: unaware | problem_aware | solution_aware | product_aware | most_aware"},
                 "research_context": {"type": "string"},
                 "extra_instructions": {"type": "string"}
             },
@@ -210,6 +213,7 @@ class ARIAAgent:
             knowledge += f"OBIETTIVI: {source_context['objectives']}\n"
         if memory_context:
             knowledge += f"\nMEMORIA APPRENDIMENTI PASSATI:\n{memory_context}\n"
+        knowledge += get_full_knowledge()
 
         # Inject conversation history so ARIA knows what was generated before
         conv_history = context.get("conversation_history", [])
@@ -245,7 +249,7 @@ class ARIAAgent:
             wants_plan     = False
         else:
             # Detect: angles
-            wants_angles = any(w in task_lower for w in ["angol", "angle", "comunicativ", "tofu", "mofu", "bofu", "funnel", "scoperta", "interesse", "decisione"])
+            wants_angles = any(w in task_lower for w in ["angol", "angle", "comunicativ", "tofu", "mofu", "bofu", "funnel", "scoperta", "interesse", "decisione", "inconsapevol", "consapevol", "unaware", "aware", "problema", "soluzione", "prodotto", "pronto"])
             # Detect: script
             wants_script = any(w in task_lower for w in ["script", "video", "reel", "tiktok", "30 secondi", "30s"])
             # Detect: copy
@@ -263,10 +267,11 @@ class ARIAAgent:
 
         if wants_angles or (not wants_script and not wants_copy and not wants_analysis and not wants_plan):
             # Default to angles if unclear
-            funnel_stage = "discovery"
-            if "interesse" in task_lower or "mofu" in task_lower: funnel_stage = "interest"
-            elif "decisione" in task_lower or "bofu" in task_lower: funnel_stage = "decision"
-            elif "azione" in task_lower: funnel_stage = "action"
+            funnel_stage = "unaware"
+            if "problema" in task_lower or "problem" in task_lower: funnel_stage = "problem_aware"
+            elif "soluzione" in task_lower or "solution" in task_lower or "mofu" in task_lower: funnel_stage = "solution_aware"
+            elif "prodotto" in task_lower or "product" in task_lower or "bofu" in task_lower: funnel_stage = "product_aware"
+            elif "pronto" in task_lower or "most" in task_lower or "azione" in task_lower: funnel_stage = "most_aware"
 
             steps_log.append({"step": "phase2_tool", "tool": "generate_angles", "funnel_stage": funnel_stage})
             angles_result = await self._tool_generate_angles(
@@ -298,18 +303,64 @@ class ARIAAgent:
 
         elif wants_copy:
             steps_log.append({"step": "phase2_tool", "tool": "generate_copy"})
+
+            # ── Rileva framework da testo del task ──────────────────────────────
+            framework = "INSPIRATIONAL_STAIR"  # default sempre IS
+            fw_keywords_map = {
+                "PAS":          ["pas", "problem agitate"],
+                "AIDA":         ["aida"],
+                "BAB":          ["bab", "before after", "prima dopo"],
+                "FAB":          ["fab", "features advantages"],
+                "4C":           ["4c", "quattro c"],
+                "4U":           ["4u", "quattro u"],
+                "5_OBIEZIONI":  ["5 obiezioni", "obiezioni", "cinque obiezioni"],
+                "3_MOTIVI":     ["3 motivi", "tre motivi"],
+                "ACCA":         ["acca"],
+                "SSS":          ["sss", "star story"],
+                "HOOK_BODY_CTA":["hook body", "hook-body"],
+                "E_QUINDI":     ["e quindi"],
+                "INSPIRATIONAL_STAIR": ["inspirational stair", "inspirational", "stair"],
+            }
+            for fw_key, kws in fw_keywords_map.items():
+                if any(kw in task_lower for kw in kws):
+                    framework = fw_key
+                    break
+
+            # ── Rileva livello consapevolezza da testo del task ─────────────────
+            copy_awareness = "unaware"  # default: pubblico freddo
+            if any(w in task_lower for w in ["freddo", "cold", "inconsapevole", "unaware"]):
+                copy_awareness = "unaware"
+            elif any(w in task_lower for w in ["problem aware", "sa il problema", "conosce il problema"]):
+                copy_awareness = "problem_aware"
+            elif any(w in task_lower for w in ["solution aware", "sa la soluzione", "conosce la soluzione"]):
+                copy_awareness = "solution_aware"
+            elif any(w in task_lower for w in ["product aware", "conosce il brand", "conosce il prodotto", "tiepido"]):
+                copy_awareness = "product_aware"
+            elif any(w in task_lower for w in ["most aware", "caldo", "hot", "pronto all'acquisto", "pronto a comprare"]):
+                copy_awareness = "most_aware"
+
+            steps_log.append({"step": "phase2_detect_copy", "framework": framework, "awareness": copy_awareness})
+
             angles_result = await self._tool_generate_angles(
-                {"client_id": client_id, "research_context": knowledge, "funnel_stage": "decision", "count": 1},
+                {"client_id": client_id, "research_context": knowledge, "funnel_stage": copy_awareness, "count": 1},
                 client_id
             )
             angle = angles_result.get("angles", [{"title": "Valore diretto", "description": knowledge[:200]}])[0]
             copy_result = await self._tool_generate_copy(
-                {"client_id": client_id, "angle": angle, "format": "full_ad", "research_context": knowledge, "extra_instructions": task},
+                {
+                    "client_id": client_id,
+                    "angle": angle,
+                    "format": "full_ad",
+                    "framework": framework,
+                    "awareness_level": copy_awareness,
+                    "research_context": knowledge,
+                    "extra_instructions": task
+                },
                 client_id
             )
             result = copy_result
             regen_label = " (versione migliorata)" if is_regen else ""
-            summary = f"ARIA ha generato un copy Meta Ads per {client_name} basato sull'angolo '{angle.get('title', '')}'{regen_label}"
+            summary = f"ARIA ha generato un copy Meta Ads per {client_name} — framework: {framework}, pubblico: {copy_awareness.replace('_',' ')}{regen_label}"
             confidence = 86
 
         elif wants_analysis or wants_plan:
@@ -610,32 +661,80 @@ ZERO genericità — ogni punto deve essere specifico per {client_name}."""
         return {"angles": angles[:count], "count": len(angles[:count])}
 
     async def _tool_generate_copy(self, inp: Dict, client_id: str) -> Dict:
-        """Generates ad copy with memory context."""
+        """Generates ad copy with full framework knowledge and awareness level injected.
+        Default framework: INSPIRATIONAL_STAIR (come per gli script).
+        """
+        from .knowledge_loader import get_copy_knowledge
+
         angle = inp.get("angle", {})
         fmt = inp.get("format", "full_ad")
         research = inp.get("research_context", "")
         extra = inp.get("extra_instructions", "")
+        framework = inp.get("framework", "INSPIRATIONAL_STAIR")  # default: Inspirational Stair
+        awareness_level = inp.get("awareness_level", "")
 
         memory_context = aria_memory.recall_context(client_id, "copy")
 
-        prompt = f"""Sei un copywriter esperto di Meta Ads.
+        # Carica la conoscenza mirata per il framework selezionato
+        copy_knowledge = get_copy_knowledge(framework=framework, awareness_level=awareness_level)
 
-ANGOLO: {angle.get('title', '')}
+        # Guide sintetiche per ogni framework (iniettate inline nel prompt)
+        FRAMEWORK_GUIDES = {
+            "INSPIRATIONAL_STAIR": "Inspirational Stair (Borzacchiello) — 5 fasi fisse NELL'ORDINE: 1) INDIFFERENT (schiaffo cognitivo, Adrenalina+Cortisolo) 2) INTERESTING (empatia profonda, Ossitocina+Serotonina) 3) INSUPERABLE (valore unico dimostrato con fatti, Dopamina) 4) IMPERATIVE (CTA secca e autoritaria, Serotonina+Testosterone) 5) IRRESISTIBLE (sfida e selezione, Cortisolo+Dopamina). La sequenza NON si inverte e NON si salta.",
+            "PAS": "PAS: 1) PROBLEM — dolore specifico nel linguaggio esatto del target 2) AGITATE — amplifica con conseguenze reali e costi nascosti 3) SOLVE — soluzione come sollievo naturale. Ritmo: tensione → picco → rilascio.",
+            "AIDA": "AIDA: 1) ATTENTION — pattern interrupt (dato sorprendente, domanda provocatoria) 2) INTEREST — fatti concreti sul perché è rilevante ORA 3) DESIRE — social proof e identità aspirazionale 4) ACTION — CTA specifica ('Prenota ora', non 'Scopri di più').",
+            "BAB": "BAB: 1) BEFORE — situazione dolorosa attuale con specificità 2) AFTER — futuro vivido e desiderabile con dettagli concreti 3) BRIDGE — il prodotto come collegamento naturale. Transizione BEFORE→AFTER emotivamente forte.",
+            "FAB": "FAB: 1) FEATURE — caratteristica tecnica 2) ADVANTAGE — vantaggio diretto che ne deriva 3) BENEFIT — beneficio emotivo/identitario nella vita reale. REGOLA: usa SOLO i BENEFIT nel copy — le feature sono prove.",
+            "4C": "4C (check-list): copy Chiaro + Conciso + Compelling (irresistibile) + Credibile. Scrivi liberamente poi applica le 4C come filtro di revisione.",
+            "4U": "4U (check-list): copy Utile + Urgente (ragione reale per agire ora) + Unico (angolo che nessun competitor usa) + Ultra-specifico (zero parole vaghe — solo dati precisi).",
+            "5_OBIEZIONI": "5 Obiezioni: smonta in modo empatico — 1) Non ho tempo 2) Non ho soldi 3) Non funzionerà per me 4) Non ti credo 5) Non ne ho bisogno. Risposta indiretta, mai difensiva.",
+            "3_MOTIVI": "3 Motivi Per: 1) Perché sei il migliore? (dimostrato, non dichiarato) 2) Perché dovrei crederti? (prove concrete) 3) Perché dovrei comprare adesso? (scarsità reale).",
+            "ACCA": "ACCA: 1) AWARENESS — presenta il problema come riconoscibile 2) COMPREHENSION — perché è importante SPECIFICAMENTE per questo target 3) CONVICTION — la soluzione con prove solide 4) ACTION — CTA a bassa frizione.",
+            "SSS": "SSS: 1) STAR — protagonista reale e riconoscibile (mai il brand) 2) STORY — storia empatica con dettagli specifici, il target pensa 'questo sono io' 3) SOLUTION — il prodotto come scoperta naturale. Tono caldo e narrativo.",
+            "HOOK_BODY_CTA": "Hook-Body-CTA: 1) HOOK — prima riga che ferma lo scroll in 0.3 secondi 2) BODY — sviluppo con prove o storia (3-5 righe max) 3) CTA — specifica e diretta, mai generica.",
+            "E_QUINDI": "E quindi?: per ogni affermazione chiediti 'E quindi? Perché è importante per il target?' — ripeti 3-5 volte finché arrivi al beneficio emotivo profondo. Usa SEMPRE l'ultima risposta nel copy, non la prima.",
+        }
+        fw_guide = FRAMEWORK_GUIDES.get(framework, FRAMEWORK_GUIDES["INSPIRATIONAL_STAIR"])
+
+        prompt = f"""Sei un copywriter esperto di Meta Ads con un track record di €10M+ in ad spend ottimizzate.
+Il tuo copy converte perché usa le parole esatte del cliente ideale, non il linguaggio del brand.
+
+ANGOLO DA SVILUPPARE: {angle.get('title', '')}
 {angle.get('description', '')}
 
-RICERCA E CONTESTO:
-{research[:2000]}
+FRAMEWORK DA USARE (OBBLIGATORIO — seguilo alla lettera):
+{fw_guide}
+{f"LIVELLO DI CONSAPEVOLEZZA TARGET: {awareness_level.upper().replace('_', ' ')}" if awareness_level else ""}
 
-{memory_context}
+═══════════════════════════════════════════════════════════
+CONTESTO STRATEGICO COMPLETO DEL CLIENTE
+═══════════════════════════════════════════════════════════
+
+{research[:3000]}
+
+{copy_knowledge}
+
+{memory_context if memory_context else ""}
 
 FORMATO RICHIESTO: {fmt}
 {f"ISTRUZIONI AGGIUNTIVE: {extra}" if extra else ""}
 
-Scrivi un copy potente e specifico per questo cliente. Zero genericità.
-Rispondi SOLO con il copy (nessuna spiegazione)."""
+REGOLE ESECUTIVE:
+- Il PRIMARY TEXT deve essere scroll-stopping dal primo carattere
+- Frasi brevi — scrivi come si parla, non come una brochure
+- Il HOOK deve arrestare lo scroll in 0.3 secondi
+- NON usare emoji a meno che non siano parte del brand voice del cliente
+- ZERO genericità — ogni frase deve essere specifica per questo cliente
+- Usa il vocabolario reale del target (dalle recensioni, VoC, analisi)
 
-        result = await self.ai._call_ai("anthropic/claude-3.7-sonnet", [{"role": "user", "content": prompt}], temperature=0.7)
-        return {"copy": result, "format": fmt, "angle": angle.get("title", "")}
+Rispondi SOLO con il copy (nessuna spiegazione, nessun titolo, nessuna formattazione extra)."""
+
+        result = await self.ai._call_ai(
+            "anthropic/claude-sonnet-4-5",
+            [{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        return {"copy": result, "format": fmt, "angle": angle.get("title", ""), "framework": framework, "awareness_level": awareness_level}
 
     async def _tool_generate_script(self, inp: Dict, client_id: str) -> Dict:
         """Generates video script using AIService with memory."""

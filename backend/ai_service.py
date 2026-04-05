@@ -5,6 +5,7 @@ import json_repair
 import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
+from .knowledge_loader import get_awareness_context, get_script_knowledge
 try:
     from .notion_service import notion_service, NOTION_ANGLES_VAULT_DB_ID, NOTION_COPY_VAULT_DB_ID
     _notion_available = True
@@ -324,14 +325,9 @@ RISPONDI ESCLUSIVAMENTE CON QUESTO JSON (nessun testo fuori dal JSON):
         user_reqs = f"REQUISTI ADDIZIONALI DELL'UTENTE:\n{user_prompt}" if user_prompt else ""
         
         funnel_context = ""
-        if funnel_stage:
-            funnel_descriptions = {
-                "discovery": "SCOPERTA (TOFU): Il pubblico NON conosce ancora il brand. Angoli che creano curiosità, rompono pattern, fanno scoprire qualcosa di nuovo. Focus su awareness.",
-                "interest": "INTERESSE (MOFU): Il pubblico conosce il brand ma non è convinto. Angoli che costruiscono fiducia, mostrano competenza. Focus su engagement.",
-                "decision": "DECISIONE (BOFU): Il pubblico sta valutando. Angoli che rimuovono obiezioni, mostrano risultati. Focus su conversione.",
-                "action": "AZIONE: Il pubblico è pronto. Angoli con CTA dirette e urgenza intelligente. Focus su conversione immediata."
-            }
-            funnel_context = f"\nFASE DEL FUNNEL (adatta gli angoli a questa fase):\n{funnel_descriptions.get(funnel_stage, funnel_stage)}\n"
+        awareness_knowledge = get_awareness_context(funnel_stage)
+        if awareness_knowledge:
+            funnel_context = awareness_knowledge
             
         # ── RAG DA NOTION (opzionale) ──
         framework_context = ""
@@ -490,6 +486,8 @@ ANGOLO: {angle['title']}
 
 CONTESTO DI SUPPORTO (usa per dettagli e credibilità):
 {research}
+
+{get_script_knowledge()}
 
 PREFERENZE E REGOLE:
 - Tono: {preferences.get('tone', 'naturale e diretto')}

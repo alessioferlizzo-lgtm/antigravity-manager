@@ -40,6 +40,7 @@ except Exception as _ne:
     print(f"⚠️  Notion service non disponibile in main.py: {_ne}")
     notion_service = None
 from .strategic_context_loader import get_strategic_context_for_generator
+from .knowledge_loader import get_awareness_context
 from .smart_lists_service import smart_lists_service
 from .aria_agent import get_aria_agent
 from .aria_memory import aria_memory
@@ -1482,7 +1483,7 @@ async def get_voc(client_id: str):
 # ══════════════════════════════════════════════════════════
 
 class CopyRequest(BaseModel):
-    framework: str = "PAS"          # PAS | AIDA | BAB | HOOK_BODY_CTA | 4C
+    framework: str = "PAS"          # PAS | AIDA | BAB | HOOK_BODY_CTA | 4C | INSPIRATIONAL_STAIR | FAB | 4U | 5_OBIEZIONI | 3_MOTIVI | ACCA | SSS | E_QUINDI
     angle_title: str
     angle_description: Optional[str] = ""
     product_name: Optional[str] = ""
@@ -1504,13 +1505,25 @@ async def generate_copy(client_id: str, request: CopyRequest):
     )
 
     framework_guides = {
-        "PAS": "PAS (Problem-Agitate-Solution): 1) Hook che identifica il problema 2) Agita il dolore/frustrazione 3) Presenta la soluzione come unica via d'uscita",
-        "AIDA": "AIDA (Attention-Interest-Desire-Action): 1) Hook che cattura attenzione 2) Crea interesse con un fatto/storia 3) Alimenta il desiderio con benefici 4) CTA urgente",
-        "BAB": "BAB (Before-After-Bridge): 1) Descrivi la situazione attuale dolorosa (Prima) 2) Dipingi la vita desiderata (Dopo) 3) Presenta il prodotto come il ponte",
+        "PAS": "PAS (Problem-Agitate-Solution): 1) PROBLEM — Hook con linguaggio esatto del target, specifico e riconoscibile 2) AGITATE — Amplifica dolore con conseguenze reali, frustrazioni quotidiane, costo nascosto del problema 3) SOLVE — La soluzione arriva come sollievo naturale. Ritmo: tensione crescente → picco → rilascio.",
+        "AIDA": "AIDA (Attention-Interest-Desire-Action): 1) ATTENTION — Pattern interrupt immediato: domanda provocatoria, dato sorprendente o affermazione contro-intuitiva 2) INTEREST — Fatti concreti sul perché questo è rilevante per il target ORA 3) DESIRE — Social proof, risultati reali, identità aspirazionale ('persone come te') 4) ACTION — CTA specifica: 'Prenota ora' non 'Scopri di più'. Flusso: curiosità → coinvolgimento → invidia positiva → urgenza.",
+        "BAB": "BAB (Before-After-Bridge): 1) BEFORE — Situazione attuale dolorosa descritta con specificità e linguaggio del target 2) AFTER — Futuro vivido e desiderabile con dettagli concreti 3) BRIDGE — Il prodotto come collegamento naturale e ovvio tra le due realtà. Transizione BEFORE→AFTER emotivamente forte, AFTER→BRIDGE logica e rassicurante.",
         "HOOK_BODY_CTA": "Hook-Body-CTA: 1) Hook in 1 riga devastante 2) Body con prova/storia/benefici (3-5 righe) 3) CTA forte e specifica",
-        "4C": "4C (Clear-Concise-Compelling-Credible): Copy brevissimo, ogni parola guadagna il suo posto, credibilità integrata, offer irresistibile",
+        "4C": "4C (Clear-Concise-Compelling-Credible): Copy brevissimo, ogni parola guadagna il suo posto, credibilit\u00e0 integrata, offer irresistibile",
+        "INSPIRATIONAL_STAIR": "Inspirational Stair (Borzacchiello): Sequenza neurochimica in 5 fasi FISSE nell'ordine: 1) INDIFFERENT (Adrenalina+Cortisolo) \u2014 schiaffo cognitivo 2) INTERESTING (Ossitocina+Serotonina) \u2014 empatia 3) INSUPERABLE (Dopamina) \u2014 valore unico 4) IMPERATIVE (Serotonina+Testosterone) \u2014 comando/CTA 5) IRRESISTIBLE (Cortisolo+Dopamina) \u2014 sfida e selezione. La sequenza NON si inverte e NON si salta.",
+        "FAB": "FAB (Features-Advantages-Benefits): 1) Elenca le CARATTERISTICHE del prodotto 2) Per ogni caratteristica scrivi i VANTAGGI che ne derivano 3) Per ogni vantaggio scrivi il BENEFICIO reale nella vita del cliente. Usa solo i BENEFIT nel copy \u2014 le feature sono prove, i benefit sono motivazioni.",
+        "4U": "Le 4U (Utile-Urgente-Unico-Ultra-specifico) — Check-list per headline e hook: 1) UTILE — beneficio tangibile e immediato 2) URGENTE — ragione reale per agire ADESSO (scarsità vera, deadline autentica, costo dell'inazione) 3) UNICO — angolo che nessun competitor usa 4) ULTRA-SPECIFICO — sostituisci ogni parola vaga con dati precisi. 'Risparmi tempo' → 'Risparmi 3 ore ogni settimana'. Applicare come filtro finale su headline e hook.",
+        "5_OBIEZIONI": "5 Obiezioni di Base — Il copy smonta le 5 resistenze universali: 1) 'Non ho abbastanza tempo' → mostra quanto è veloce 2) 'Non ho abbastanza soldi' → mostra ROI o costo dell'inazione 3) 'Non funzionerà per me' → case study di qualcuno identico al target 4) 'Non ti credo' → social proof forte (numeri verificabili, nomi reali) 5) 'Non ne ho bisogno' → fai visualizzare cosa perde ogni giorno che aspetta. Rispondere in modo indiretto ed empatico, mai difensivo. Utile per sales page.",
+        "3_MOTIVI": "3 Motivi Per — Copy che risponde a 3 domande fondamentali: 1) 'PERCHÉ SEI IL MIGLIORE?' — differenziatori specifici e verificabili, non aggettivi vuoti 2) 'PERCHÉ DOVREI CREDERTI?' — social proof concreto: nomi reali, numeri precisi, risultati misurabili 3) 'PERCHÉ DOVREI COMPRARE ADESSO?' — scarsità reale o costo dell'inazione concreto (MAI urgenza fasulla). Particolarmente efficace per personal brand e servizi high-ticket.",
+        "ACCA": "ACCA (Awareness-Comprehension-Conviction-Action): 1) AWARENESS — Presenta il problema in modo riconoscibile (non assumere che il target lo conosca già) 2) COMPREHENSION — Spiega PERCHÉ è un problema per questo target specificamente, con dati e conseguenze concrete 3) CONVICTION — Mostra la soluzione con prove solide (numeri, casi studio) 4) ACTION — CTA a bassa frizione come primo step. Più razionale ed educativa di AIDA. Usare quando il target deve capire prima di credere.",
+        "SSS": "SSS (Star-Story-Solution): 1) STAR — Protagonista reale e riconoscibile (un cliente tipo, mai il brand) 2) STORY — Storia con dettagli specifici: età, situazione, problema vissuto in prima persona. Il lettore deve pensare 'questo sono io' 3) SOLUTION — Il prodotto come scoperta naturale e credibile, non pubblicità. Tono caldo e narrativo. Trasmissione: la trasformazione deve essere specifica e verosimile.",
+        "E_QUINDI": "E quindi? — Processo di approfondimento iterativo: per ogni affermazione nel copy chiediti 'E quindi? Perché questa dichiarazione dovrebbe essere importante per il target?' Ripeti 3-5 volte finché non arrivi al beneficio emotivo/identitario finale. REGOLA: usa sempre l'ULTIMA risposta nel copy, non la prima. È un processo di revisione da applicare su qualsiasi copy già scritto con qualsiasi framework.",
     }
     fw_guide = framework_guides.get(request.framework, framework_guides["PAS"])
+
+    # Inject full Inspirational Stair knowledge when that framework is selected
+    from .knowledge_loader import get_copy_knowledge
+    extra_knowledge = get_copy_knowledge(framework=request.framework)
 
     system_prompt = f"""Sei un copywriter esperto di Meta Ads con un track record di €10M+ in ad spend ottimizzate.
 Il tuo copy converte perché usa le parole esatte del cliente ideale, non il linguaggio del brand.
@@ -1526,6 +1539,8 @@ CONTESTO STRATEGICO COMPLETO DEL CLIENTE
 ═══════════════════════════════════════════════════════════
 
 {strategic_context}
+
+{extra_knowledge}
 
 REGOLE FONDAMENTALI:
 - Il PRIMARY TEXT deve essere scroll-stopping dal primo carattere
@@ -2980,17 +2995,13 @@ async def generate_script_endpoint(client_id: str, request: ScriptRequest):
         focus_areas=["customer_personas", "brand_voice", "visual_brief", "product_vertical", "psychographic_analysis"]
     )
     
-    # Read Output-script rules (optional, best-effort)
+    # Knowledge (Borzacchiello, Vignali, Dosio, Schwartz) is now injected
+    # directly in ai_service.generate_script via knowledge_loader
     rules = ""
-    try:
-        with open("Output-script", "r") as f:
-            rules = f.read()
-    except FileNotFoundError:
-        pass
-    
+
     angle = {"title": request.title, "description": request.description}
     count = min(max(request.count, 1), 5)
-    
+
     scripts = []
     for i in range(count):
         script = await ai_service.generate_script(
@@ -3036,13 +3047,8 @@ async def submit_feedback(client_id: str, request: FeedbackRequest):
         with open(research_path, "r") as f:
             research = f.read()
     
+    # Knowledge now injected via knowledge_loader in ai_service
     rules = ""
-    try:
-        if os.path.exists("Output-script"):
-            with open("Output-script", "r") as f:
-                rules = f.read()
-    except Exception:
-        pass
         
     # Load original script content for contextual refinement
     original_script_content = ""
@@ -3430,7 +3436,7 @@ REGOLE FONDAMENTALI:
 
 Rispondi SOLO con il prompt inglese. Senza spiegazioni, senza prefissi."""
 
-        user_msg_text = f"Contesto brand:\n{client_context}\n{rag_context_text}\n\nFormato richiesto: {request.format}\nModello: {model_label}\n\nIdea dell'utente:\n{request.prompt}"
+        user_msg_text = f"Contesto brand:\n{client_context}\n{get_awareness_context()}\n{rag_context_text}\n\nFormato richiesto: {request.format}\nModello: {model_label}\n\nIdea dell'utente:\n{request.prompt}"
 
         user_content = [
             {"type": "text", "text": user_msg_text}

@@ -78,10 +78,11 @@ const STATUS_CYCLE: Record<string, string> = { todo: "doing", doing: "done", don
 const PRIORITY_ORDER: Record<string, number> = { alta: 0, media: 1, bassa: 2 };
 const GFX_FORMATS = ["Feed IG (1:1)", "Feed IG (4:5)", "Stories (9:16)", "Banner (16:9)", "Carosello", "LinkedIn (1.91:1)", "Pinterest (2:3)"];
 const FUNNEL_STAGES = [
-  { key: "discovery", emoji: "🔍", label: "Scoperta", desc: "Non conosce il brand" },
-  { key: "interest", emoji: "💡", label: "Interesse", desc: "Conosce, non è convinto" },
-  { key: "decision", emoji: "🎯", label: "Decisione", desc: "Valuta l'acquisto" },
-  { key: "action", emoji: "🔥", label: "Azione", desc: "Pronto a comprare" },
+  { key: "unaware", emoji: "🔍", label: "Inconsapevole", desc: "Non sa di avere un problema" },
+  { key: "problem_aware", emoji: "💡", label: "Problema", desc: "Sente il disagio, non sa come risolverlo" },
+  { key: "solution_aware", emoji: "⚡", label: "Soluzione", desc: "Confronta le opzioni disponibili" },
+  { key: "product_aware", emoji: "🎯", label: "Prodotto", desc: "Conosce il brand, è indeciso" },
+  { key: "most_aware", emoji: "🔥", label: "Pronto", desc: "Serve solo la spinta finale" },
 ];
 
 /* ═══════════════════════════════════════════════════════════
@@ -208,6 +209,7 @@ export default function Dashboard() {
   // Copy
   const [cpyCliId, setCpyCliId] = useState("");
   const [cpyType, setCpyType] = useState("caption");
+  const [cpyFramework, setCpyFramework] = useState("PAS");
   const [cpyPrompt, setCpyPrompt] = useState("");
   const [cpyOutput, setCpyOutput] = useState("");
   const [cpyLoading, setCpyLoading] = useState(false);
@@ -487,19 +489,30 @@ export default function Dashboard() {
   async function genCopy() {
     if (!cpyCliId) return;
     setCpyLoading(true);
-    const r = await fetch(`${API}/clients/${cpyCliId}/scripts`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: cpyAngle?.title || `Copy ${cpyType}`,
-        description: cpyAngle?.description || cpyPrompt || `Crea copy per ${cpyType}`,
-        emotion: cpyAngle?.emotion || "",
-        script_instructions: `TIPO DI COPY: ${cpyType.toUpperCase()}. Non scrivere uno script video. Scrivi SOLO il copy pronto per essere pubblicato su ${cpyType}. ${cpyAngle ? `ANGOLO: "${cpyAngle.title}" — ${cpyAngle.description}` : ""} ${cpyPrompt ? `ISTRUZIONI EXTRA: ${cpyPrompt}` : ""}`.trim(),
-        count: 1
-      })
-    });
-    const data = await r.json();
-    const arr = Array.isArray(data) ? data : [data];
-    setCpyOutput(arr[0]?.content || "");
+    try {
+      const r = await fetch(`${API}/clients/${cpyCliId}/copy/generate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          framework: cpyFramework,
+          angle_title: cpyAngle?.title || `Copy ${cpyType}`,
+          angle_description: cpyAngle?.description || "",
+          product_name: cpyPrompt || `Formato: ${cpyType}`,
+          variations: 1
+        })
+      });
+      const data = await r.json();
+      // Il copy endpoint restituisce { variations: [...], ... }
+      if (data.variations && data.variations.length > 0) {
+        const v = data.variations[0];
+        setCpyOutput(`${v.hook}\n\n${v.primary_text}\n\n📌 ${v.headline}\n${v.description || ""}\n\n🔘 ${v.cta_button}`);
+      } else if (typeof data === "string") {
+        setCpyOutput(data);
+      } else {
+        setCpyOutput(JSON.stringify(data, null, 2));
+      }
+    } catch (e) {
+      setCpyOutput("Errore nella generazione del copy.");
+    }
     setCpyLoading(false);
   }
 
@@ -1590,6 +1603,27 @@ export default function Dashboard() {
                       { key: "story", label: "⚡ Story Caption" },
                     ].map(t => (
                       <button key={t.key} className={`format-chip ${cpyType === t.key ? "active" : ""}`} onClick={() => setCpyType(t.key)}>{t.label}</button>
+                    ))}
+                  </div>
+
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Framework</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                    {[
+                      { key: "PAS", label: "PAS" },
+                      { key: "AIDA", label: "AIDA" },
+                      { key: "BAB", label: "BAB" },
+                      { key: "HOOK_BODY_CTA", label: "Hook-Body-CTA" },
+                      { key: "4C", label: "4C" },
+                      { key: "INSPIRATIONAL_STAIR", label: "Inspirational Stair" },
+                      { key: "FAB", label: "FAB" },
+                      { key: "4U", label: "4U" },
+                      { key: "5_OBIEZIONI", label: "5 Obiezioni" },
+                      { key: "3_MOTIVI", label: "3 Motivi Per" },
+                      { key: "ACCA", label: "ACCA" },
+                      { key: "SSS", label: "SSS" },
+                      { key: "E_QUINDI", label: "E quindi?" },
+                    ].map(fw => (
+                      <button key={fw.key} className={`format-chip ${cpyFramework === fw.key ? "active" : ""}`} onClick={() => setCpyFramework(fw.key)}>{fw.label}</button>
                     ))}
                   </div>
 
