@@ -356,6 +356,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     const [exportLoading, setExportLoading] = useState(false);
     // AI analysis data for cross-tab display
     const [analysisCustomerPersonas, setAnalysisCustomerPersonas] = useState<any>(null);
+    const [analysisVisualBrief, setAnalysisVisualBrief] = useState<any>(null);
+    const [analysisPsychographic, setAnalysisPsychographic] = useState<any>(null);
     const [analysisPersonasLoading, setAnalysisPersonasLoading] = useState(false);
 
     // VoC / Review Mining
@@ -389,19 +391,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         load();
     }, [id]);
 
-    // Lazy-load AI customer personas when visiting the Personas tab
-    useEffect(() => {
-        if (section === "personas" && !analysisCustomerPersonas && !analysisPersonasLoading) {
-            setAnalysisPersonasLoading(true);
-            fetch(`${API}/clients/${id}/analysis/complete`)
-                .then(r => r.ok ? r.json() : null)
-                .then(d => {
-                    if (d && d.customer_personas) setAnalysisCustomerPersonas(d.customer_personas);
-                })
-                .catch(() => {})
-                .finally(() => setAnalysisPersonasLoading(false));
-        }
-    }, [section]); // eslint-disable-line react-hooks/exhaustive-deps
+    // (Lazy-load removed, integrated into load() to ensure all data is preloaded for cross-tab display)
 
     // Auto-fetch live Meta Ads metrics when entering Reports section
     useEffect(() => {
@@ -447,6 +437,12 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         fetch(`${API}/clients/${id}/psychographic`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setPsychographic(d); }).catch(() => {});
         fetch(`${API}/clients/${id}/visual-brief`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setVisualBrief(d); }).catch(() => {});
         fetch(`${API}/clients/${id}/seasonality`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setSeasonality(d); }).catch(() => {});
+        // Load completed strategic analysis logic for visual brief and personas
+        fetch(`${API}/clients/${id}/analysis/complete`).then(r => r.ok ? r.json() : null).then(d => {
+            if (d && d.customer_personas) setAnalysisCustomerPersonas(d.customer_personas);
+            if (d && d.psychographic_analysis) setAnalysisPsychographic(d.psychographic_analysis);
+            if (d && d.visual_brief) setAnalysisVisualBrief(d.visual_brief);
+        }).catch(() => {});
     }
 
 
@@ -1268,18 +1264,20 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         </div>
 
                         {/* ── Visual Brief dall'AI ── */}
-                        {visualBrief?.data && (
+                        {(visualBrief?.data || analysisVisualBrief) && (() => {
+                            const vbData = visualBrief?.data || analysisVisualBrief;
+                            return (
                             <div className="card" style={{ marginTop: 4 }}>
                                 <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, color: "var(--text-primary)" }}>
                                     <span style={{ fontSize: 18 }}>🎨</span> Visual Brief (dall&apos;Analisi AI)
                                 </span>
 
                                 {/* Palette Colori */}
-                                {Array.isArray(visualBrief.data.color_palette) && visualBrief.data.color_palette.length > 0 && (
+                                {Array.isArray(vbData.color_palette) && vbData.color_palette.length > 0 && (
                                     <div style={{ marginBottom: 20 }}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#ec4899", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>🎨 Palette Colori dell&apos;Analisi</div>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                                            {visualBrief.data.color_palette.map((c: any, i: number) => {
+                                            {vbData.color_palette.map((c: any, i: number) => {
                                                 const hex = typeof c === "string" ? c : (c.color || c.hex || "#cccccc");
                                                 const label = typeof c === "string" ? c : (c.name || c.label || hex);
                                                 const usage = typeof c === "object" && c.usage ? c.usage : null;
@@ -1298,62 +1296,63 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                 )}
 
                                 {/* Stile Visivo */}
-                                {(visualBrief.data.visual_style || visualBrief.data.style) && (
+                                {(vbData.visual_style || vbData.style) && (
                                     <div style={{ marginBottom: 16, padding: "12px 16px", background: "rgba(139,92,246,0.06)", borderRadius: 10, border: "1px solid rgba(139,92,246,0.2)" }}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", marginBottom: 6 }}>🖼️ Stile Visivo & Art Direction</div>
                                         <p style={{ fontSize: 13, lineHeight: 1.7, margin: 0, color: "var(--text-primary)" }}>
-                                            {typeof (visualBrief.data.visual_style || visualBrief.data.style) === "string"
-                                                ? (visualBrief.data.visual_style || visualBrief.data.style)
-                                                : JSON.stringify(visualBrief.data.visual_style || visualBrief.data.style)}
+                                            {typeof (vbData.visual_style || vbData.style) === "string"
+                                                ? (vbData.visual_style || vbData.style)
+                                                : JSON.stringify(vbData.visual_style || vbData.style)}
                                         </p>
                                     </div>
                                 )}
 
                                 {/* Tipografia */}
-                                {visualBrief.data.typography_direction && (
+                                {vbData.typography_direction && (
                                     <div style={{ marginBottom: 16, padding: "12px 16px", background: "rgba(99,102,241,0.06)", borderRadius: 10, border: "1px solid rgba(99,102,241,0.2)" }}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", marginBottom: 6 }}>🔤 Tipografia</div>
                                         <p style={{ fontSize: 13, lineHeight: 1.7, margin: 0, color: "var(--text-primary)" }}>
-                                            {typeof visualBrief.data.typography_direction === "string"
-                                                ? visualBrief.data.typography_direction
-                                                : JSON.stringify(visualBrief.data.typography_direction)}
+                                            {typeof vbData.typography_direction === "string"
+                                                ? vbData.typography_direction
+                                                : JSON.stringify(vbData.typography_direction)}
                                         </p>
                                     </div>
                                 )}
 
                                 {/* Mood Board */}
-                                {visualBrief.data.mood_board && (
+                                {vbData.mood_board && (
                                     <div style={{ marginBottom: 16, padding: "12px 16px", background: "rgba(245,158,11,0.06)", borderRadius: 10, border: "1px solid rgba(245,158,11,0.2)" }}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", marginBottom: 6 }}>🌟 Mood Board</div>
                                         <p style={{ fontSize: 13, lineHeight: 1.7, margin: 0, color: "var(--text-primary)" }}>
-                                            {typeof visualBrief.data.mood_board === "string" ? visualBrief.data.mood_board : JSON.stringify(visualBrief.data.mood_board)}
+                                            {typeof vbData.mood_board === "string" ? vbData.mood_board : JSON.stringify(vbData.mood_board)}
                                         </p>
                                     </div>
                                 )}
 
                                 {/* DO / DON'T Visivi */}
-                                {(visualBrief.data.dos_visivi || visualBrief.data.donts_visivi || visualBrief.data.what_to_avoid) && (
+                                {(vbData.dos_visivi || vbData.donts_visivi || vbData.what_to_avoid) && (
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                                        {visualBrief.data.dos_visivi && Array.isArray(visualBrief.data.dos_visivi) && (
+                                        {vbData.dos_visivi && Array.isArray(vbData.dos_visivi) && (
                                             <div style={{ padding: "12px 16px", background: "rgba(16,185,129,0.06)", borderRadius: 10, border: "1px solid rgba(16,185,129,0.2)" }}>
                                                 <div style={{ fontSize: 11, fontWeight: 700, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>✅ DO Visivi</div>
                                                 <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                                                    {visualBrief.data.dos_visivi.map((d: string, i: number) => <li key={i}>{d}</li>)}
+                                                    {vbData.dos_visivi.map((d: string, i: number) => <li key={i}>{d}</li>)}
                                                 </ul>
                                             </div>
                                         )}
-                                        {(visualBrief.data.donts_visivi || visualBrief.data.what_to_avoid) && (
+                                        {(vbData.donts_visivi || vbData.what_to_avoid) && (
                                             <div style={{ padding: "12px 16px", background: "rgba(239,68,68,0.06)", borderRadius: 10, border: "1px solid rgba(239,68,68,0.2)" }}>
-                                                <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>❌ {visualBrief.data.donts_visivi ? "DON'T Visivi" : "Da Evitare"}</div>
+                                                <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>❌ {vbData.donts_visivi ? "DON'T Visivi" : "Da Evitare"}</div>
                                                 <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                                                    {(visualBrief.data.donts_visivi || (typeof visualBrief.data.what_to_avoid === 'string' ? [visualBrief.data.what_to_avoid] : visualBrief.data.what_to_avoid)).map((d: string, i: number) => <li key={i}>{d}</li>)}
+                                                    {(vbData.donts_visivi || (typeof vbData.what_to_avoid === 'string' ? [vbData.what_to_avoid] : vbData.what_to_avoid)).map((d: string, i: number) => <li key={i}>{d}</li>)}
                                                 </ul>
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
-                        )}
+                            );
+                        })()}
                     </div>
                 )}
 
@@ -1518,8 +1517,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                         )}
 
                         {/* ── Analisi Psicografica (dall'Analisi Strategica) ── */}
-                        {psychographic?.data && (() => {
-                            const psyData = psychographic.data;
+                        {(psychographic?.data || analysisPsychographic) && (() => {
+                            const psyData = psychographic?.data || analysisPsychographic;
                             const levels = [
                                 { key: "level_1_primary", label: "Livello 1 — Inconsapevole", color: "#6366f1", emoji: "🧠" },
                                 { key: "level_2_secondary", label: "Livello 2 — Consapevole del Problema", color: "#0ea5e9", emoji: "🎯" },
