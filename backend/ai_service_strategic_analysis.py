@@ -15,6 +15,10 @@ ANTI_HALLUCINATION_DIRECTIVE = """
    Se il sito dice "aiuto e-commerce a ottenere clienti", NON scrivere "specializzato in lead generation".
    Se il sito parla di "e-commerce e attività locali", NON scrivere "lead generation" o "B2B enterprise".
    Il posizionamento e il vocabolario devono riflettere come il brand si presenta REALMENTE.
+   NON rietichettare i servizi: se un servizio include gestione completa (campagne, creatività,
+   ottimizzazione, reportistica), è un servizio di GESTIONE DONE-FOR-YOU, NON una consulenza.
+   "Consulenza" = il professionista dà consigli e il cliente esegue. Se il professionista esegue → gestione.
+   Usa i NOMI ORIGINALI dei servizi così come li chiama il brand.
 
 3. ANALIZZA TUTTO — Usa TUTTI i dati disponibili, anche se sono pochi. Poche recensioni sono
    comunque recensioni reali da analizzare. Pochi servizi meritano comunque un'analisi approfondita.
