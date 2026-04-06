@@ -439,9 +439,9 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         fetch(`${API}/clients/${id}/seasonality`).then(r => r.ok ? r.json() : null).then(d => { if (d?.data) setSeasonality(d); }).catch(() => {});
         // Load completed strategic analysis logic for visual brief and personas
         fetch(`${API}/clients/${id}/analysis/complete`).then(r => r.ok ? r.json() : null).then(d => {
-            if (d && d.customer_personas) setAnalysisCustomerPersonas(d.customer_personas);
-            if (d && d.psychographic_analysis) setAnalysisPsychographic(d.psychographic_analysis);
-            if (d && d.visual_brief) setAnalysisVisualBrief(d.visual_brief);
+            setAnalysisCustomerPersonas(d?.customer_personas || null);
+            setAnalysisPsychographic(d?.psychographic_analysis || null);
+            setAnalysisVisualBrief(d?.visual_brief || null);
         }).catch(() => {});
     }
 
