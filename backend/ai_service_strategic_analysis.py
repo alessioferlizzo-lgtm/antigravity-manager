@@ -5,31 +5,25 @@ import json_repair
 from typing import Dict, Any
 
 ANTI_HALLUCINATION_DIRECTIVE = """
-⚠️ REGOLE CRITICHE PER L'ANALISI — VIOLARNE UNA INVALIDA L'INTERO OUTPUT:
+⚠️ REGOLE PER L'ANALISI:
 
-1. INTEGRITÀ DEI FATTI — Ogni dato specifico sul brand (numeri, clienti, fatturati, anni di esperienza,
-   prezzi, offerte, settori serviti, competenze) deve provenire ESCLUSIVAMENTE dai dati forniti.
-   Se un'informazione NON è presente nei dati, NON scriverla. MAI.
-   Meglio dire "consulente di marketing digitale" che inventare "10 anni di esperienza e 1.200 clienti".
-   Se non sai quanti anni di esperienza ha → NON menzionare anni di esperienza.
-   Se non sai i settori specifici in cui opera → descrivi solo quello che emerge dai dati.
+1. INTEGRITÀ DEI FATTI — Dati specifici sul brand (numeri, clienti, fatturati, anni di esperienza,
+   competenze dichiarate) devono provenire dai dati forniti. NON inventare statistiche, numeri o
+   credenziali che non trovi nelle fonti. Se non sai quanti anni di esperienza ha → non menzionarli.
 
 2. USA LE PAROLE DEL BRAND — NON tradurre la terminologia del brand in gergo tecnico diverso.
    Se il sito dice "aiuto e-commerce a ottenere clienti", NON scrivere "specializzato in lead generation".
-   Se il sito dice "strategie pubblicitarie su misura", NON tradurre in "funnel di conversione B2B".
    Se il sito parla di "e-commerce e attività locali", NON scrivere "lead generation" o "B2B enterprise".
-   Il posizionamento, il settore e il vocabolario devono riflettere come il brand si presenta REALMENTE.
-   COPIA le parole del brand, non interpretarle con sinonimi tecnici.
+   Il posizionamento e il vocabolario devono riflettere come il brand si presenta REALMENTE.
 
-3. NON ALLUNGARE CON INVENZIONI — Se i dati sono pochi, scrivi un'analisi più breve ma vera.
-   Non inventare fatti per raggiungere una lunghezza target. Un'analisi di 5 righe vera vale più
-   di 50 righe con fatti inventati. Il cliente CONOSCE la sua attività e riconoscerà ogni invenzione.
+3. ANALIZZA TUTTO — Usa TUTTI i dati disponibili, anche se sono pochi. Poche recensioni sono
+   comunque recensioni reali da analizzare. Pochi servizi meritano comunque un'analisi approfondita.
+   Non dire "dati insufficienti" se i dati ci sono — analizzali a fondo.
+   Se i dati sono davvero assenti, fai inferenze di settore dichiarandole come tali.
 
-4. ANALISI STRATEGICHE SÌ — Puoi fare inferenze, analisi competitive, suggerimenti strategici,
-   identificare trend di settore. Questo è il tuo lavoro. Ma i FATTI sul brand devono essere reali.
-
-5. VERIFICA FINALE — Prima di restituire il JSON, rileggi ogni affermazione fattuale e chiediti:
-   "Dove nei dati forniti ho trovato questa informazione?" Se non riesci a indicare la fonte → RIMUOVILA.
+4. PROFONDITÀ — Per ogni elemento trovato nei dati, vai in profondità. Non limitarti a elencare:
+   analizza, suggerisci strategie, crea angoli di marketing. Più è dettagliata l'analisi, meglio è.
+   La brevità è accettabile SOLO se davvero non ci sono dati. Se ci sono dati → approfondisci.
 """
 
 async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, Any]) -> Any:
