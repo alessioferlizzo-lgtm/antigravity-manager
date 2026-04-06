@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowPathIcon, DocumentTextIcon, ChevronDownIcon, ChevronRightIcon, SparklesIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, DocumentTextIcon, ChevronDownIcon, ChevronRightIcon, SparklesIcon, CheckCircleIcon, TrashIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 interface Props { clientId: string; apiUrl: string; onRefresh?: () => void; }
 
@@ -1209,6 +1209,55 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl, onRefresh }
         onRefresh?.();
     };
 
+    const handleDeleteSection = async (e: React.MouseEvent, stepId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!confirm("Cancellare questa sezione?")) return;
+        setSectionLoading(prev => ({ ...prev, [stepId]: true }));
+        try {
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/section/${stepId}`, { method: "DELETE" });
+            if (res.ok) {
+                setAnalysis((prev: any) => {
+                    if (!prev) return prev;
+                    const next = { ...prev };
+                    delete next[stepId];
+                    return next;
+                });
+            }
+        } catch (e) {
+            console.error(`[Delete] Error:`, e);
+        }
+        setSectionLoading(prev => ({ ...prev, [stepId]: false }));
+        onRefresh?.();
+    };
+
+    const handleDeepenSection = async (e: React.MouseEvent, stepId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSectionLoading(prev => ({ ...prev, [stepId]: true }));
+        try {
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/deepen/${stepId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+            if (res.ok) {
+                const result = await res.json();
+                if (result.new_data) {
+                    setAnalysis((prev: any) => ({ ...prev, [stepId]: result.new_data }));
+                } else if (result.analysis_step) {
+                    setAnalysis((prev: any) => ({ ...prev, [stepId]: result.analysis_step }));
+                }
+            } else {
+                console.error(`[Deepen] Error:`, res.status);
+            }
+        } catch (e) {
+            console.error(`[Deepen] Network Error:`, e);
+        }
+        setSectionLoading(prev => ({ ...prev, [stepId]: false }));
+        fetchCosts();
+        onRefresh?.();
+    };
+
     const toggleMacro = (i: number) => {
         const s = new Set(expandedMacros);
         s.has(i) ? s.delete(i) : s.add(i);
@@ -1338,14 +1387,36 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl, onRefresh }
                                                     {sectionLoading[key] ? (
                                                         <div className="spinner" style={{ width: 14, height: 14 }} />
                                                     ) : (
-                                                        <button 
-                                                            className="btn-icon" 
-                                                            title="Rigenera solo questa sezione"
-                                                            onClick={(e) => handleRegenerateSection(e, key)}
-                                                            style={{ padding: 4, borderRadius: 4, color: "var(--text-muted)", hover: { background: "rgba(0,0,0,0.05)", color: "var(--lime)" } } as any}
-                                                        >
-                                                            <ArrowPathIcon style={{ width: 14, height: 14 }} />
-                                                        </button>
+                                                        <div style={{ display: "flex", gap: 2 }} onClick={e => e.stopPropagation()}>
+                                                            {hasData && (
+                                                                <button
+                                                                    className="btn-icon"
+                                                                    title="Approfondisci con ricerca online"
+                                                                    onClick={(e) => handleDeepenSection(e, key)}
+                                                                    style={{ padding: 4, borderRadius: 4, color: "var(--text-muted)" }}
+                                                                >
+                                                                    <MagnifyingGlassIcon style={{ width: 14, height: 14 }} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                className="btn-icon"
+                                                                title="Rigenera solo questa sezione"
+                                                                onClick={(e) => handleRegenerateSection(e, key)}
+                                                                style={{ padding: 4, borderRadius: 4, color: "var(--text-muted)" }}
+                                                            >
+                                                                <ArrowPathIcon style={{ width: 14, height: 14 }} />
+                                                            </button>
+                                                            {hasData && (
+                                                                <button
+                                                                    className="btn-icon"
+                                                                    title="Cancella questa sezione"
+                                                                    onClick={(e) => handleDeleteSection(e, key)}
+                                                                    style={{ padding: 4, borderRadius: 4, color: "var(--text-muted)" }}
+                                                                >
+                                                                    <TrashIcon style={{ width: 14, height: 14 }} />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     )}
 
                                                     {hasData ? (

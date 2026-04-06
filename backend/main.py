@@ -4217,6 +4217,175 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
     }
 
 
+@app.delete("/clients/{client_id}/analysis/section/{step_id}")
+async def delete_analysis_section(client_id: str, step_id: str):
+    """🗑️ Cancella una singola sezione dell'analisi."""
+    FRONTEND_TO_STEP = {"objections": "objections_management"}
+    workflow_step_id = FRONTEND_TO_STEP.get(step_id, step_id)
+
+    metadata = storage_service.get_metadata(client_id)
+
+    # Rimuovi dal raw backup
+    if "analysis_completa_raw" in metadata and workflow_step_id in metadata["analysis_completa_raw"]:
+        del metadata["analysis_completa_raw"][workflow_step_id]
+
+    storage_service.save_metadata(client_id, metadata)
+
+    # Rimuovi da Supabase
+    try:
+        existing = storage_service.get_complete_analysis(client_id) or {}
+        existing.pop(step_id, None)
+        storage_service.save_complete_analysis(client_id, existing)
+    except Exception as e:
+        print(f"Warning: Could not update Supabase: {e}")
+
+    print(f"🗑️ Sezione {step_id} cancellata per {client_id}")
+    return {"success": True, "step_id": step_id}
+
+
+@app.post("/clients/{client_id}/analysis/deepen/{step_id}")
+async def deepen_analysis_section(client_id: str, step_id: str):
+    """
+    🔬 APPROFONDISCI — Ricerca online aggiuntiva + rigenerazione con più contesto.
+    Usa Perplexity per ricerca specifica, poi rigenera con dati arricchiti.
+    """
+    metadata = storage_service.get_metadata(client_id)
+    snapshot = metadata.get("raw_data_snapshot")
+
+    if not snapshot:
+        raise HTTPException(status_code=400, detail="Nessun dato raccolto. Esegui prima un'analisi completa.")
+
+    client_info = {
+        "id": client_id,
+        "name": metadata.get("name", ""),
+        "industry": metadata.get("industry", ""),
+        "location": metadata.get("location", ""),
+        "metadata": metadata
+    }
+
+    # Carica workflow task
+    from .ai_service_strategic_analysis import run_workflow_task
+    workflow_path = Path(__file__).parent / "master_workflows" / "agostinis_meta_ads.json"
+    import json
+    with open(workflow_path, "r", encoding="utf-8") as f:
+        workflow = json.load(f)
+
+    FRONTEND_TO_STEP = {"objections": "objections_management"}
+    workflow_step_id = FRONTEND_TO_STEP.get(step_id, step_id)
+    task = next((t for t in workflow["tasks"] if t["step_id"] == workflow_step_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Step {step_id} non trovato")
+
+    # 🔬 RICERCA ONLINE APPROFONDITA con Perplexity
+    ai_service.start_cost_tracking(f"approfondisci_{step_id}")
+
+    client_name = metadata.get("name", "")
+    industry = metadata.get("industry", "")
+    location = metadata.get("location", "")
+    site_url = snapshot.get("site_url", "")
+
+    # Costruisci query di ricerca specifica per questa sezione
+    SECTION_RESEARCH_QUERIES = {
+        "brand_identity": f"Analisi approfondita brand \"{client_name}\" {location}: posizionamento, storia, mission, valori, target, competitor diretti. Sito: {site_url}",
+        "brand_values": f"Valori e filosofia del brand \"{client_name}\" {industry} {location}: cosa li distingue, recensioni clienti, reputazione online",
+        "product_portfolio": f"Tutti i prodotti e servizi offerti da \"{client_name}\" {location}: listino, prezzi, offerte speciali, servizi principali. Sito: {site_url}",
+        "reasons_to_buy": f"Perché i clienti scelgono \"{client_name}\" {industry} {location}: recensioni, punti di forza, vantaggi rispetto ai competitor",
+        "customer_personas": f"Target e clienti tipici di {industry} a {location}: demographics, comportamenti, esigenze, frustrazioni comuni nel settore",
+        "brand_voice": f"Tono di voce e comunicazione di \"{client_name}\": come comunica sui social, sul sito, nelle ads. Stile linguistico del settore {industry}",
+        "content_matrix": f"Migliori strategie di contenuto per {industry} su Meta/Instagram: format che funzionano, hook efficaci, trend attuali 2024-2025",
+        "reviews_voc": f"Recensioni e opinioni clienti su \"{client_name}\" {location}: Google Reviews, TrustPilot, Facebook, Instagram commenti. Cosa dicono i clienti?",
+        "battlecards": f"Competitor principali di \"{client_name}\" nel settore {industry} a {location}: chi sono, come si posizionano, punti di forza e debolezza, ads attive",
+        "seasonal_roadmap": f"Stagionalità e trend nel settore {industry} in Italia: periodi di picco, eventi chiave, opportunità stagionali, calendario marketing",
+        "product_vertical": f"Analisi dettagliata prodotti {industry}: tendenze, best seller del settore, margini, strategie di pricing, cross-sell",
+        "service_vertical": f"Analisi dettagliata servizi {industry} a {location}: tendenze, prezzi medi, servizi più richiesti, innovazioni",
+        "objections_management": f"Obiezioni comuni dei clienti nel settore {industry}: dubbi, paure, motivi per non acquistare, come superarle",
+        "psychographic_analysis": f"Profilo psicografico dei clienti {industry}: valori, lifestyle, motivazioni d'acquisto, fattori emotivi",
+        "visual_brief": f"Trend visual e design per {industry}: colori, stili grafici, tipografia, mood board, riferimenti visivi 2024-2025",
+        "ad_copy_creation": f"Best practice copy ads per {industry}: headline che convertono, angoli di comunicazione, hook per Meta Ads, esempi di ads efficaci",
+    }
+
+    research_query = SECTION_RESEARCH_QUERIES.get(
+        workflow_step_id,
+        f"Ricerca approfondita su \"{client_name}\" {industry} {location}: tutto ciò che è rilevante per {task.get('title', step_id)}"
+    )
+
+    print(f"🔬 Approfondimento {step_id}: ricerca online...")
+    extra_research = ""
+    try:
+        extra_research = await ai_service._call_ai(
+            model="perplexity/sonar-pro",
+            messages=[{"role": "user", "content": research_query}],
+            temperature=0.1,
+            max_tokens=8000
+        )
+        print(f"✅ Ricerca online completata: {len(extra_research)} caratteri")
+    except Exception as e:
+        print(f"⚠️ Ricerca online fallita (procedo con dati esistenti): {e}")
+
+    # Arricchisci il contesto con i dati di ricerca extra
+    context = {
+        "client_info": client_info,
+        **snapshot,
+        **(metadata.get("analysis_completa_raw", {}))
+    }
+
+    # Aggiungi la ricerca extra ai dati
+    if extra_research:
+        existing_raw_docs = context.get("raw_docs", "")
+        context["raw_docs"] = f"{existing_raw_docs}\n\n--- RICERCA ONLINE APPROFONDITA ({task.get('title', step_id)}) ---\n{extra_research}"
+
+    # Modifica il prompt per chiedere più profondità
+    original_prompt = task["system_prompt"]
+    deepened_task = {**task}
+    deepened_task["system_prompt"] = (
+        f"{original_prompt}\n\n"
+        f"⚠️ MODALITÀ APPROFONDIMENTO ATTIVA: Hai a disposizione dati aggiuntivi da una ricerca online dedicata "
+        f"(troverai una sezione '--- RICERCA ONLINE APPROFONDITA ---' nei raw_docs). "
+        f"Usa TUTTI i dati disponibili per generare un'analisi MOLTO PIÙ DETTAGLIATA e approfondita del normale. "
+        f"Vai in profondità su ogni punto. Aggiungi insight, strategie specifiche, esempi concreti."
+    )
+
+    print(f"🧠 Rigenerazione approfondita {step_id}...")
+    new_result = await run_workflow_task(ai_service, deepened_task, context)
+    cost_data = ai_service.stop_cost_tracking()
+
+    # Salva costo
+    if cost_data and cost_data.get("total_cost_usd", 0) > 0:
+        print(f"💰 Costo approfondimento {step_id}: ${cost_data['total_cost_usd']:.4f}")
+        if "ai_costs" not in metadata:
+            metadata["ai_costs"] = []
+        from datetime import datetime
+        metadata["ai_costs"].append({
+            "operation": cost_data["operation"],
+            "cost_usd": round(cost_data["total_cost_usd"], 4),
+            "prompt_tokens": cost_data["total_prompt_tokens"],
+            "completion_tokens": cost_data["total_completion_tokens"],
+            "calls": cost_data["calls"],
+            "models": cost_data["models_used"],
+            "date": datetime.now().isoformat()
+        })
+
+    # Aggiorna raw e Supabase
+    if "analysis_completa_raw" not in metadata:
+        metadata["analysis_completa_raw"] = {}
+    metadata["analysis_completa_raw"][workflow_step_id] = new_result
+    storage_service.save_metadata(client_id, metadata)
+
+    try:
+        existing_analysis = storage_service.get_complete_analysis(client_id) or {}
+        existing_analysis[step_id] = new_result
+        storage_service.save_complete_analysis(client_id, existing_analysis)
+    except Exception as e:
+        print(f"Warning: Could not update Supabase: {e}")
+
+    return {
+        "step_id": step_id,
+        "new_data": new_result,
+        "analysis_step": new_result,
+        "cost": cost_data
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════
 # SMART LISTS API (Apple Reminders style)
 # ═══════════════════════════════════════════════════════════════════
