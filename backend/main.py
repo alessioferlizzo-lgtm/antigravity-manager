@@ -3826,7 +3826,15 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                             products_pages.append(f"--- PRODOTTI/MENU DA: {url} ---\n{raw_text}")
                             print(f"✅ Estratti prodotti da pagina web: {url}")
                             
-                elif any(keyword in url.lower() for keyword in ["trattament", "serviz", "epilazione", "service", "treatment"]):
+                elif any(keyword in url.lower() for keyword in [
+                    # Settori classici (estetica, wellness, ristorazione)
+                    "trattament", "serviz", "epilazione", "service", "treatment",
+                    # Consulenti / marketer / freelance / agenzie
+                    "clienti", "misura", "check", "strategico", "marketing",
+                    "campagne", "ads", "gestione", "pacchett", "offert",
+                    "consulenz", "audit", "soluzion", "program", "percorso",
+                    "formazione", "coaching", "mentoring", "lavora", "collabora"
+                ]):
                     if "data" in page and isinstance(page["data"], dict):
                         raw_text = page["data"].get("raw_text", "")
                         if raw_text:
@@ -3836,6 +3844,24 @@ async def _do_complete_analysis(client_id: str, job_id: str):
         if services_pages and services_txt == "Non disponibili":
             services_txt = "\n\n".join(services_pages)[:15000]  # Limite 15K caratteri per servizi
             print(f"✅ TOTALE SERVIZI ESTRATTI: {len(services_pages)} pagine web")
+        
+        # 🔥 FALLBACK UNIVERSALE: se services_txt è ancora vuoto, usa TUTTE le pagine non-home
+        # Questo cattura qualsiasi sito che non ha keyword specifici nell'URL
+        if services_txt == "Non disponibili" and pages_data:
+            fallback_pages = []
+            for page in pages_data:
+                if isinstance(page, dict) and "url" in page and "data" in page:
+                    url = page["url"]
+                    # Escludi la homepage (path = / o vuoto) e pagine tecniche
+                    path = url.replace(site_url, "").strip("/")
+                    if path and not any(skip in path.lower() for skip in ["privacy", "cookie", "legal", "terms", "login", "cart", "checkout", "wp-", "xml", "feed", "sitemap"]):
+                        if isinstance(page["data"], dict):
+                            raw_text = page["data"].get("raw_text", "")
+                            if raw_text and len(raw_text) > 100:  # Ignora pagine quasi vuote
+                                fallback_pages.append(f"--- PAGINA: {url} ---\n{raw_text}")
+            if fallback_pages:
+                services_txt = "[CONTENUTO SITO WEB — Estrai i servizi offerti da queste pagine]\n\n" + "\n\n".join(fallback_pages)[:20000]
+                print(f"✅ FALLBACK: Passate {len(fallback_pages)} pagine web generali come context servizi")
             
         if products_pages:
             products_text_from_scraping = "\n\n".join(products_pages)[:15000]
