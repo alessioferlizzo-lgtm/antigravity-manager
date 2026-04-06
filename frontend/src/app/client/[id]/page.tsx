@@ -1201,10 +1201,10 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                 </span>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                                     {(client.brand_identity?.colors || []).map((color: string, i: number) => (
-                                        <div key={i} className="color-chip">
-                                            <div style={{ width: 20, height: 20, borderRadius: 4, background: color, border: "1px solid rgba(0,0,0,0.1)" }} />
-                                            <span style={{ fontFamily: "monospace", fontSize: 12 }}>{color.toUpperCase()}</span>
-                                            <button className="icon-btn" onClick={() => removeColor(i)}><TrashIcon style={{ width: 12, height: 12 }} /></button>
+                                        <div key={i} className="color-chip" style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.08)", color: "var(--text-primary)" }}>
+                                            <div style={{ width: 22, height: 22, borderRadius: 6, background: color, border: "1px solid rgba(255,255,255,0.15)" }} />
+                                            <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 600 }}>{color.toUpperCase()}</span>
+                                            <button className="icon-btn" style={{ marginLeft: "auto", color: "var(--text-muted)" }} onClick={() => removeColor(i)}><TrashIcon style={{ width: 14, height: 14 }} /></button>
                                         </div>
                                     ))}
                                 </div>
@@ -1275,18 +1275,18 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                 {Array.isArray(vbData.color_palette) && vbData.color_palette.length > 0 && (
                                     <div style={{ marginBottom: 20 }}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#ec4899", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>🎨 Palette Colori dell&apos;Analisi</div>
-                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                                             {vbData.color_palette.map((c: any, i: number) => {
                                                 const hex = typeof c === "string" ? c : (c.color || c.hex || "#cccccc");
                                                 const label = typeof c === "string" ? c : (c.name || c.label || hex);
                                                 const usage = typeof c === "object" && c.usage ? c.usage : null;
                                                 return (
-                                                    <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                                                        <div style={{ width: 52, height: 52, borderRadius: 10, background: hex, border: "2px solid rgba(255,255,255,0.12)", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }} />
-                                                        <div style={{ textAlign: "center" }}>
-                                                            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{label}</div>
-                                                            {label !== hex && <div style={{ fontSize: 10, fontFamily: "monospace", color: "var(--text-primary)", opacity: 0.8, marginTop: 2 }}>{hex}</div>}
-                                                            {usage && <div style={{ fontSize: 9, color: "var(--text-muted)", maxWidth: 72, lineHeight: 1.3, marginTop: 4 }}>{usage}</div>}
+                                                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px", background: "rgba(255,255,255,0.03)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+                                                        <div style={{ width: 44, height: 44, minWidth: 44, borderRadius: 8, background: hex, border: "2px solid rgba(255,255,255,0.15)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }} />
+                                                        <div style={{ display: "flex", flexDirection: "column" }}>
+                                                            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>{label}</div>
+                                                            {label !== hex && <div style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-primary)", opacity: 0.6, marginTop: 4 }}>{hex}</div>}
+                                                            {usage && <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.4, marginTop: 6 }}>{usage}</div>}
                                                         </div>
                                                     </div>
                                                 );
