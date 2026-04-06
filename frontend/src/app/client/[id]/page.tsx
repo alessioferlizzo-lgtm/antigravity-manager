@@ -1101,20 +1101,78 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                          {/* Shopify Connection */}
                          <ShopifyCard clientId={id} client={client} setClient={setClient} />
 
-                         {/* Istruzioni per Analisi Strategica */}
+                         {/* Genera / Rigenera Analisi Completa */}
                          <div className="card" style={{ marginTop: 24, background: "rgba(149,191,71,0.05)", border: "1px solid rgba(149,191,71,0.2)" }}>
                              <div style={{ marginBottom: 12 }}>
                                  <span className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--lime)" }}>
                                      <SparklesIcon style={{ width: 18, height: 18 }} />
-                                     Pronto per l'Analisi Strategica?
+                                     Genera Analisi Completa
                                  </span>
                              </div>
-                             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.6 }}>
-                                 Dopo aver aggiunto link, competitor e documenti, vai alla sezione <strong>Analisi Strategica</strong> per generare l'analisi completa in 18 sezioni.
+                             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.6 }}>
+                                 Dopo aver aggiunto link, competitor e documenti, genera l'analisi completa: raccolta dati automatica, 18 sezioni strategiche, buyer personas e identità del brand.
                              </p>
-                             <p style={{ fontSize: 12, color: "rgba(149,191,71,0.8)", background: "rgba(149,191,71,0.1)", padding: "8px 12px", borderRadius: 6, marginBottom: 0 }}>
-                                 💡 L'analisi raccoglierà automaticamente dati da sito web, social, recensioni Google e competitor.
+                             <button
+                                 className="btn btn-primary"
+                                 disabled={loading.fullAnalysis}
+                                 style={{ fontSize: 14, padding: "12px 24px", fontWeight: 700 }}
+                                 onClick={async () => {
+                                     setLoad("fullAnalysis", true);
+                                     try {
+                                         const res = await fetch(`${API}/clients/${id}/analysis/complete`, { method: "POST" });
+                                         if (res.ok) {
+                                             const { job_id } = await res.json();
+                                             localStorage.setItem(`analysis_job_${id}`, job_id);
+                                             setSection("analisi-strategica");
+                                         } else {
+                                             alert("Errore nell'avvio dell'analisi");
+                                         }
+                                     } catch {
+                                         alert("Errore di rete");
+                                     }
+                                     setLoad("fullAnalysis", false);
+                                 }}
+                             >
+                                 {loading.fullAnalysis
+                                     ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Avvio in corso...</>
+                                     : <><SparklesIcon style={{ width: 16, height: 16 }} /> Genera / Rigenera Analisi Completa</>
+                                 }
+                             </button>
+                             <p style={{ fontSize: 12, color: "rgba(149,191,71,0.8)", background: "rgba(149,191,71,0.1)", padding: "8px 12px", borderRadius: 6, marginTop: 12, marginBottom: 0 }}>
+                                 Raccoglierà automaticamente dati da sito web, social, recensioni Google e competitor. Aggiorna anche personas e identità.
                              </p>
+                             <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                                 <button
+                                     className="btn btn-ghost btn-sm"
+                                     disabled={loading.resetAnalysis}
+                                     style={{ color: "#dc2626", fontSize: 12 }}
+                                     onClick={async () => {
+                                         if (!confirm("Sei sicuro? Questo cancellerà TUTTA l'analisi, la cache, le personas generate e l'identità generata. I documenti, link e competitor resteranno.")) return;
+                                         setLoad("resetAnalysis", true);
+                                         try {
+                                             const res = await fetch(`${API}/clients/${id}/analysis/complete`, { method: "DELETE" });
+                                             if (res.ok) {
+                                                 localStorage.removeItem(`analysis_job_${id}`);
+                                                 await load();
+                                                 alert("Analisi cancellata. Pronto per una nuova analisi da zero.");
+                                             } else {
+                                                 alert("Errore nella cancellazione");
+                                             }
+                                         } catch {
+                                             alert("Errore di rete");
+                                         }
+                                         setLoad("resetAnalysis", false);
+                                     }}
+                                 >
+                                     {loading.resetAnalysis
+                                         ? <><div className="spinner" style={{ width: 12, height: 12 }} /> Cancellazione...</>
+                                         : <><TrashIcon style={{ width: 14, height: 14 }} /> Cancella Analisi e Cache</>
+                                     }
+                                 </button>
+                                 <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
+                                     Elimina analisi, cache, personas e identità generate. Documenti, link e competitor restano intatti.
+                                 </p>
+                             </div>
                          </div>
 
                     </div>
@@ -1906,7 +1964,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                 {/* ══ ANALISI COMPLETA ══ */}
                 {/* ══ ANALISI COMPLETA ══ */}
                 {section === "analisi-strategica" && (
-                    <AnalisiStrategicaSection clientId={id} apiUrl={API} />
+                    <AnalisiStrategicaSection clientId={id} apiUrl={API} onRefresh={load} />
                 )}
                 </div>
             </main>

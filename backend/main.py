@@ -4096,13 +4096,37 @@ async def get_complete_client_analysis(client_id: str):
 @app.delete("/clients/{client_id}/analysis/complete")
 async def delete_complete_analysis(client_id: str):
     """
-    Elimina l'analisi completa per il cliente.
+    🗑️ Reset TOTALE: elimina analisi, cache, snapshot, personas generate, brand identity generata.
+    Dopo questo, una nuova analisi partirà completamente da zero.
     """
     try:
+        # 1. Pulisci metadata (snapshot, raw cache, analisi generata)
+        metadata = storage_service.get_metadata(client_id)
+        keys_to_remove = [
+            "raw_data_snapshot",
+            "analysis_completa_raw",
+            "swot",
+            "objectives",
+            "strategy",
+        ]
+        for key in keys_to_remove:
+            metadata.pop(key, None)
+
+        # Pulisci buyer personas generate dall'analisi (ma mantieni quelle manuali se presenti)
+        if "brand_identity" in metadata:
+            metadata["brand_identity"].pop("buyer_personas", None)
+            metadata["brand_identity"].pop("tone", None)
+
+        storage_service.save_metadata(client_id, metadata)
+        print(f"🗑️ Metadata pulito per {client_id}: rimossi snapshot, cache, analisi")
+
+        # 2. Elimina da Supabase
         supabase = _get_sb()
         if supabase:
             supabase.table("client_complete_analysis").delete().eq("client_id", client_id).execute()
-        return {"success": True}
+            print(f"🗑️ Analisi Supabase eliminata per {client_id}")
+
+        return {"success": True, "message": "Analisi, cache e dati generati eliminati. Pronto per una nuova analisi da zero."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

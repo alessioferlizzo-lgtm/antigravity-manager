@@ -5,22 +5,31 @@ import json_repair
 from typing import Dict, Any
 
 ANTI_HALLUCINATION_DIRECTIVE = """
-⚠️ REGOLE CRITICHE PER L'ANALISI:
+⚠️ REGOLE CRITICHE PER L'ANALISI — VIOLARNE UNA INVALIDA L'INTERO OUTPUT:
 
 1. INTEGRITÀ DEI FATTI — Ogni dato specifico sul brand (numeri, clienti, fatturati, anni di esperienza,
-   prezzi, offerte) deve provenire dai dati forniti. Se non lo trovi nei dati, NON scriverlo.
+   prezzi, offerte, settori serviti, competenze) deve provenire ESCLUSIVAMENTE dai dati forniti.
+   Se un'informazione NON è presente nei dati, NON scriverla. MAI.
    Meglio dire "consulente di marketing digitale" che inventare "10 anni di esperienza e 1.200 clienti".
+   Se non sai quanti anni di esperienza ha → NON menzionare anni di esperienza.
+   Se non sai i settori specifici in cui opera → descrivi solo quello che emerge dai dati.
 
 2. USA LE PAROLE DEL BRAND — NON tradurre la terminologia del brand in gergo tecnico diverso.
    Se il sito dice "aiuto e-commerce a ottenere clienti", NON scrivere "specializzato in lead generation".
    Se il sito dice "strategie pubblicitarie su misura", NON tradurre in "funnel di conversione B2B".
+   Se il sito parla di "e-commerce e attività locali", NON scrivere "lead generation" o "B2B enterprise".
    Il posizionamento, il settore e il vocabolario devono riflettere come il brand si presenta REALMENTE.
+   COPIA le parole del brand, non interpretarle con sinonimi tecnici.
 
 3. NON ALLUNGARE CON INVENZIONI — Se i dati sono pochi, scrivi un'analisi più breve ma vera.
-   Non inventare fatti per raggiungere una lunghezza target.
+   Non inventare fatti per raggiungere una lunghezza target. Un'analisi di 5 righe vera vale più
+   di 50 righe con fatti inventati. Il cliente CONOSCE la sua attività e riconoscerà ogni invenzione.
 
 4. ANALISI STRATEGICHE SÌ — Puoi fare inferenze, analisi competitive, suggerimenti strategici,
    identificare trend di settore. Questo è il tuo lavoro. Ma i FATTI sul brand devono essere reali.
+
+5. VERIFICA FINALE — Prima di restituire il JSON, rileggi ogni affermazione fattuale e chiediti:
+   "Dove nei dati forniti ho trovato questa informazione?" Se non riesci a indicare la fonte → RIMUOVILA.
 """
 
 async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, Any]) -> Any:

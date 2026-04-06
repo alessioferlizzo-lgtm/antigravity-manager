@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ArrowPathIcon, DocumentTextIcon, ChevronDownIcon, ChevronRightIcon, SparklesIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 
-interface Props { clientId: string; apiUrl: string; }
+interface Props { clientId: string; apiUrl: string; onRefresh?: () => void; }
 
 // ── Markdown-aware text renderer ──────────────────────────────────────────────
 function MD({ text }: { text: string }) {
@@ -1042,7 +1042,7 @@ const MACRO_AREAS = [
 //  MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════════════════
 
-export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
+export default function AnalisiStrategicaSection({ clientId, apiUrl, onRefresh }: Props) {
     const [analysis, setAnalysis] = useState<any>(null);
     const [generating, setGenerating] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -1071,6 +1071,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
                     setAnalysis(jobData.analysis);
                     localStorage.removeItem(`analysis_job_${clientId}`);
                     fetchCosts();
+                    onRefresh?.();
                     return "done";
                 }
                 if (jobData.status === "error") {
@@ -1205,6 +1206,7 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl }: Props) {
         }
         setSectionLoading(prev => ({ ...prev, [stepId]: false }));
         fetchCosts();
+        onRefresh?.();
     };
 
     const toggleMacro = (i: number) => {
