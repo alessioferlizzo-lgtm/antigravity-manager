@@ -3811,7 +3811,6 @@ async def _do_complete_analysis(client_id: str, job_id: str):
 
     # 🔥 ESTRAI CONTENUTO DEL SITO — Approccio universale senza keyword filtering
     # Tutte le pagine scrappate vengono passate all'AI che identifica autonomamente prodotti e servizi.
-    # Questo funziona per qualsiasi tipo di business: ristorante, estetica, marketer, e-commerce, ecc.
     if isinstance(site_content, dict):
         pages_data = site_content.get("pages", [])
         all_site_pages = []
@@ -3836,14 +3835,25 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                 if raw_text and len(raw_text) > 80:
                     all_site_pages.append(f"--- PAGINA: {url} ---\n{raw_text}")
 
-        if all_site_pages:
-            # Tutte le pagine → services_txt: l'AI estrae servizi e prodotti in autonomia
-            full_site_dump = "\n\n".join(all_site_pages)[:25000]
-            services_txt = f"[CONTENUTO INTEGRALE DEL SITO — {len(all_site_pages)} pagine scrappate]\n\n{full_site_dump}"
-            # Usa le stesse pagine anche per products_csv se non disponibile da CSV
-            if products_csv == "Non disponibili":
-                products_csv = full_site_dump
-            print(f"✅ SITO SCRAPPATO: {len(all_site_pages)} pagine web passate all'AI (nessun filtro keyword)")
+        # 🔥 PREPARAZIONE DATI SITO (CHI È IL CLIENTE - CONTESTO BRAND)
+        # Queste pagine servono per l'analisi completa dell'identità, SWOT, ecc.
+        full_site_dump = "\n\n".join(all_site_pages)[:25000] if all_site_pages else ""
+
+        # 🔥 ANALISI SERVIZI (FISSAZIONE SULLA LANDING SPECIFICA)
+        # Se 'services_txt' ha già contenuto (dai link marchiati 'Landing Servizio' dal menu a tendina), 
+        # NON lo sovrascriviamo col dump del sito. Lo teniamo pulito e specifico come richiesto.
+        if services_txt == "Non disponibili" and full_site_dump:
+            services_txt = f"[FALLBACK — CONTENUTO DEL SITO]\n\n{full_site_dump}"
+            print("✅ Nessuna landing specifica: uso il dump del sito come fallback per i servizi")
+        elif services_txt != "Non disponibili":
+            # Aggiungiamo il dump del sito solo in coda come CONTESTO aggiuntivo, ma non come fonte principale
+            services_txt = f"{services_txt}\n\n--- CONTESTO BRAND AGGIUNTIVO ---\n{full_site_dump[:5000]}"
+            print(f"✅ Landing specifica trovata: focus chirurgico su quella. Dump sito aggiunto solo come contesto.")
+
+        # Per i prodotti, se non c'è CSV/Documento, usiamo il dump come fallback
+        if products_csv == "Non disponibili" and full_site_dump:
+            products_csv = full_site_dump
+            print("✅ Prodotti: nessun documento trovato, uso il dump del sito come fallback")
 
     # 1. Flatten Instagram Comments for easier Review Mining
     flattened_ig = []

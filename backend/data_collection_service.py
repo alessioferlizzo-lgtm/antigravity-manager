@@ -246,22 +246,24 @@ class DataCollectionService:
         """
         print(f"   🌐 Scraping {url} {'(' + context + ')' if context else ''}...")
         
-        prompt = f"""Analizza approfonditamente questa pagina web: {url}
-{"Contesto fornito dall'utente: " + context if context else ""}
+        prompt = f"""ANALISI CHIRURGICA E INTEGRALE della pagina web: {url}
+{"CONTESTO SPECIFICO FORNITO DALL'UTENTE: " + context if context else ""}
 
-Estrai TUTTE le informazioni rilevanti per un media buyer.
+ISTRUZIONI MANDATORIE:
+1. **ANALISI TOP-TO-BOTTOM**: Estrai ogni singola informazione presente, dalla prima all'ultima riga. 
+2. **ZERO RIASSUNTI**: Non provare a sintetizzare. Se nella pagina è descritto un processo in 5 fasi, devi estrarre tutte le 5 fasi con i relativi dettagli. Se ci sono prezzi, elenchi puntati o note tecniche, catturli integralmente.
+3. **FEDELTÀ ASSOLUTA AL TESTO**: Usa le parole esatte del brand. Se dicono "Check-up strategico", non scrivere "Consulenza iniziale".
 
-⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu o QR code (es. Qromo, Leggimenu, Menudigitale, Flazio, Linktree, Gloriafood, TheFork, Deliverect, Orderlord, Tillster, etc.), NON analizzare il fornitore del software o del servizio. Il cliente NON vende menu digitali né software per ristoranti; il cliente USA quella piattaforma per mostrare la sua offerta reale. Concentrati esclusivamente sui piatti, pizze, prodotti, servizi, prezzi e descrizioni dell'attività reale presenti nel link. Se la pagina mostra un menu di cibo, elenca i piatti, le categorie, i prezzi e gli ingredienti — NON descrivere la tecnologia del menu.
+⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu (Qromo, Leggimenu, etc.), ignora il software e concentrati solo sui piatti, ingredienti e prezzi.
 
-COMPONENTI RICHIESTI:
-1. **raw_text**: COPIA il testo visibile della pagina il più fedelmente possibile — titoli, sottotitoli, paragrafi, CTA, footer. Questo è il dato PIÙ IMPORTANTE: deve contenere le PAROLE ESATTE usate dal brand, senza riformulare o tradurre. Se la pagina dice "Aiuto business locali ed e-commerce", scrivi esattamente quello, non "specializzato in lead generation".
-2. Prodotti/Servizi principali con relativi prezzi o offerte
-3. Angoli di attacco (Pain points risolti, promesse, trasformazione)
-4. Elementi di trust (Anni di esperienza, certificazioni, premi) — SOLO quelli che trovi scritti nella pagina
-5. Linguaggio e terminologia specifica usata dal brand
-6. Obiezioni prevenute o gestite nel testo
+COMPONENTI RICHIESTI NEL JSON:
+1. **raw_text**: Il dump testuale più completo e fedele possibile di tutta la pagina. Deve contenere headline, body copy, bullet points e CTA.
+2. **product_service_details**: Analisi tecnica millimetrica di cosa viene offerto, come viene offerto, fasi del servizio, prezzi e pacchetti.
+3. **marketing_hooks**: Angoli di attacco, promesse, trasformazione promessa al cliente.
+4. **trust_signals**: Certificazioni, anni di esperienza, premi, garanzie esplicite.
+5. **brand_voice**: Termini specifici e stile comunicativo usato.
 
-Rispondi con un JSON strutturato con queste chiavi."""
+Rispondi esclusivamente con un JSON strutturato con queste chiavi."""
 
         try:
             response = await self.ai_service._call_ai(
