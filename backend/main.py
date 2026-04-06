@@ -3809,67 +3809,41 @@ async def _do_complete_analysis(client_id: str, job_id: str):
         except Exception as e:
             print(f"⚠️ Errore processamento file {file_path.name}: {e}")
 
-    # 🔥 ESTRAI PRODOTTI e SERVIZI dalle pagine scrappate
+    # 🔥 ESTRAI CONTENUTO DEL SITO — Approccio universale senza keyword filtering
+    # Tutte le pagine scrappate vengono passate all'AI che identifica autonomamente prodotti e servizi.
+    # Questo funziona per qualsiasi tipo di business: ristorante, estetica, marketer, e-commerce, ecc.
     if isinstance(site_content, dict):
         pages_data = site_content.get("pages", [])
-        services_pages = []
-        products_pages = []
+        all_site_pages = []
+
+        # Pagine tecniche da escludere sempre (non contengono info su prodotti/servizi)
+        SKIP_PATHS = ["privacy", "cookie", "legal", "terms", "login", "cart",
+                      "checkout", "wp-", "xmlrpc", "feed", "sitemap", "robots",
+                      "tag/", "author/", "page/", "404", "search"]
 
         for page in pages_data:
-            if isinstance(page, dict) and "url" in page:
-                url = page["url"]
-                # Cerca pagine Prodotti/Menu o Servizi
-                if any(keyword in url.lower() for keyword in ["menu", "pizza", "ristorant", "food", "carta", "lista", "prodott", "shop", "store", "catalog", "listino"]):
-                    if "data" in page and isinstance(page["data"], dict):
-                        raw_text = page["data"].get("raw_text", "")
-                        if raw_text:
-                            products_pages.append(f"--- PRODOTTI/MENU DA: {url} ---\n{raw_text}")
-                            print(f"✅ Estratti prodotti da pagina web: {url}")
-                            
-                elif any(keyword in url.lower() for keyword in [
-                    # Settori classici (estetica, wellness, ristorazione)
-                    "trattament", "serviz", "epilazione", "service", "treatment",
-                    # Consulenti / marketer / freelance / agenzie
-                    "clienti", "misura", "check", "strategico", "marketing",
-                    "campagne", "ads", "gestione", "pacchett", "offert",
-                    "consulenz", "audit", "soluzion", "program", "percorso",
-                    "formazione", "coaching", "mentoring", "lavora", "collabora"
-                ]):
-                    if "data" in page and isinstance(page["data"], dict):
-                        raw_text = page["data"].get("raw_text", "")
-                        if raw_text:
-                            services_pages.append(f"--- SERVIZI DA: {url} ---\n{raw_text}")
-                            print(f"✅ Estratti servizi da pagina web: {url}")
+            if not isinstance(page, dict) or "url" not in page or "data" not in page:
+                continue
+            url = page["url"]
+            path = url.replace(site_url, "").strip("/")
 
-        if services_pages and services_txt == "Non disponibili":
-            services_txt = "\n\n".join(services_pages)[:15000]  # Limite 15K caratteri per servizi
-            print(f"✅ TOTALE SERVIZI ESTRATTI: {len(services_pages)} pagine web")
-        
-        # 🔥 FALLBACK UNIVERSALE: se services_txt è ancora vuoto, usa TUTTE le pagine non-home
-        # Questo cattura qualsiasi sito che non ha keyword specifici nell'URL
-        if services_txt == "Non disponibili" and pages_data:
-            fallback_pages = []
-            for page in pages_data:
-                if isinstance(page, dict) and "url" in page and "data" in page:
-                    url = page["url"]
-                    # Escludi la homepage (path = / o vuoto) e pagine tecniche
-                    path = url.replace(site_url, "").strip("/")
-                    if path and not any(skip in path.lower() for skip in ["privacy", "cookie", "legal", "terms", "login", "cart", "checkout", "wp-", "xml", "feed", "sitemap"]):
-                        if isinstance(page["data"], dict):
-                            raw_text = page["data"].get("raw_text", "")
-                            if raw_text and len(raw_text) > 100:  # Ignora pagine quasi vuote
-                                fallback_pages.append(f"--- PAGINA: {url} ---\n{raw_text}")
-            if fallback_pages:
-                services_txt = "[CONTENUTO SITO WEB — Estrai i servizi offerti da queste pagine]\n\n" + "\n\n".join(fallback_pages)[:20000]
-                print(f"✅ FALLBACK: Passate {len(fallback_pages)} pagine web generali come context servizi")
-            
-        if products_pages:
-            products_text_from_scraping = "\n\n".join(products_pages)[:15000]
+            # Salta pagine tecniche
+            if any(skip in path.lower() for skip in SKIP_PATHS):
+                continue
+
+            if isinstance(page["data"], dict):
+                raw_text = page["data"].get("raw_text", "")
+                if raw_text and len(raw_text) > 80:
+                    all_site_pages.append(f"--- PAGINA: {url} ---\n{raw_text}")
+
+        if all_site_pages:
+            # Tutte le pagine → services_txt: l'AI estrae servizi e prodotti in autonomia
+            full_site_dump = "\n\n".join(all_site_pages)[:25000]
+            services_txt = f"[CONTENUTO INTEGRALE DEL SITO — {len(all_site_pages)} pagine scrappate]\n\n{full_site_dump}"
+            # Usa le stesse pagine anche per products_csv se non disponibile da CSV
             if products_csv == "Non disponibili":
-                products_csv = products_text_from_scraping
-            else:
-                products_csv += "\n\n" + products_text_from_scraping
-            print(f"✅ TOTALE PRODOTTI/MENU ESTRATTI: {len(products_pages)} pagine web")
+                products_csv = full_site_dump
+            print(f"✅ SITO SCRAPPATO: {len(all_site_pages)} pagine web passate all'AI (nessun filtro keyword)")
 
     # 1. Flatten Instagram Comments for easier Review Mining
     flattened_ig = []
