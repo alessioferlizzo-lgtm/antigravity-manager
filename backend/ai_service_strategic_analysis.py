@@ -94,6 +94,30 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
                 kv = response_json.get("key_vocabulary", response_json.get("vocabulary", []))
                 if not gh and not kv:
                     raise Exception("Voice of Customer returned empty data arrays. Retrying.")
+
+            # Content validation: service_vertical must have non-empty services array
+            if step_id == "service_vertical" and isinstance(response_json, dict):
+                services = response_json.get("services", [])
+                if not services:
+                    raise Exception("Analisi Verticale Servizi returned empty services array. Retrying with stronger context.")
+                # Also check that services have actual content, not just names
+                for svc in services:
+                    if isinstance(svc, dict):
+                        tech = svc.get("technical_analysis", {})
+                        if isinstance(tech, dict) and not tech.get("description"):
+                            raise Exception(f"Service '{svc.get('name', '?')}' has empty technical_analysis. Retrying.")
+
+            # Content validation: product_portfolio must have non-empty items array
+            if step_id == "product_portfolio" and isinstance(response_json, dict):
+                items = response_json.get("items", [])
+                if not items:
+                    raise Exception("Portafoglio Prodotti returned empty items array. Retrying.")
+                # Check items have substantive descriptions (not just a name)
+                for item in items:
+                    if isinstance(item, dict):
+                        desc = item.get("description", "")
+                        if len(str(desc)) < 50:
+                            raise Exception(f"Item '{item.get('name', '?')}' has insufficient description ({len(str(desc))} chars). Retrying for deeper analysis.")
                     
             # If we get here, success!
             return response_json

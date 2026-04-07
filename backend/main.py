@@ -3843,8 +3843,8 @@ async def _do_complete_analysis(client_id: str, job_id: str):
         # Se 'services_txt' ha già contenuto (dai link marchiati 'Landing Servizio' dal menu a tendina), 
         # NON lo sovrascriviamo col dump del sito. Lo teniamo pulito e specifico come richiesto.
         if services_txt == "Non disponibili" and full_site_dump:
-            services_txt = f"[FALLBACK — CONTENUTO DEL SITO]\n\n{full_site_dump}"
-            print("✅ Nessuna landing specifica: uso il dump del sito come fallback per i servizi")
+            services_txt = f"[CONTENUTO SITO WEB]\n\n{full_site_dump}"
+            print("✅ Nessuna landing specifica: uso [CONTENUTO SITO WEB] come fallback per i servizi")
         elif services_txt != "Non disponibili":
             # Aggiungiamo il dump del sito solo in coda come CONTESTO aggiuntivo, ma non come fonte principale
             services_txt = f"{services_txt}\n\n--- CONTESTO BRAND AGGIUNTIVO ---\n{full_site_dump[:5000]}"
