@@ -166,10 +166,56 @@ class DataCollectionService:
                 print("❌ Nessun link utile fornito nelle sorgenti")
                 return {"error": "Nessun link utile fornito nelle sorgenti"}
 
-        # Raccogli dati in parallelo - TIMEOUT GLOBALE 9 MINUTI per evitare freeze infiniti
+        # ─── FASE 0: AUTO-DISCOVERY LINK INTERNI ────────────────────────────
+        # Fetch rapido dell'HTML delle pagine sito per scoprire link interni
+        # (landing servizi, prodotti, about, etc.) che l'utente non ha inserito manualmente.
+        already_known_urls = set()
+        for lst in [site_urls, service_urls, product_urls]:
+            for item in lst:
+                already_known_urls.add(item["url"].rstrip("/").lower())
+
+        discovered_pages = []
+        try:
+            print("   🔍 Auto-discovery: scarico HTML delle pagine sito per trovare link interni...")
+            html_fetch_tasks = []
+            for s in site_urls:
+                html_fetch_tasks.append(self._fetch_page_html(s["url"]))
+
+            html_results = await asyncio.wait_for(
+                asyncio.gather(*html_fetch_tasks, return_exceptions=True),
+                timeout=30.0
+            )
+
+            for i, html in enumerate(html_results):
+                if isinstance(html, Exception):
+                    continue
+                base_url = site_urls[i]["url"]
+                internal_links = self._extract_internal_links(html, base_url)
+
+                for link_url in internal_links:
+                    if link_url.rstrip("/").lower() not in already_known_urls:
+                        already_known_urls.add(link_url.rstrip("/").lower())
+                        discovered_pages.append({"url": link_url, "context": "Pagina interna scoperta automaticamente"})
+
+            if discovered_pages:
+                print(f"   ✅ Auto-discovery: trovate {len(discovered_pages)} pagine interne aggiuntive:")
+                for dp in discovered_pages[:10]:  # Log max 10
+                    print(f"      → {dp['url']}")
+                if len(discovered_pages) > 10:
+                    print(f"      ... e altre {len(discovered_pages) - 10}")
+            else:
+                print("   ℹ️ Auto-discovery: nessuna pagina interna aggiuntiva trovata")
+        except Exception as e:
+            print(f"   ⚠️ Auto-discovery fallita: {e} — procedo senza")
+
+        # ─── FASE 1: RACCOLTA DATI PARALLELA ─────────────────────────────────
+        # TIMEOUT GLOBALE 9 MINUTI per evitare freeze infiniti
         try:
             # 1. Scraping Siti Web (Generali)
             site_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in site_urls]
+
+            # 1.5 Scraping pagine interne auto-scoperte
+            discovered_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in discovered_pages]
 
             # 2. Scraping Landing Page Servizi (Specifici)
             service_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in service_urls]
@@ -181,11 +227,12 @@ class DataCollectionService:
             gmb_info_tasks = [self._scrape_gmb_info(s["url"], s["context"]) for s in gmb_info_urls]
 
             # 3. Task in parallelo principali
-            print(f"   📊 Lancio {len(site_tasks)} task sito, {len(service_tasks)} task servizi, {len(product_tasks)} task prodotti/menu, {len(gmb_info_tasks)} task GMB info, {len(review_urls)} task recensioni")
+            print(f"   📊 Lancio {len(site_tasks)} task sito, {len(discovered_tasks)} pagine scoperte, {len(service_tasks)} task servizi, {len(product_tasks)} task prodotti/menu, {len(gmb_info_tasks)} task GMB info, {len(review_urls)} task recensioni")
 
             main_results = await asyncio.wait_for(
                 asyncio.gather(
                     asyncio.gather(*site_tasks, return_exceptions=True),
+                    asyncio.gather(*discovered_tasks, return_exceptions=True),
                     asyncio.gather(*service_tasks, return_exceptions=True),
                     asyncio.gather(*product_tasks, return_exceptions=True),
                     asyncio.gather(*gmb_info_tasks, return_exceptions=True),
@@ -200,9 +247,9 @@ class DataCollectionService:
             )
         except asyncio.TimeoutError:
             print("⚠️ TIMEOUT GLOBALE RACCOLTA DATI (9 min) - Procedo con i dati parziali")
-            main_results = [[], [], [], [], {}, {}, {}, {}, {}]
+            main_results = [[], [], [], [], [], {}, {}, {}, {}, {}]
 
-        site_res, service_res, product_res, gmb_info_res, g_reviews, extra_reviews, instagram_data, ads_data, competitor_data = main_results
+        site_res, discovered_res, service_res, product_res, gmb_info_res, g_reviews, extra_reviews, instagram_data, ads_data, competitor_data = main_results
 
         # 🔥 UNISCI CONTENUTI SITO
         combined_site_content = ""
@@ -215,6 +262,15 @@ class DataCollectionService:
             else:
                 processed_site_results.append({"url": url, "data": res})
                 combined_site_content += f"\n\n--- CONTENUTO DA: {url} ---\n{res.get('raw_text', str(res))}"
+
+        # 🔥 UNISCI PAGINE AUTO-SCOPERTE (link interni trovati nella homepage)
+        for i, res in enumerate(discovered_res or []):
+            if isinstance(res, Exception):
+                continue
+            url = discovered_pages[i]["url"] if i < len(discovered_pages) else "discovered"
+            processed_site_results.append({"url": url, "data": res})
+            combined_site_content += f"\n\n--- CONTENUTO DA: {url} (auto-scoperta) ---\n{res.get('raw_text', str(res))}"
+            print(f"   ✅ Pagina auto-scoperta aggiunta: {url} ({len(res.get('raw_text', ''))} chars)")
 
         # 🔥 UNISCI INFO GOOGLE MY BUSINESS (indirizzo, orari, categorie, servizi)
         gmb_info_text = ""
@@ -296,6 +352,46 @@ class DataCollectionService:
             if cleaned:
                 lines.append(cleaned)
         return '\n'.join(lines)
+
+    def _extract_internal_links(self, html: str, base_url: str) -> List[str]:
+        """Estrae tutti i link interni da una pagina HTML."""
+        from urllib.parse import urljoin, urlparse
+        base_domain = urlparse(base_url).netloc
+
+        # Trova tutti gli href
+        hrefs = re.findall(r'<a[^>]+href=["\']([^"\']+)["\']', html, re.IGNORECASE)
+
+        internal_links = set()
+        # Pagine tecniche da ignorare
+        SKIP = ["privacy", "cookie", "legal", "terms", "login", "cart", "checkout",
+                "wp-admin", "wp-json", "xmlrpc", "feed", "sitemap", "robots",
+                "#", "mailto:", "tel:", "javascript:", "whatsapp", ".pdf", ".jpg",
+                ".png", ".gif", ".svg", ".css", ".js", "facebook.com", "instagram.com",
+                "linkedin.com", "twitter.com", "youtube.com", "wa.me"]
+
+        for href in hrefs:
+            # Risolvi URL relativi
+            full_url = urljoin(base_url, href)
+            parsed = urlparse(full_url)
+
+            # Solo link interni (stesso dominio)
+            if parsed.netloc != base_domain:
+                continue
+
+            # Rimuovi fragment e query
+            clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}".rstrip("/")
+
+            # Salta pagine tecniche
+            if any(skip in clean_url.lower() for skip in SKIP):
+                continue
+
+            # Salta la homepage stessa
+            if parsed.path in ("", "/"):
+                continue
+
+            internal_links.add(clean_url)
+
+        return list(internal_links)
 
     async def _fetch_page_html(self, url: str) -> str:
         """Scarica l'HTML grezzo di una pagina con httpx."""
