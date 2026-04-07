@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional
 import os
 import re
 import json
+from html.parser import HTMLParser
 from pathlib import Path
 
 
@@ -240,34 +241,132 @@ class DataCollectionService:
             "products_txt": combined_products_text
         }
 
+    def _html_to_text(self, html: str) -> str:
+        """Converte HTML in testo pulito senza dipendenze esterne."""
+        # Rimuovi script, style, svg, noscript
+        html = re.sub(r'<(script|style|svg|noscript)[^>]*>.*?</\1>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        # Rimuovi commenti HTML
+        html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
+        # Converti br e p/div/h*/li in newline
+        html = re.sub(r'<br\s*/?\s*>', '\n', html, flags=re.IGNORECASE)
+        html = re.sub(r'</(p|div|h[1-6]|li|tr|section|article|header|footer|blockquote)>', '\n', html, flags=re.IGNORECASE)
+        html = re.sub(r'<(p|div|h[1-6]|li|tr|section|article|header|footer|blockquote)[^>]*>', '\n', html, flags=re.IGNORECASE)
+        # Rimuovi tutti i tag rimanenti
+        html = re.sub(r'<[^>]+>', ' ', html)
+        # Decodifica entità HTML comuni
+        html = html.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+        html = html.replace('&quot;', '"').replace('&#39;', "'").replace('&nbsp;', ' ')
+        html = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), html)
+        html = re.sub(r'&\w+;', ' ', html)
+        # Pulisci whitespace
+        lines = []
+        for line in html.split('\n'):
+            cleaned = ' '.join(line.split())
+            if cleaned:
+                lines.append(cleaned)
+        return '\n'.join(lines)
+
+    async def _fetch_page_html(self, url: str) -> str:
+        """Scarica l'HTML grezzo di una pagina con httpx."""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+        }
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            return response.text
+
     async def _scrape_single_website_page(self, url: str, context: str = "") -> Dict[str, Any]:
         """
-        Scraping profondo di un URL specifico usando contesto se fornito
+        Scraping DIRETTO: fetch HTML → estrai testo → Claude per strutturazione.
+        Non usa più Perplexity — prende il testo reale dalla pagina.
         """
-        print(f"   🌐 Scraping {url} {'(' + context + ')' if context else ''}...")
-        
-        prompt = f"""ANALISI CHIRURGICA E INTEGRALE della pagina web: {url}
-{"CONTESTO SPECIFICO FORNITO DALL'UTENTE: " + context if context else ""}
+        print(f"   🌐 Scraping diretto {url} {'(' + context + ')' if context else ''}...")
 
-ISTRUZIONI MANDATORIE:
-1. **ANALISI TOP-TO-BOTTOM**: Estrai ogni singola informazione presente, dalla prima all'ultima riga.
-2. **ZERO RIASSUNTI**: Non provare a sintetizzare. Se nella pagina è descritto un processo in 5 fasi, devi estrarre tutte le 5 fasi con i relativi dettagli. Se ci sono prezzi, elenchi puntati o note tecniche, catturli integralmente.
-3. **FEDELTÀ ASSOLUTA AL TESTO**: Usa le parole esatte del brand. Se dicono "Check-up strategico", non scrivere "Consulenza iniziale". Se dicono "Mi occupo di tutto" o "gestione completa", NON scrivere "consulenza".
+        try:
+            # STEP 1: Fetch HTML diretto
+            html = await self._fetch_page_html(url)
+            raw_text = self._html_to_text(html)
 
-⚠️ REGOLA CRITICA — DISTINGUI CTA DA SERVIZIO:
-- I bottoni CTA come "Richiedi una Consulenza Gratuita", "Prenota una Call", "Parla con noi" sono il PROCESSO DI VENDITA (la call conoscitiva), NON il servizio offerto.
-- Il SERVIZIO REALE è descritto nel corpo della pagina: sezioni "Come Funziona", "Cosa Include", "Fa per te se", descrizioni delle fasi operative.
-- Se la pagina dice "mi occupo di tutto", "gestione completa", "delegare", "gestiamo noi" → il servizio è GESTIONE DONE-FOR-YOU, non consulenza.
-- NON confondere il CTA di vendita con la natura del servizio.
+            if len(raw_text.strip()) < 50:
+                print(f"   ⚠️ Pagina {url} ha poco testo ({len(raw_text)} chars), provo con Perplexity come fallback")
+                return await self._scrape_single_website_page_perplexity(url, context)
 
-⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu (Qromo, Leggimenu, etc.), ignora il software e concentrati solo sui piatti, ingredienti e prezzi.
+            # Tronca a 15K chars per non esplodere il context
+            raw_text = raw_text[:15000]
+            print(f"   ✅ HTML scaricato e convertito: {len(raw_text)} caratteri di testo")
+
+            # STEP 2: Claude analizza il testo REALE estratto
+            prompt = f"""Hai davanti il TESTO REALE estratto dalla pagina web: {url}
+{"CONTESTO: " + context if context else ""}
+
+TESTO DELLA PAGINA (estratto direttamente dall'HTML):
+---
+{raw_text}
+---
+
+ISTRUZIONI:
+1. Analizza il testo sopra COSÌ COM'È. Non inventare, non aggiungere, non interpretare.
+2. Il testo sopra È la pagina. Non hai bisogno di navigare altrove.
+3. FEDELTÀ ASSOLUTA: usa le parole esatte del testo. Se dice "gestione completa" scrivi "gestione completa", non "consulenza".
+
+⚠️ REGOLA CRITICA — CTA ≠ SERVIZIO:
+- Bottoni come "Richiedi una Consulenza Gratuita" sono il PROCESSO DI VENDITA (call conoscitiva), NON il servizio.
+- Il servizio è descritto nel corpo: "Come Funziona", fasi operative, "Fa per te se".
+- Se dice "mi occupo di tutto", "gestione e ottimizzazione", "delegare completamente" → GESTIONE DONE-FOR-YOU.
 
 COMPONENTI RICHIESTI NEL JSON:
-1. **raw_text**: Il dump testuale COMPLETO e LETTERALE di tutta la pagina, dall'alto in basso. COPIA le frasi esatte: headline, sottotitoli, body copy, ogni bullet point, ogni step del processo, sezioni "fa per te se / non fa per te se", e i CTA (ma etichettali come CTA). Il raw_text deve essere abbastanza completo da permettere a chi lo legge di ricostruire l'intera pagina senza visitarla.
-2. **product_service_details**: Analisi tecnica millimetrica di cosa viene offerto, come viene offerto, fasi del servizio, prezzi e pacchetti. SPECIFICA se è gestione done-for-you o consulenza basandoti sulle parole della pagina.
-3. **marketing_hooks**: Angoli di attacco, promesse, trasformazione promessa al cliente.
-4. **trust_signals**: Certificazioni, anni di esperienza, premi, garanzie esplicite.
-5. **brand_voice**: Termini specifici e stile comunicativo usato.
+1. "raw_text": COPIA il testo integrale della pagina così come lo vedi sopra — non riassumere.
+2. "product_service_details": Cosa viene offerto, come funziona, fasi del servizio. Specifica se è gestione done-for-you o consulenza BASANDOTI sulle parole reali.
+3. "marketing_hooks": Promesse, angoli, trasformazione promessa al cliente.
+4. "trust_signals": Testimonianze, garanzie, numeri citati.
+5. "brand_voice": Termini specifici e stile comunicativo.
+
+Rispondi esclusivamente con un JSON strutturato con queste chiavi."""
+
+            response = await self.ai_service._call_ai(
+                model="anthropic/claude-3.7-sonnet",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=16000
+            )
+
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                # Assicurati che il raw_text contenga il testo reale, non un riassunto di Claude
+                if len(data.get("raw_text", "")) < len(raw_text) * 0.3:
+                    data["raw_text"] = raw_text
+                print(f"   ✅ Analisi pagina completata: {len(str(data))} caratteri")
+                return data
+            else:
+                print(f"   ✅ Analisi pagina completata (testo): {len(response)} caratteri")
+                return {"raw_text": raw_text}
+
+        except Exception as e:
+            print(f"   ⚠️ Scraping diretto fallito per {url}: {e} — fallback a Perplexity")
+            return await self._scrape_single_website_page_perplexity(url, context)
+
+    async def _scrape_single_website_page_perplexity(self, url: str, context: str = "") -> Dict[str, Any]:
+        """Fallback: usa Perplexity solo se il fetch diretto fallisce (es. JS-rendered pages)."""
+        print(f"   🔄 Fallback Perplexity per {url}...")
+
+        prompt = f"""Estrai TUTTO il testo visibile dalla pagina web: {url}
+{"CONTESTO: " + context if context else ""}
+
+ISTRUZIONI MANDATORIE:
+1. Estrai ogni singola informazione presente, dalla prima all'ultima riga.
+2. ZERO RIASSUNTI: copia il testo come appare sulla pagina.
+3. FEDELTÀ ASSOLUTA: usa le parole esatte. Se dicono "gestione completa" NON scrivere "consulenza".
+
+COMPONENTI RICHIESTI NEL JSON:
+1. "raw_text": Il testo COMPLETO e LETTERALE della pagina, dall'alto in basso.
+2. "product_service_details": Cosa viene offerto, come funziona.
+3. "marketing_hooks": Promesse e angoli di marketing.
+4. "trust_signals": Certificazioni, garanzie, testimonianze.
+5. "brand_voice": Termini specifici del brand.
 
 Rispondi esclusivamente con un JSON strutturato con queste chiavi."""
 
@@ -276,24 +375,20 @@ Rispondi esclusivamente con un JSON strutturato con queste chiavi."""
                 model="perplexity/sonar-pro",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1,
-                max_tokens=16000  # Massimo per avere TUTTO
+                max_tokens=16000
             )
 
-            # Prova a parsare JSON
-            import re
-            import json
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group())
-                print(f"   ✅ Scraping pagina completato: {len(str(data))} caratteri")
+                print(f"   ✅ Fallback Perplexity completato: {len(str(data))} caratteri")
                 return data
             else:
-                print(f"   ✅ Scraping pagina completato (testo): {len(response)} caratteri")
                 return {"raw_text": response}
 
         except Exception as e:
-            print(f"   ❌ Errore scraping pagina {url}: {e}")
-            raise # Re-raise to be caught by asyncio.gather's return_exceptions
+            print(f"   ❌ Anche Perplexity fallito per {url}: {e}")
+            raise
 
     async def _scrape_website_complete(self, site_urls: List[str], client_name: str) -> Dict[str, Any]:
         """
