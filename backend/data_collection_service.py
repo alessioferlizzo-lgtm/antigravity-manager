@@ -463,10 +463,9 @@ Rispondi esclusivamente con un JSON strutturato con queste chiavi."""
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group())
-                # Assicurati che il raw_text contenga il testo reale, non un riassunto di Claude
-                if len(data.get("raw_text", "")) < len(raw_text) * 0.3:
-                    data["raw_text"] = raw_text
-                print(f"   ✅ Analisi pagina completata: {len(str(data))} caratteri")
+                # SEMPRE preserva il testo REALE dall'HTML — Claude potrebbe riassumerlo
+                data["raw_text"] = raw_text
+                print(f"   ✅ Analisi pagina completata: {len(str(data))} caratteri (raw_text: {len(raw_text)} chars reali)")
                 return data
             else:
                 print(f"   ✅ Analisi pagina completata (testo): {len(response)} caratteri")
