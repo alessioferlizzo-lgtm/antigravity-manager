@@ -41,6 +41,7 @@ class DataCollectionService:
         service_urls = []    # Link a landing page servizi
         product_urls = []    # Link a landing page prodotti o menu digitali
         competitor_links = [] # Link a competitor specifici
+        gmb_info_urls = []   # Link a Google My Business (info business: indirizzo, orari, etc.)
         instagram_handle = ""
         google_maps_url = ""
 
@@ -61,18 +62,34 @@ class DataCollectionService:
                     instagram_handle = url.strip("/").split("/")[-1].replace("@", "")
                     return
 
-            # 2. Google My Business (tutte le varianti testuali)
-            if label_lc == "google_business" or any(x in label_lc for x in [
+            # 2. Google My Business — distingui SCHEDA (info) da RECENSIONI
+            is_gmb = label_lc == "google_business" or any(x in label_lc for x in [
                 "google my business", "scheda google", "google maps", "gmb",
-                "mappa google", "reviews google", "recensioni google"
-            ]):
+                "mappa google"
+            ])
+            is_gmb_reviews = any(x in label_lc for x in [
+                "reviews google", "recensioni google", "google review", "google recensioni"
+            ])
+            # Anche URL pattern: se il link contiene #lrd o fid è un link diretto recensioni
+            is_review_url_pattern = any(x in url.lower() for x in ["#lrd=", "fid=", "place_id"])
+
+            if is_gmb_reviews or (is_gmb and is_review_url_pattern):
+                # Link diretto alle recensioni Google → va nelle recensioni
                 google_maps_url = url
+                return
+            elif is_gmb:
+                # Link alla scheda GMB (info business) → scrappa come pagina + usa per recensioni
+                google_maps_url = url
+                gmb_info_urls.append({"url": url, "context": "Scheda Google My Business — estrai indirizzo, orari, categorie, descrizione, servizi elencati"})
                 return
 
             # 3. Recensioni (non-Google)
             if label_lc == "reviews" or any(x in label_lc for x in [
                 "recensioni", "review", "trustpilot", "opinioni", "recenzion"
             ]):
+                # Se è un link Google, usalo anche per le recensioni Google
+                if any(x in url.lower() for x in ["google.com/maps", "business.google.com", "g.page", "goo.gl"]):
+                    google_maps_url = url
                 review_urls.append({"url": url, "context": f"{desc or label}".strip()})
                 return
 
@@ -153,21 +170,25 @@ class DataCollectionService:
         try:
             # 1. Scraping Siti Web (Generali)
             site_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in site_urls]
-            
+
             # 2. Scraping Landing Page Servizi (Specifici)
             service_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in service_urls]
-            
+
             # 2.5 Scraping Landing Page Prodotti / Menu
             product_tasks = [self._scrape_single_website_page(s["url"], s["context"]) for s in product_urls]
-            
+
+            # 2.6 Scraping Google My Business info (indirizzo, orari, servizi, etc.)
+            gmb_info_tasks = [self._scrape_gmb_info(s["url"], s["context"]) for s in gmb_info_urls]
+
             # 3. Task in parallelo principali
-            print(f"   📊 Lancio {len(site_tasks)} task sito, {len(service_tasks)} task servizi, {len(product_tasks)} task prodotti/menu, {len(review_urls)} task recensioni")
-            
+            print(f"   📊 Lancio {len(site_tasks)} task sito, {len(service_tasks)} task servizi, {len(product_tasks)} task prodotti/menu, {len(gmb_info_tasks)} task GMB info, {len(review_urls)} task recensioni")
+
             main_results = await asyncio.wait_for(
                 asyncio.gather(
                     asyncio.gather(*site_tasks, return_exceptions=True),
                     asyncio.gather(*service_tasks, return_exceptions=True),
                     asyncio.gather(*product_tasks, return_exceptions=True),
+                    asyncio.gather(*gmb_info_tasks, return_exceptions=True),
                     self._collect_google_reviews(client_name, metadata.get("location", ""), google_maps_url),
                     self._mine_reviews_from_urls(review_urls),
                     self._collect_instagram_data_complete(instagram_handle, metadata),
@@ -179,9 +200,9 @@ class DataCollectionService:
             )
         except asyncio.TimeoutError:
             print("⚠️ TIMEOUT GLOBALE RACCOLTA DATI (9 min) - Procedo con i dati parziali")
-            main_results = [[], [], [], {}, {}, {}, {}, {}] 
+            main_results = [[], [], [], [], {}, {}, {}, {}, {}]
 
-        site_res, service_res, product_res, g_reviews, extra_reviews, instagram_data, ads_data, competitor_data = main_results
+        site_res, service_res, product_res, gmb_info_res, g_reviews, extra_reviews, instagram_data, ads_data, competitor_data = main_results
 
         # 🔥 UNISCI CONTENUTI SITO
         combined_site_content = ""
@@ -194,6 +215,16 @@ class DataCollectionService:
             else:
                 processed_site_results.append({"url": url, "data": res})
                 combined_site_content += f"\n\n--- CONTENUTO DA: {url} ---\n{res.get('raw_text', str(res))}"
+
+        # 🔥 UNISCI INFO GOOGLE MY BUSINESS (indirizzo, orari, categorie, servizi)
+        gmb_info_text = ""
+        for i, res in enumerate(gmb_info_res or []):
+            if not isinstance(res, Exception) and res:
+                gmb_info_text += f"\n\n--- GOOGLE MY BUSINESS ---\n{res.get('raw_text', str(res))}"
+                # Aggiungi anche al contenuto del sito per arricchire il contesto
+                processed_site_results.append({"url": gmb_info_urls[i]["url"] if i < len(gmb_info_urls) else "gmb", "data": res})
+                combined_site_content += f"\n\n--- GOOGLE MY BUSINESS ---\n{res.get('raw_text', str(res))}"
+                print(f"   ✅ Info GMB estratte: {len(res.get('raw_text', ''))} caratteri")
         
         # 🔥 UNISCI SERVIZI (Vengono messi in services_txt per l'AI)
         combined_services_text = ""
@@ -389,6 +420,81 @@ Rispondi esclusivamente con un JSON strutturato con queste chiavi."""
         except Exception as e:
             print(f"   ❌ Anche Perplexity fallito per {url}: {e}")
             raise
+
+    async def _scrape_gmb_info(self, url: str, context: str = "") -> Dict[str, Any]:
+        """
+        Estrai info business dalla scheda Google My Business.
+        Google Maps è JS-rendered → usiamo Perplexity per navigarla.
+        """
+        print(f"   📍 Scraping info Google My Business: {url}")
+
+        prompt = f"""Visita questa scheda Google My Business / Google Maps: {url}
+
+ESTRAI TUTTE le seguenti informazioni (se presenti):
+1. Nome attività ESATTO come appare sulla scheda
+2. Indirizzo completo
+3. Numero di telefono
+4. Orari di apertura (tutti i giorni)
+5. Categorie/tipo di attività
+6. Descrizione dell'attività (se presente)
+7. Servizi elencati sulla scheda
+8. Sito web collegato
+9. Rating medio e numero totale recensioni
+10. Foto: descrivi brevemente le prime 5-10 foto (cosa mostrano)
+11. Domande e risposte (se presenti)
+12. Attributi speciali (accessibilità, pagamenti accettati, etc.)
+
+NON estrarre le singole recensioni qui — solo le INFO della scheda.
+
+Rispondi in JSON:
+{{
+  "business_name": "Nome",
+  "address": "Indirizzo completo",
+  "phone": "Numero",
+  "hours": "Orari dettagliati per giorno",
+  "categories": ["Categoria 1", "Categoria 2"],
+  "description": "Descrizione dalla scheda",
+  "listed_services": ["Servizio 1", "Servizio 2"],
+  "website": "URL sito",
+  "rating": 4.9,
+  "total_reviews": 150,
+  "photo_descriptions": ["Descrizione foto 1", "..."],
+  "attributes": ["Attributo 1", "..."],
+  "raw_text": "Tutto il testo visibile sulla scheda, completo"
+}}"""
+
+        try:
+            response = await self.ai_service._call_ai(
+                model="perplexity/sonar-pro",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=8000
+            )
+
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                # Costruisci un raw_text leggibile dalle info strutturate
+                parts = []
+                if data.get("business_name"): parts.append(f"Nome attività: {data['business_name']}")
+                if data.get("address"): parts.append(f"Indirizzo: {data['address']}")
+                if data.get("phone"): parts.append(f"Telefono: {data['phone']}")
+                if data.get("hours"): parts.append(f"Orari: {data['hours']}")
+                if data.get("categories"): parts.append(f"Categorie: {', '.join(data['categories'])}")
+                if data.get("description"): parts.append(f"Descrizione: {data['description']}")
+                if data.get("listed_services"): parts.append(f"Servizi: {', '.join(data['listed_services'])}")
+                if data.get("rating"): parts.append(f"Rating: {data['rating']} ({data.get('total_reviews', '?')} recensioni)")
+                if data.get("attributes"): parts.append(f"Attributi: {', '.join(data['attributes'])}")
+                if not data.get("raw_text") or len(data["raw_text"]) < 50:
+                    data["raw_text"] = "\n".join(parts)
+                print(f"   ✅ Info GMB estratte: {data.get('business_name', 'N/A')}")
+                return data
+            else:
+                return {"raw_text": response}
+
+        except Exception as e:
+            print(f"   ❌ Errore scraping GMB info: {e}")
+            return {"raw_text": "", "error": str(e)}
 
     async def _scrape_website_complete(self, site_urls: List[str], client_name: str) -> Dict[str, Any]:
         """
