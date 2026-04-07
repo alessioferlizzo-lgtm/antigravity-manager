@@ -188,6 +188,26 @@ async def generate_complete_strategic_analysis(
     for i, task in enumerate(workflow["tasks"], 1):
         step_id = task["step_id"]
         task_name = task.get("title", step_id)
+
+        # Skip vertical analysis if product_portfolio has no items of that type
+        portfolio = context.get("product_portfolio")
+        if isinstance(portfolio, dict) and portfolio.get("items"):
+            portfolio_items = portfolio["items"]
+            has_products = any(it.get("type") == "product" for it in portfolio_items if isinstance(it, dict))
+            has_services = any(it.get("type") == "service" for it in portfolio_items if isinstance(it, dict))
+
+            if step_id == "product_vertical" and not has_products:
+                _report(f"[{i}/{total_tasks}] ⏭️ Skipping {task_name} — nessun prodotto nel portfolio")
+                results[step_id] = None
+                context[step_id] = None
+                continue
+
+            if step_id == "service_vertical" and not has_services:
+                _report(f"[{i}/{total_tasks}] ⏭️ Skipping {task_name} — nessun servizio nel portfolio")
+                results[step_id] = None
+                context[step_id] = None
+                continue
+
         _report(f"[{i}/{total_tasks}] {task_name}…")
         try:
             task_result = await run_workflow_task(service, task, context)
