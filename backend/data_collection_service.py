@@ -250,15 +250,21 @@ class DataCollectionService:
 {"CONTESTO SPECIFICO FORNITO DALL'UTENTE: " + context if context else ""}
 
 ISTRUZIONI MANDATORIE:
-1. **ANALISI TOP-TO-BOTTOM**: Estrai ogni singola informazione presente, dalla prima all'ultima riga. 
+1. **ANALISI TOP-TO-BOTTOM**: Estrai ogni singola informazione presente, dalla prima all'ultima riga.
 2. **ZERO RIASSUNTI**: Non provare a sintetizzare. Se nella pagina è descritto un processo in 5 fasi, devi estrarre tutte le 5 fasi con i relativi dettagli. Se ci sono prezzi, elenchi puntati o note tecniche, catturli integralmente.
-3. **FEDELTÀ ASSOLUTA AL TESTO**: Usa le parole esatte del brand. Se dicono "Check-up strategico", non scrivere "Consulenza iniziale".
+3. **FEDELTÀ ASSOLUTA AL TESTO**: Usa le parole esatte del brand. Se dicono "Check-up strategico", non scrivere "Consulenza iniziale". Se dicono "Mi occupo di tutto" o "gestione completa", NON scrivere "consulenza".
+
+⚠️ REGOLA CRITICA — DISTINGUI CTA DA SERVIZIO:
+- I bottoni CTA come "Richiedi una Consulenza Gratuita", "Prenota una Call", "Parla con noi" sono il PROCESSO DI VENDITA (la call conoscitiva), NON il servizio offerto.
+- Il SERVIZIO REALE è descritto nel corpo della pagina: sezioni "Come Funziona", "Cosa Include", "Fa per te se", descrizioni delle fasi operative.
+- Se la pagina dice "mi occupo di tutto", "gestione completa", "delegare", "gestiamo noi" → il servizio è GESTIONE DONE-FOR-YOU, non consulenza.
+- NON confondere il CTA di vendita con la natura del servizio.
 
 ⚠️ REGOLA CRITICA PER I MENU DIGITALI: se questo URL appartiene a una piattaforma di menu (Qromo, Leggimenu, etc.), ignora il software e concentrati solo sui piatti, ingredienti e prezzi.
 
 COMPONENTI RICHIESTI NEL JSON:
-1. **raw_text**: Il dump testuale più completo e fedele possibile di tutta la pagina. Deve contenere headline, body copy, bullet points e CTA.
-2. **product_service_details**: Analisi tecnica millimetrica di cosa viene offerto, come viene offerto, fasi del servizio, prezzi e pacchetti.
+1. **raw_text**: Il dump testuale COMPLETO e LETTERALE di tutta la pagina, dall'alto in basso. COPIA le frasi esatte: headline, sottotitoli, body copy, ogni bullet point, ogni step del processo, sezioni "fa per te se / non fa per te se", e i CTA (ma etichettali come CTA). Il raw_text deve essere abbastanza completo da permettere a chi lo legge di ricostruire l'intera pagina senza visitarla.
+2. **product_service_details**: Analisi tecnica millimetrica di cosa viene offerto, come viene offerto, fasi del servizio, prezzi e pacchetti. SPECIFICA se è gestione done-for-you o consulenza basandoti sulle parole della pagina.
 3. **marketing_hooks**: Angoli di attacco, promesse, trasformazione promessa al cliente.
 4. **trust_signals**: Certificazioni, anni di esperienza, premi, garanzie esplicite.
 5. **brand_voice**: Termini specifici e stile comunicativo usato.

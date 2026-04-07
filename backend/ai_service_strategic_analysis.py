@@ -19,6 +19,9 @@ ANTI_HALLUCINATION_DIRECTIVE = """
    ottimizzazione, reportistica), è un servizio di GESTIONE DONE-FOR-YOU, NON una consulenza.
    "Consulenza" = il professionista dà consigli e il cliente esegue. Se il professionista esegue → gestione.
    Usa i NOMI ORIGINALI dei servizi così come li chiama il brand.
+   ATTENZIONE AI CTA: bottoni come "Richiedi una Consulenza Gratuita" o "Prenota una Call" sono il
+   processo di vendita (call conoscitiva), NON la descrizione del servizio. Per capire cosa FA il servizio,
+   leggi il corpo della pagina: "Come Funziona", "Cosa Include", le fasi operative.
 
 3. ANALIZZA TUTTO — Usa TUTTI i dati disponibili, anche se sono pochi. Poche recensioni sono
    comunque recensioni reali da analizzare. Pochi servizi meritano comunque un'analisi approfondita.
