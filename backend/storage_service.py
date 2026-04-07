@@ -443,6 +443,27 @@ class StorageService:
     def delete_graphic_from_supabase(self, client_id: str, filename: str):
         _sb_run(lambda sb: sb.storage.from_("graphics").remove([f"{client_id}/{filename}"]))
 
+    # ─── COMPLETE ANALYSIS HELPERS ────────────────────────────────
+    def get_complete_analysis(self, client_id: str) -> Dict[str, Any]:
+        """Fetch the full analysis row from Supabase as a unified dictionary."""
+        def _get(sb):
+            res = sb.table("client_complete_analysis").select("*").eq("client_id", client_id).execute()
+            if res and res.data:
+                return res.data[0]
+            return {}
+        return _sb_run(_get) or {}
+
+    def save_complete_analysis(self, client_id: str, analysis: Dict[str, Any]):
+        """Save the full analysis object (containing multiple columns) to Supabase."""
+        # Se vogliamo cancellare campi rimossi dal dizionario, Supabase Upsert aggiorna solo 
+        # le chiavi fornite. Passiamo quindi 'None' per le chiavi che non ci sono più se necessario, 
+        # oppure facciamo semplicemente un upsert dei dati attuali. 
+        # L'endpoint chiamante dovrebbe settare a None le chiavi da rimuovere.
+        analysis["client_id"] = client_id
+        def _save(sb):
+            sb.table("client_complete_analysis").upsert(analysis).execute()
+        _sb_run(_save)
+
     # ─── ON-DEMAND LOCAL CACHE (download from Supabase if missing) ─
     def _ensure_local_file(self, bucket: str, client_id: str, filename: str, local_path: Path) -> bool:
         if local_path.exists():

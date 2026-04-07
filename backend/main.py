@@ -4244,7 +4244,7 @@ async def delete_analysis_section(client_id: str, step_id: str):
     # Rimuovi da Supabase
     try:
         existing = storage_service.get_complete_analysis(client_id) or {}
-        existing.pop(step_id, None)
+        existing[step_id] = None  # Forza il campo a null su Supabase
         storage_service.save_complete_analysis(client_id, existing)
     except Exception as e:
         print(f"Warning: Could not update Supabase: {e}")
