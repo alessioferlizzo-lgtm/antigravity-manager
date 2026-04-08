@@ -4069,30 +4069,14 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                 "seasonal_roadmap": complete_analysis.get("seasonal_roadmap", {}),
                 "psychographic_analysis": complete_analysis.get("psychographic_analysis", {}),
                 "visual_brief": complete_analysis.get("visual_brief", {}),
-                "ad_copy_creation": complete_analysis.get("ad_copy_creation", {}),
-                "video_scripts": complete_analysis.get("video_scripts", {}),
-                "franzcopy_scaling": complete_analysis.get("franzcopy_scaling", {}),
+                # NOTA: ad_copy_creation, video_scripts, franzcopy_scaling NON esistono in Supabase
+                # Vengono salvati solo nel file locale complete_analysis.json
                 "swot": complete_analysis.get("swot", {}),
                 "objectives": complete_analysis.get("objectives", {}),
                 "strategy": complete_analysis.get("strategy", ""),
             }
-            try:
-                supabase.table("client_complete_analysis").upsert(upsert_data).execute()
-                print("✅ Analisi salvata in Supabase (tutte le colonne)")
-            except Exception as col_err:
-                # Se fallisce (colonne mancanti), riprova con solo le colonne originali
-                err_msg = str(col_err).lower()
-                if "column" in err_msg or "undefined" in err_msg or "400" in err_msg:
-                    print(f"⚠️  Alcune colonne Supabase mancanti ({col_err}). Riprovo senza colonne nuove…")
-                    for key in ["service_vertical", "ad_copy_creation", "video_scripts", "franzcopy_scaling"]:
-                        upsert_data.pop(key, None)
-                    try:
-                        supabase.table("client_complete_analysis").upsert(upsert_data).execute()
-                        print("✅ Analisi salvata in Supabase (colonne base)")
-                    except Exception as e2:
-                        print(f"❌ Errore salvataggio Supabase anche con colonne base: {e2}")
-                else:
-                    print(f"❌ Errore salvataggio Supabase: {col_err}")
+            supabase.table("client_complete_analysis").upsert(upsert_data).execute()
+            print("✅ Analisi salvata in Supabase")
     except Exception as e:
         print(f"❌ Errore salvataggio Supabase: {e}")
 
