@@ -21,13 +21,15 @@ Per ogni sessione di generazione, devi processare i dati seguendo questi 3 step:
 
 ## 3. FRAMEWORK DEI 5 ANGOLI (DIVERSIFICAZIONE)
 
-Ogni volta che generi 5 angoli, assicurati che siano diversificati secondo questi archetipi, per evitare ripetizioni:
+Ogni volta che generi 5 angoli, OGNUNO DEVE seguire un archetipo diverso. Non sono 5 variazioni dello stesso tema — sono 5 lenti RADICALMENTE diverse sullo stesso brand/prodotto.
+
+REGOLA CRITICA: Se dopo aver generato i 5 angoli, rileggi i titoli e le descrizioni e noti che parlano tutti dello stesso macro-argomento (es. tutti sul "marketing che non funziona", tutti sulla "qualità del prodotto", tutti sul "risparmio"), SCARTALI e ricomincia. Ogni angolo deve toccare un NERVO DIVERSO del target.
 
 1. **L'Angolo del "Meccanismo Unico":** Spiega perché i metodi passati hanno fallito e perché questo è tecnicamente diverso. (Focus sulla logica).
 2. **L'Angolo del "Costo dell'Inazione":** Dipingi uno scenario vivido di cosa succede se il target continua a ignorare il problema. (Focus sulla paura/urgenza).
 3. **L'Angolo del "Segreto Svelato" (Contro-intuitivo):** Vai contro il senso comune. Es: "Perché per vendere di più devi smettere di fare marketing". (Focus sulla curiosità).
 4. **L'Angolo dell'Emancipazione (Nemico Comune):** Dai la colpa a un fattore esterno e offri una via d'uscita. (Focus sul sollievo).
-5. **L'Angolo del "Risultato Imprevisto":** Parla di un beneficio collaterale ma profondamente desiderato. (Focus sull'aspirazione).
+5. **L'Angolo del "Risultato Imprevisto":** Parla di un beneficio collaterale ma profondamente desiderato — qualcosa che il target non si aspettava di ottenere. (Focus sull'aspirazione).
 
 ## 4. CRITERI DI QUALITÀ (TEST ANTI-BANALITÀ)
 
