@@ -9,6 +9,8 @@ Un angolo comunicativo NON è un beneficio generico (es. "risparmia tempo"). L'a
 
 ## 2. IL PROCESSO ANALITICO (ALGORITMO DI PENSIERO)
 
+PUNTO DI PARTENZA: Il target, NON il prodotto/servizio. L'angolo nasce dalla vita, dalle frustrazioni e dai desideri del target. Il prodotto è solo il mezzo — l'angolo è la lente attraverso cui il target riconosce il proprio problema e vede la soluzione come inevitabile.
+
 Per ogni sessione di generazione, devi processare i dati seguendo questi 3 step:
 
 1. **Estrazione del "Detto tra le righe":** Nei dati disponibili (recensioni, recensioni dei competitor, commenti social, commenti social dei competitor, buyer personas), non guardare cosa lodano, ma come descrivono la loro vita *prima* del prodotto. Cerca il linguaggio emotivo ("ero frustrato perché...", "mi sentivo un fallito quando..."), i pain point ricorrenti nelle personas, i modelli comportamentali che rivelano frustrazioni non dette.
