@@ -4069,8 +4069,9 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                 "seasonal_roadmap": complete_analysis.get("seasonal_roadmap", {}),
                 "psychographic_analysis": complete_analysis.get("psychographic_analysis", {}),
                 "visual_brief": complete_analysis.get("visual_brief", {}),
-                # NOTA: ad_copy_creation, video_scripts, franzcopy_scaling NON esistono in Supabase
-                # Vengono salvati solo nel file locale complete_analysis.json
+                "ad_copy_creation": complete_analysis.get("ad_copy_creation", {}),
+                "video_scripts": complete_analysis.get("video_scripts", {}),
+                "franzcopy_scaling": complete_analysis.get("franzcopy_scaling", {}),
                 "swot": complete_analysis.get("swot", {}),
                 "objectives": complete_analysis.get("objectives", {}),
                 "strategy": complete_analysis.get("strategy", ""),
