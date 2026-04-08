@@ -1504,47 +1504,108 @@ async def generate_copy(client_id: str, request: CopyRequest):
         focus_areas=["brand_voice", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
     )
 
-    # Knowledge: framework + awareness + tipo specifico
-    from .knowledge_loader import get_copy_knowledge, get_copy_type_knowledge
-    framework_knowledge = get_copy_knowledge(framework=request.framework, awareness_level=request.awareness_level) if request.framework else get_copy_knowledge(awareness_level=request.awareness_level)
+    from .knowledge_loader import (
+        get_writing_knowledge, get_awareness_context,
+        get_single_framework_knowledge, get_inspirational_stair,
+        get_copy_type_knowledge
+    )
+
+    # ═══════════════════════════════════════════════════════
+    # LAYER 1 — Conoscenza base (SEMPRE presente)
+    # Regole di scrittura Vignali + Modelli narrativi Dosio
+    # L'AI deve conoscere queste regole PRIMA di scrivere qualsiasi cosa
+    # ═══════════════════════════════════════════════════════
+    writing_knowledge = get_writing_knowledge()
+
+    # ═══════════════════════════════════════════════════════
+    # LAYER 2 — Livello di consapevolezza (se selezionato)
+    # Dice all'AI COME parlare al target in base a dove si trova
+    # ═══════════════════════════════════════════════════════
+    awareness_section = ""
+    if request.awareness_level:
+        awareness_section = get_awareness_context(request.awareness_level)
+
+    # ═══════════════════════════════════════════════════════
+    # LAYER 3 — Framework (se selezionato)
+    # Detta la STRUTTURA del copy — l'AI lo segue alla lettera
+    # ═══════════════════════════════════════════════════════
+    framework_section = ""
+    if request.framework:
+        if request.framework == "INSPIRATIONAL_STAIR":
+            framework_section = get_inspirational_stair()
+        else:
+            fw = get_single_framework_knowledge(request.framework)
+            if fw:
+                framework_section = fw
+
+    # ═══════════════════════════════════════════════════════
+    # LAYER 4 — Tipo di copy (canale + vincoli tecnici)
+    # NON detta la struttura — dice solo DOVE verrà pubblicato
+    # e i vincoli tecnici di quel canale
+    # ═══════════════════════════════════════════════════════
     type_knowledge = get_copy_type_knowledge(request.copy_type)
 
-    # Contesto angolo
+    # ── Contesto angolo ──
     angle_ctx = ""
     if request.angle_title:
-        angle_ctx = f"\nANGOLO DA SVILUPPARE: {request.angle_title}"
+        angle_ctx = f"ANGOLO COMUNICATIVO: {request.angle_title}"
         if request.angle_description:
-            angle_ctx += f"\nDESCRIZIONE ANGOLO: {request.angle_description}"
+            angle_ctx += f"\n{request.angle_description}"
 
-    # Istruzioni utente
-    user_instr = f"\nISTRUZIONI AGGIUNTIVE DELL'UTENTE: {request.user_instructions}" if request.user_instructions else ""
+    # ── Istruzioni utente ──
+    user_instr = request.user_instructions or ""
 
-    system_prompt = f"""Sei un copywriter esperto con un track record di risultati concreti.
-Il tuo copy converte perché usa le parole esatte del cliente ideale, non il linguaggio del brand.
+    # ── Costruzione prompt per sezioni ──
+    sep = "=" * 60
+    parts = []
 
-TIPO DI COPY DA GENERARE: {request.copy_type.upper()}
-{angle_ctx}
-{user_instr}
+    parts.append("Sei un copywriter professionista. Il tuo lavoro è scrivere copy che converte.")
 
-{type_knowledge}
+    parts.append(f"""{sep}
+CONOSCENZA BASE — Regole di scrittura e modelli narrativi
+Applica queste regole a TUTTO quello che scrivi.
+{sep}
+{writing_knowledge}""")
 
-{framework_knowledge}
+    parts.append(f"""{sep}
+CONTESTO STRATEGICO DEL CLIENTE
+Usa questi dati per scrivere con il linguaggio del target, non del brand.
+{sep}
+{strategic_context}""")
 
-═══════════════════════════════════════════════════════════
-CONTESTO STRATEGICO COMPLETO DEL CLIENTE
-═══════════════════════════════════════════════════════════
+    if awareness_section:
+        parts.append(f"""{sep}
+LIVELLO DI CONSAPEVOLEZZA DEL TARGET
+Adatta il tono e il punto di ingresso del messaggio a questo livello.
+{sep}
+{awareness_section}""")
 
-{strategic_context}
+    if framework_section:
+        parts.append(f"""{sep}
+FRAMEWORK — Questa è la STRUTTURA del copy.
+Segui questo framework alla lettera. Ogni fase deve essere presente e riconoscibile.
+{sep}
+{framework_section}""")
 
-REGOLE FONDAMENTALI:
-- Scrivi come parli, non come una brochure aziendale
-- Usa il linguaggio reale del target (dalla Voice of Customer)
-- Il tono deve riflettere la Brand Voice del cliente
-- NON usare emoji a meno che non siano parte del tono del brand
+    if type_knowledge:
+        parts.append(f"""{sep}
+CANALE DI PUBBLICAZIONE — Vincoli tecnici del formato
+{sep}
+{type_knowledge}""")
+    else:
+        parts.append(f"CANALE: {request.copy_type.upper()}")
 
-FORMATO OUTPUT: Rispondi con il copy pronto all'uso in testo semplice (NO JSON). Formatta con **grassetto** dove serve per enfasi."""
+    if angle_ctx:
+        parts.append(f"ANGOLO COMUNICATIVO — Declina il copy su questo angolo:\n{angle_ctx}")
 
-    user_msg = f"Genera il copy richiesto. Usa TUTTO il contesto strategico fornito, soprattutto Brand Voice, Voice of Customer e Reasons to Buy."
+    if user_instr:
+        parts.append(f"ISTRUZIONI AGGIUNTIVE DELL'UTENTE: {user_instr}")
+
+    parts.append("OUTPUT: Testo pronto all'uso. NO JSON. Usa **grassetto** dove serve per enfasi.")
+
+    system_prompt = "\n\n".join(parts)
+
+    user_msg = "Scrivi il copy."
 
     try:
         raw = await ai_service._call_ai(
