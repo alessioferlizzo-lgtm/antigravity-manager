@@ -1555,57 +1555,80 @@ async def generate_copy(client_id: str, request: CopyRequest):
     # ── Istruzioni utente ──
     user_instr = request.user_instructions or ""
 
-    # ── Costruzione prompt per sezioni ──
+    # ── Costruzione prompt ──
     sep = "=" * 60
+
+    # Label leggibili per il tipo di copy
+    TYPE_LABELS = {
+        "caption": "CAPTION INSTAGRAM",
+        "meta_ads": "META ADS COPY",
+        "email": "EMAIL MARKETING",
+        "headline": "HEADLINE / HOOK",
+        "bio": "BIO PROFILO",
+    }
+    type_label = TYPE_LABELS.get(request.copy_type, request.copy_type.upper())
+
+    # Costruisci il briefing operativo — la prima cosa che l'AI legge
+    briefing = f"DEVI SCRIVERE: {type_label}"
+    if request.framework:
+        fw_label = request.framework.replace("_", " ")
+        briefing += f"\nFRAMEWORK: {fw_label} — questa è la STRUTTURA del copy. Ogni fase del framework deve essere presente e riconoscibile nel testo finale."
+    if request.awareness_level:
+        briefing += f"\nLIVELLO DI CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()} — questo definisce il TONO e il punto di ingresso. NON la struttura."
+    if request.angle_title:
+        briefing += f"\nANGOLO: {request.angle_title}"
+
     parts = []
 
-    parts.append("Sei un copywriter professionista. Il tuo lavoro è scrivere copy che converte.")
+    # 1. Identità + briefing operativo
+    parts.append(f"""Sei un copywriter professionista.
 
+{sep}
+BRIEFING
+{sep}
+{briefing}
+{f'{chr(10)}DESCRIZIONE ANGOLO: {request.angle_description}' if request.angle_description else ''}
+{f'{chr(10)}ISTRUZIONI UTENTE: {user_instr}' if user_instr else ''}""")
+
+    # 2. Knowledge base (sempre)
     parts.append(f"""{sep}
-CONOSCENZA BASE — Regole di scrittura e modelli narrativi
-Applica queste regole a TUTTO quello che scrivi.
+REGOLE DI SCRITTURA — Applica sempre
 {sep}
 {writing_knowledge}""")
 
+    # 3. Contesto strategico del cliente
     parts.append(f"""{sep}
-CONTESTO STRATEGICO DEL CLIENTE
-Usa questi dati per scrivere con il linguaggio del target, non del brand.
+DATI DEL CLIENTE — Usa il linguaggio del target, non del brand
 {sep}
 {strategic_context}""")
 
+    # 4. Awareness (se selezionato)
     if awareness_section:
         parts.append(f"""{sep}
-LIVELLO DI CONSAPEVOLEZZA DEL TARGET
-Adatta il tono e il punto di ingresso del messaggio a questo livello.
+LIVELLO DI CONSAPEVOLEZZA — Come parlare al target
 {sep}
 {awareness_section}""")
 
+    # 5. Framework (se selezionato)
     if framework_section:
         parts.append(f"""{sep}
-FRAMEWORK — Questa è la STRUTTURA del copy.
-Segui questo framework alla lettera. Ogni fase deve essere presente e riconoscibile.
+FRAMEWORK — Struttura da seguire alla lettera
 {sep}
 {framework_section}""")
 
+    # 6. Vincoli tecnici del canale
     if type_knowledge:
         parts.append(f"""{sep}
-CANALE DI PUBBLICAZIONE — Vincoli tecnici del formato
+VINCOLI DEL CANALE ({type_label})
 {sep}
 {type_knowledge}""")
-    else:
-        parts.append(f"CANALE: {request.copy_type.upper()}")
 
-    if angle_ctx:
-        parts.append(f"ANGOLO COMUNICATIVO — Declina il copy su questo angolo:\n{angle_ctx}")
-
-    if user_instr:
-        parts.append(f"ISTRUZIONI AGGIUNTIVE DELL'UTENTE: {user_instr}")
-
-    parts.append("OUTPUT: Testo pronto all'uso. NO JSON. Usa **grassetto** dove serve per enfasi.")
+    # 7. Output
+    parts.append("OUTPUT: Scrivi SOLO il copy pronto all'uso. Nessuna premessa, nessuna spiegazione, nessun commento. Testo e basta. Usa **grassetto** dove serve.")
 
     system_prompt = "\n\n".join(parts)
 
-    user_msg = "Scrivi il copy."
+    user_msg = f"Scrivi il {type_label.lower()}."
 
     try:
         raw = await ai_service._call_ai(
