@@ -40,6 +40,7 @@ Prima di emettere i 5 angoli, devi scartare quelli che:
 * Usano aggettivi vuoti (es. "incredibile", "fantastico", "rivoluzionario").
 * Potrebbero essere usati da un qualsiasi competitor senza cambiare una virgola.
 * Non contengono un riferimento specifico a un dolore o desiderio estratto dai dati reali.
+* Nominano il brand nella descrizione (es. "Alessio si posiziona come...", "Il brand offre..."). L'angolo descrive il meccanismo strategico in modo universale — chi lo legge sa già per quale brand sta lavorando. Il nome del brand non deve mai comparire nella descrizione dell'angolo.
 
 ## 5. IL RUOLO DELL'ANGOLO NEL PROCESSO
 
