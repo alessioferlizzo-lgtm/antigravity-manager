@@ -32,6 +32,15 @@ VIGNALI_KNOWLEDGE = _load_file("scrittura_vignali.md")
 DOSIO_KNOWLEDGE = _load_file("narrativa_dosio.md")
 FRAMEWORK_COPY_KNOWLEDGE = _load_file("framework_copy.md")
 
+# Mapping: copy_type → file knowledge dedicato
+COPY_TYPE_FILES = {
+    "caption":   "copy_caption.md",
+    "meta_ads":  "copy_meta_ads.md",
+    "email":     "copy_email.md",
+    "headline":  "copy_headline.md",
+    "bio":       "copy_bio.md",
+}
+
 # Mapping: awareness_level key → file specifico + label italiano
 AWARENESS_LEVELS = {
     "unaware":        {"label": "COMPLETAMENTE INCONSAPEVOLE (Unaware)",        "file": "consapevolezza_1_unaware.md"},
@@ -176,6 +185,20 @@ def get_copy_knowledge(framework: str = "", awareness_level: str = "") -> str:
     parts.append(get_awareness_context(awareness_level))
 
     return "\n".join(p for p in parts if p)
+
+
+def get_copy_type_knowledge(copy_type: str) -> str:
+    """
+    Restituisce il knowledge file specifico per il tipo di copy selezionato.
+    Es: "caption" → copy_caption.md, "meta_ads" → copy_meta_ads.md
+    """
+    filename = COPY_TYPE_FILES.get(copy_type)
+    if not filename:
+        return ""
+    content = _load_file(filename)
+    if content:
+        return f"\n{'='*60}\nISTRUZIONI SPECIFICHE PER QUESTO FORMATO\n{'='*60}\n{content}\n"
+    return ""
 
 
 def get_full_knowledge() -> str:

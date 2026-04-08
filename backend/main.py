@@ -1483,19 +1483,19 @@ async def get_voc(client_id: str):
 # ══════════════════════════════════════════════════════════
 
 class CopyRequest(BaseModel):
-    framework: str = "PAS"          # PAS | AIDA | BAB | HOOK_BODY_CTA | 4C | INSPIRATIONAL_STAIR | FAB | 4U | 5_OBIEZIONI | 3_MOTIVI | ACCA | SSS | E_QUINDI
-    angle_title: str
-    angle_description: Optional[str] = ""
-    product_name: Optional[str] = ""
-    variations: Optional[int] = 1    # number of copy variations to generate
+    copy_type: str = "caption"       # caption | meta_ads | email | headline | bio
+    framework: str = ""              # opzionale — PAS | AIDA | BAB | ecc.
+    awareness_level: str = ""        # opzionale — unaware | problem_aware | solution_aware | product_aware | most_aware
+    angle_title: str = ""
+    angle_description: str = ""
+    user_instructions: str = ""
+    variations: int = 1
 
 @app.post("/clients/{client_id}/copy/generate")
 async def generate_copy(client_id: str, request: CopyRequest):
-    """Genera copy strutturato per Meta Ads usando framework professionali di copywriting."""
+    """Genera copy in base al tipo selezionato, framework e livello di consapevolezza."""
     metadata = storage_service.get_metadata(client_id)
-    client_name = metadata.get("name", client_id)
 
-    # 🔥 NUOVO: Carica TUTTA l'Analisi Strategica (14 sezioni)
     supabase = _get_sb()
     strategic_context = await get_strategic_context_for_generator(
         client_id=client_id,
@@ -1504,35 +1504,31 @@ async def generate_copy(client_id: str, request: CopyRequest):
         focus_areas=["brand_voice", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
     )
 
-    framework_guides = {
-        "PAS": "PAS (Problem-Agitate-Solution): 1) PROBLEM — Hook con linguaggio esatto del target, specifico e riconoscibile 2) AGITATE — Amplifica dolore con conseguenze reali, frustrazioni quotidiane, costo nascosto del problema 3) SOLVE — La soluzione arriva come sollievo naturale. Ritmo: tensione crescente → picco → rilascio.",
-        "AIDA": "AIDA (Attention-Interest-Desire-Action): 1) ATTENTION — Pattern interrupt immediato: domanda provocatoria, dato sorprendente o affermazione contro-intuitiva 2) INTEREST — Fatti concreti sul perché questo è rilevante per il target ORA 3) DESIRE — Social proof, risultati reali, identità aspirazionale ('persone come te') 4) ACTION — CTA specifica: 'Prenota ora' non 'Scopri di più'. Flusso: curiosità → coinvolgimento → invidia positiva → urgenza.",
-        "BAB": "BAB (Before-After-Bridge): 1) BEFORE — Situazione attuale dolorosa descritta con specificità e linguaggio del target 2) AFTER — Futuro vivido e desiderabile con dettagli concreti 3) BRIDGE — Il prodotto come collegamento naturale e ovvio tra le due realtà. Transizione BEFORE→AFTER emotivamente forte, AFTER→BRIDGE logica e rassicurante.",
-        "HOOK_BODY_CTA": "Hook-Body-CTA: 1) Hook in 1 riga devastante 2) Body con prova/storia/benefici (3-5 righe) 3) CTA forte e specifica",
-        "4C": "4C (Clear-Concise-Compelling-Credible): Copy brevissimo, ogni parola guadagna il suo posto, credibilit\u00e0 integrata, offer irresistibile",
-        "INSPIRATIONAL_STAIR": "Inspirational Stair (Borzacchiello): Sequenza neurochimica in 5 fasi FISSE nell'ordine: 1) INDIFFERENT (Adrenalina+Cortisolo) \u2014 schiaffo cognitivo 2) INTERESTING (Ossitocina+Serotonina) \u2014 empatia 3) INSUPERABLE (Dopamina) \u2014 valore unico 4) IMPERATIVE (Serotonina+Testosterone) \u2014 comando/CTA 5) IRRESISTIBLE (Cortisolo+Dopamina) \u2014 sfida e selezione. La sequenza NON si inverte e NON si salta.",
-        "FAB": "FAB (Features-Advantages-Benefits): 1) Elenca le CARATTERISTICHE del prodotto 2) Per ogni caratteristica scrivi i VANTAGGI che ne derivano 3) Per ogni vantaggio scrivi il BENEFICIO reale nella vita del cliente. Usa solo i BENEFIT nel copy \u2014 le feature sono prove, i benefit sono motivazioni.",
-        "4U": "Le 4U (Utile-Urgente-Unico-Ultra-specifico) — Check-list per headline e hook: 1) UTILE — beneficio tangibile e immediato 2) URGENTE — ragione reale per agire ADESSO (scarsità vera, deadline autentica, costo dell'inazione) 3) UNICO — angolo che nessun competitor usa 4) ULTRA-SPECIFICO — sostituisci ogni parola vaga con dati precisi. 'Risparmi tempo' → 'Risparmi 3 ore ogni settimana'. Applicare come filtro finale su headline e hook.",
-        "5_OBIEZIONI": "5 Obiezioni di Base — Il copy smonta le 5 resistenze universali: 1) 'Non ho abbastanza tempo' → mostra quanto è veloce 2) 'Non ho abbastanza soldi' → mostra ROI o costo dell'inazione 3) 'Non funzionerà per me' → case study di qualcuno identico al target 4) 'Non ti credo' → social proof forte (numeri verificabili, nomi reali) 5) 'Non ne ho bisogno' → fai visualizzare cosa perde ogni giorno che aspetta. Rispondere in modo indiretto ed empatico, mai difensivo. Utile per sales page.",
-        "3_MOTIVI": "3 Motivi Per — Copy che risponde a 3 domande fondamentali: 1) 'PERCHÉ SEI IL MIGLIORE?' — differenziatori specifici e verificabili, non aggettivi vuoti 2) 'PERCHÉ DOVREI CREDERTI?' — social proof concreto: nomi reali, numeri precisi, risultati misurabili 3) 'PERCHÉ DOVREI COMPRARE ADESSO?' — scarsità reale o costo dell'inazione concreto (MAI urgenza fasulla). Particolarmente efficace per personal brand e servizi high-ticket.",
-        "ACCA": "ACCA (Awareness-Comprehension-Conviction-Action): 1) AWARENESS — Presenta il problema in modo riconoscibile (non assumere che il target lo conosca già) 2) COMPREHENSION — Spiega PERCHÉ è un problema per questo target specificamente, con dati e conseguenze concrete 3) CONVICTION — Mostra la soluzione con prove solide (numeri, casi studio) 4) ACTION — CTA a bassa frizione come primo step. Più razionale ed educativa di AIDA. Usare quando il target deve capire prima di credere.",
-        "SSS": "SSS (Star-Story-Solution): 1) STAR — Protagonista reale e riconoscibile (un cliente tipo, mai il brand) 2) STORY — Storia con dettagli specifici: età, situazione, problema vissuto in prima persona. Il lettore deve pensare 'questo sono io' 3) SOLUTION — Il prodotto come scoperta naturale e credibile, non pubblicità. Tono caldo e narrativo. Trasmissione: la trasformazione deve essere specifica e verosimile.",
-        "E_QUINDI": "E quindi? — Processo di approfondimento iterativo: per ogni affermazione nel copy chiediti 'E quindi? Perché questa dichiarazione dovrebbe essere importante per il target?' Ripeti 3-5 volte finché non arrivi al beneficio emotivo/identitario finale. REGOLA: usa sempre l'ULTIMA risposta nel copy, non la prima. È un processo di revisione da applicare su qualsiasi copy già scritto con qualsiasi framework.",
-    }
-    fw_guide = framework_guides.get(request.framework, framework_guides["PAS"])
+    # Knowledge: framework + awareness + tipo specifico
+    from .knowledge_loader import get_copy_knowledge, get_copy_type_knowledge
+    framework_knowledge = get_copy_knowledge(framework=request.framework, awareness_level=request.awareness_level) if request.framework else get_copy_knowledge(awareness_level=request.awareness_level)
+    type_knowledge = get_copy_type_knowledge(request.copy_type)
 
-    # Inject full Inspirational Stair knowledge when that framework is selected
-    from .knowledge_loader import get_copy_knowledge
-    extra_knowledge = get_copy_knowledge(framework=request.framework)
+    # Contesto angolo
+    angle_ctx = ""
+    if request.angle_title:
+        angle_ctx = f"\nANGOLO DA SVILUPPARE: {request.angle_title}"
+        if request.angle_description:
+            angle_ctx += f"\nDESCRIZIONE ANGOLO: {request.angle_description}"
 
-    system_prompt = f"""Sei un copywriter esperto di Meta Ads con un track record di €10M+ in ad spend ottimizzate.
+    # Istruzioni utente
+    user_instr = f"\nISTRUZIONI AGGIUNTIVE DELL'UTENTE: {request.user_instructions}" if request.user_instructions else ""
+
+    system_prompt = f"""Sei un copywriter esperto con un track record di risultati concreti.
 Il tuo copy converte perché usa le parole esatte del cliente ideale, non il linguaggio del brand.
 
-ANGOLO DA SVILUPPARE: {request.angle_title}
-{f"DESCRIZIONE ANGOLO: {request.angle_description}" if request.angle_description else ""}
-{f"PRODOTTO/SERVIZIO SPECIFICO: {request.product_name}" if request.product_name else ""}
+TIPO DI COPY DA GENERARE: {request.copy_type.upper()}
+{angle_ctx}
+{user_instr}
 
-FRAMEWORK DA USARE: {fw_guide}
+{type_knowledge}
+
+{framework_knowledge}
 
 ═══════════════════════════════════════════════════════════
 CONTESTO STRATEGICO COMPLETO DEL CLIENTE
@@ -1540,35 +1536,15 @@ CONTESTO STRATEGICO COMPLETO DEL CLIENTE
 
 {strategic_context}
 
-{extra_knowledge}
-
 REGOLE FONDAMENTALI:
-- Il PRIMARY TEXT deve essere scroll-stopping dal primo carattere
-- Usa frasi brevi e impatto alto — scrivi come parli, non come un brochure
-- Il HOOK deve arrestare lo scroll in 0.3 secondi
-- La HEADLINE è ciò che appare sotto all'immagine — massimo 5-7 parole
-- Il CTA è specifico, non generico ("Scopri il programma" non "Clicca qui")
+- Scrivi come parli, non come una brochure aziendale
+- Usa il linguaggio reale del target (dalla Voice of Customer)
+- Il tono deve riflettere la Brand Voice del cliente
 - NON usare emoji a meno che non siano parte del tono del brand
-- Ogni variazione deve avere un angolo di hook diverso
 
-FORMATO OUTPUT (JSON):
-{{
-  "variations": [
-    {{
-      "hook": "Prima riga/frase d'apertura — il gancio",
-      "primary_text": "Testo completo dell'ad (primary text, max 150 parole)",
-      "headline": "Headline sotto all'immagine (max 7 parole)",
-      "description": "Descrizione opzionale sotto headline (max 20 parole)",
-      "cta_button": "Testo bottone CTA"
-    }}
-  ],
-  "framework_used": "{request.framework}",
-  "copy_notes": "Note strategiche sul copy generato"
-}}
+FORMATO OUTPUT: Rispondi con il copy pronto all'uso in testo semplice (NO JSON). Formatta con **grassetto** dove serve per enfasi."""
 
-Genera {min(request.variations, 3)} variazioni. Rispondi SOLO con JSON valido."""
-
-    user_msg = f"Genera copy Meta Ads per l'angolo: '{request.angle_title}'.\n\nUsa TUTTO il contesto strategico fornito, soprattutto Brand Voice, Voice of Customer, Obiezioni e Reasons to Buy."
+    user_msg = f"Genera il copy richiesto. Usa TUTTO il contesto strategico fornito, soprattutto Brand Voice, Voice of Customer e Reasons to Buy."
 
     try:
         raw = await ai_service._call_ai(
@@ -1580,11 +1556,9 @@ Genera {min(request.variations, 3)} variazioni. Rispondi SOLO con JSON valido.""
             temperature=0.7,
             max_tokens=2500
         )
-        copy_data = json_repair.loads(raw)
+        return {"copy_text": raw.strip()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
-
-    return copy_data
 
 
 # ══════════════════════════════════════════════════════════

@@ -210,10 +210,10 @@ export default function Dashboard() {
   const [cpyCliId, setCpyCliId] = useState("");
   const [cpyType, setCpyType] = useState("caption");
   const [cpyFramework, setCpyFramework] = useState("PAS");
+  const [cpyAwareness, setCpyAwareness] = useState("");
   const [cpyPrompt, setCpyPrompt] = useState("");
   const [cpyOutput, setCpyOutput] = useState("");
   const [cpyLoading, setCpyLoading] = useState(false);
-  // FIX: copy now has angle selector like script does
   const [cpyAngles, setCpyAngles] = useState<any[]>([]);
   const [cpyAngle, setCpyAngle] = useState<any>(null);
   const [cpyAngLoading, setCpyAngLoading] = useState(false);
@@ -490,26 +490,21 @@ export default function Dashboard() {
     if (!cpyCliId) return;
     setCpyLoading(true);
     try {
+      const showFramework = cpyType !== "headline" && cpyType !== "bio";
       const r = await fetch(`${API}/clients/${cpyCliId}/copy/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          framework: cpyFramework,
-          angle_title: cpyAngle?.title || `Copy ${cpyType}`,
+          copy_type: cpyType,
+          framework: showFramework ? cpyFramework : "",
+          awareness_level: cpyType !== "bio" ? cpyAwareness : "",
+          angle_title: cpyAngle?.title || "",
           angle_description: cpyAngle?.description || "",
-          product_name: cpyPrompt || `Formato: ${cpyType}`,
+          user_instructions: cpyPrompt,
           variations: 1
         })
       });
       const data = await r.json();
-      // Il copy endpoint restituisce { variations: [...], ... }
-      if (data.variations && data.variations.length > 0) {
-        const v = data.variations[0];
-        setCpyOutput(`${v.hook}\n\n${v.primary_text}\n\n📌 ${v.headline}\n${v.description || ""}\n\n🔘 ${v.cta_button}`);
-      } else if (typeof data === "string") {
-        setCpyOutput(data);
-      } else {
-        setCpyOutput(JSON.stringify(data, null, 2));
-      }
+      setCpyOutput(data.copy_text || (typeof data === "string" ? data : JSON.stringify(data, null, 2)));
     } catch (e) {
       setCpyOutput("Errore nella generazione del copy.");
     }
@@ -1554,7 +1549,7 @@ export default function Dashboard() {
 
               {cpyCliId && (<>
                 <div className="card" style={{ marginBottom: 16 }}>
-                  {/* FIX: Angle selector for copy — same as script section */}
+                  {/* Angolo comunicativo */}
                   <div style={{ marginBottom: 16 }}>
                     <label className="label" style={{ display: "block", marginBottom: 6 }}>Angolo Comunicativo (opzionale)</label>
                     <select
@@ -1566,68 +1561,85 @@ export default function Dashboard() {
                       }}
                       disabled={cpyAngLoading}
                     >
-                      <option value="">{cpyAngLoading ? "Caricamento angoli..." : cpyAngles.length > 0 ? "Nessun angolo (ARIA sceglie il migliore)" : "Nessun angolo salvato — ARIA sceglierà"}</option>
+                      <option value="">{cpyAngLoading ? "Caricamento angoli..." : cpyAngles.length > 0 ? "Nessun angolo selezionato" : "Nessun angolo salvato"}</option>
                       {cpyAngles.map((a: any, i: number) => <option key={i} value={a.title}>{a.title}</option>)}
                     </select>
                     {cpyAngle && (
                       <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-muted)", padding: "6px 10px", background: "rgba(255,165,0,0.05)", borderRadius: 6, border: "1px solid rgba(255,165,0,0.15)" }}>
-                        🎯 {cpyAngle.description}
+                        {cpyAngle.description}
                       </div>
                     )}
                   </div>
 
+                  {/* Tipo di copy */}
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 12 }}>Tipo di copy</p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                     {[
-                      { key: "caption", label: "📱 Caption Instagram" },
-                      { key: "headline", label: "🎯 Headline Ads" },
-                      { key: "email", label: "📧 Email Marketing" },
-                      { key: "cta", label: "🔥 CTA Button" },
-                      { key: "bio", label: "👤 Bio Profilo" },
-                      { key: "whatsapp", label: "💬 WhatsApp Message" },
-                      { key: "landing", label: "🖥️ Landing Page" },
-                      { key: "story", label: "⚡ Story Caption" },
+                      { key: "caption", label: "Caption Instagram" },
+                      { key: "meta_ads", label: "Meta Ads Copy" },
+                      { key: "email", label: "Email Marketing" },
+                      { key: "headline", label: "Headline / Hook" },
+                      { key: "bio", label: "Bio Profilo" },
                     ].map(t => (
                       <button key={t.key} className={`format-chip ${cpyType === t.key ? "active" : ""}`} onClick={() => setCpyType(t.key)}>{t.label}</button>
                     ))}
                   </div>
 
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Framework</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-                    {[
-                      { key: "PAS", label: "PAS" },
-                      { key: "AIDA", label: "AIDA" },
-                      { key: "BAB", label: "BAB" },
-                      { key: "HOOK_BODY_CTA", label: "Hook-Body-CTA" },
-                      { key: "4C", label: "4C" },
-                      { key: "INSPIRATIONAL_STAIR", label: "Inspirational Stair" },
-                      { key: "FAB", label: "FAB" },
-                      { key: "4U", label: "4U" },
-                      { key: "5_OBIEZIONI", label: "5 Obiezioni" },
-                      { key: "3_MOTIVI", label: "3 Motivi Per" },
-                      { key: "ACCA", label: "ACCA" },
-                      { key: "SSS", label: "SSS" },
-                      { key: "E_QUINDI", label: "E quindi?" },
-                    ].map(fw => (
-                      <button key={fw.key} className={`format-chip ${cpyFramework === fw.key ? "active" : ""}`} onClick={() => setCpyFramework(fw.key)}>{fw.label}</button>
-                    ))}
-                  </div>
+                  {/* Livello di consapevolezza — nascosto per Bio */}
+                  {cpyType !== "bio" && (
+                    <>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Livello di Consapevolezza (opzionale)</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                        {FUNNEL_STAGES.map(st => (
+                          <button key={st.key} className={`format-chip ${cpyAwareness === st.key ? "active" : ""}`} onClick={() => setCpyAwareness(cpyAwareness === st.key ? "" : st.key)}>
+                            {st.emoji} {st.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Framework — nascosto per Headline e Bio */}
+                  {cpyType !== "headline" && cpyType !== "bio" && (
+                    <>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Framework</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                        {[
+                          { key: "PAS", label: "PAS" },
+                          { key: "AIDA", label: "AIDA" },
+                          { key: "BAB", label: "BAB" },
+                          { key: "HOOK_BODY_CTA", label: "Hook-Body-CTA" },
+                          { key: "4C", label: "4C" },
+                          { key: "INSPIRATIONAL_STAIR", label: "Inspirational Stair" },
+                          { key: "FAB", label: "FAB" },
+                          { key: "4U", label: "4U" },
+                          { key: "5_OBIEZIONI", label: "5 Obiezioni" },
+                          { key: "3_MOTIVI", label: "3 Motivi Per" },
+                          { key: "ACCA", label: "ACCA" },
+                          { key: "SSS", label: "SSS" },
+                          { key: "E_QUINDI", label: "E quindi?" },
+                        ].map(fw => (
+                          <button key={fw.key} className={`format-chip ${cpyFramework === fw.key ? "active" : ""}`} onClick={() => setCpyFramework(fw.key)}>{fw.label}</button>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#6b7280", marginBottom: 6 }}>Istruzioni aggiuntive</label>
-                  <textarea className="input" rows={3} placeholder="Es: Focus sul risparmio di tempo, tono informale, includi emoji, max 150 caratteri..."
+                  <textarea className="input" rows={3} placeholder="Es: Focus sul risparmio di tempo, tono informale, obiettivo traffico al sito..."
                     value={cpyPrompt} onChange={e => setCpyPrompt(e.target.value)} />
 
                   <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={genCopy} disabled={cpyLoading}>
-                    {cpyLoading ? <><div className="spinner" />Generando...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Copy{cpyAngle ? ` dall'Angolo` : ""}</> }
+                    {cpyLoading ? <><div className="spinner" />Generando...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Copy</>}
                   </button>
                 </div>
 
                 {cpyOutput && (
                   <div className="card">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14 }}>✍️ Copy Generato</p>
+                      <p style={{ fontWeight: 700, fontSize: 14 }}>Copy Generato</p>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => openVaultModal("copy", `Copy ${cpyType}`, cpyOutput, cpyCliId, "", cpyType)}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => openVaultModal("copy", `Copy ${cpyType}`, cpyOutput, cpyCliId, cpyAwareness, cpyType)}>
                           <BookmarkSquareIcon style={{ width: 14, height: 14 }} /> Salva in Vault
                         </button>
                         <button className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard.writeText(cpyOutput)}>
