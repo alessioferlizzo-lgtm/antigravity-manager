@@ -1555,10 +1555,7 @@ async def generate_copy(client_id: str, request: CopyRequest):
     # ── Istruzioni utente ──
     user_instr = request.user_instructions or ""
 
-    # ── Costruzione prompt ──
-    sep = "=" * 60
-
-    # Label leggibili per il tipo di copy
+    # ── Label leggibili per il tipo di copy ──
     TYPE_LABELS = {
         "caption": "CAPTION INSTAGRAM",
         "meta_ads": "META ADS COPY",
@@ -1568,90 +1565,91 @@ async def generate_copy(client_id: str, request: CopyRequest):
     }
     type_label = TYPE_LABELS.get(request.copy_type, request.copy_type.upper())
 
-    # Fasi operative per ogni framework — l'AI deve seguire questa sequenza
+    # ── Limiti di lunghezza per tipo ──
+    WORD_LIMITS = {
+        "caption": 150,
+        "meta_ads": 125,
+        "email": 200,
+        "headline": 0,  # 10 varianti, non un testo
+        "bio": 0,       # limiti in caratteri, non parole
+    }
+    word_limit = WORD_LIMITS.get(request.copy_type, 200)
+
+    # ── Fasi operative per ogni framework ──
     FRAMEWORK_PHASES = {
-        "AIDA": "1. ATTENTION — Ferma lo scroll con un pattern interrupt\n2. INTEREST — Fatti concreti che rendono il messaggio rilevante per il target\n3. DESIRE — Social proof, risultati, identità aspirazionale\n4. ACTION — CTA specifica e diretta",
-        "PAS": "1. PROBLEM — Descrivi il problema con il linguaggio del target\n2. AGITATE — Amplifica le conseguenze reali del problema\n3. SOLVE — Presenta la soluzione come liberazione",
-        "BAB": "1. BEFORE — La situazione attuale dolorosa\n2. AFTER — La vita dopo la soluzione\n3. BRIDGE — Come arrivare dal prima al dopo",
-        "FAB": "1. FEATURES — Caratteristiche chiave\n2. ADVANTAGES — Vantaggi concreti\n3. BENEFITS — Benefici emotivi nella vita reale del target",
-        "ACCA": "1. AWARENESS — Presenta il problema\n2. COMPREHENSION — Perché è importante per il target\n3. CONVICTION — Prove che la soluzione funziona\n4. ACTION — CTA a bassa frizione",
-        "SSS": "1. STAR — Presenta il protagonista (un cliente reale o archetipo)\n2. STORY — Racconta la sua storia — il lettore deve immedesimarsi\n3. SOLUTION — La soluzione che ha cambiato la situazione",
-        "4C": "Usa come checklist: il copy deve essere CHIARO, CONCISO, CREDIBILE, IRRESISTIBILE",
-        "4U": "Usa come checklist: il copy deve essere UTILE, URGENTE, UNICO, ULTRA-SPECIFICO",
-        "5_OBIEZIONI": "Smonta le obiezioni principali del target: tempo, soldi, scetticismo, fiducia, bisogno",
-        "3_MOTIVI": "Rispondi a: 1. Perché sei il migliore? 2. Perché dovrei crederti? 3. Perché comprare adesso?",
-        "E_QUINDI": "Per ogni affermazione chiediti 'E quindi?' fino ad arrivare al beneficio emotivo finale",
-        "HOOK_BODY_CTA": "1. HOOK — Prima riga devastante che ferma lo scroll\n2. BODY — Sviluppo con prove o benefici\n3. CTA — Chiamata all'azione specifica",
-        "INSPIRATIONAL_STAIR": "Segui le 5 fasi neurochimiche nell'ordine esatto descritto nel framework",
+        "AIDA": "[A] ATTENTION: 1-2 righe che fermano lo scroll\n[I] INTEREST: 2-3 righe di fatti concreti\n[D] DESIRE: 2-3 righe di social proof o risultati\n[A] ACTION: 1 riga di CTA diretta",
+        "PAS": "[P] PROBLEM: 1-2 righe che descrivono il problema\n[A] AGITATE: 2-3 righe che amplificano le conseguenze\n[S] SOLVE: 2-3 righe con la soluzione",
+        "BAB": "[B] BEFORE: la situazione dolorosa attuale\n[A] AFTER: la vita dopo la soluzione\n[B] BRIDGE: come arrivarci",
+        "FAB": "[F] FEATURES: caratteristiche chiave\n[A] ADVANTAGES: vantaggi concreti\n[B] BENEFITS: benefici emotivi nella vita reale",
+        "ACCA": "[A] AWARENESS: presenta il problema\n[C] COMPREHENSION: perché è importante per il target\n[C] CONVICTION: prove che la soluzione funziona\n[A] ACTION: CTA a bassa frizione",
+        "SSS": "[S] STAR: il protagonista\n[S] STORY: la sua storia\n[S] SOLUTION: la soluzione",
+        "4C": "Checklist: CHIARO + CONCISO + CREDIBILE + IRRESISTIBILE",
+        "4U": "Checklist: UTILE + URGENTE + UNICO + ULTRA-SPECIFICO",
+        "5_OBIEZIONI": "Smonta le 2-3 obiezioni più forti per questo target",
+        "3_MOTIVI": "1. Perché sei il migliore? 2. Perché crederti? 3. Perché ora?",
+        "E_QUINDI": "Per ogni affermazione: 'E quindi?' fino al beneficio emotivo finale",
+        "HOOK_BODY_CTA": "[HOOK] 1 riga devastante\n[BODY] 3-5 righe di sviluppo\n[CTA] 1 riga di azione",
+        "INSPIRATIONAL_STAIR": "Segui le 5 fasi neurochimiche nell'ordine esatto",
     }
 
-    # Costruisci il briefing operativo — la prima cosa che l'AI legge
-    briefing = f"DEVI SCRIVERE: {type_label}"
-    if request.framework:
-        fw_label = request.framework.replace("_", " ")
-        phases = FRAMEWORK_PHASES.get(request.framework, "")
-        briefing += f"\n\nFRAMEWORK: {fw_label}"
-        briefing += f"\nIl copy DEVE seguire questa struttura nell'ordine indicato:"
-        if phases:
-            briefing += f"\n{phases}"
-        briefing += f"\n\nOGNI FASE deve essere riconoscibile nel testo. Se il lettore non riesce a identificare le fasi, hai sbagliato."
-    if request.awareness_level:
-        briefing += f"\n\nLIVELLO DI CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()}"
-        briefing += f"\nQuesto definisce il TONO e il punto di ingresso del messaggio. NON la struttura (la struttura è il framework)."
-    if request.angle_title:
-        briefing += f"\n\nANGOLO: {request.angle_title}"
+    # ══════════════════════════════════════════════════════════
+    # SYSTEM PROMPT — Background knowledge (contesto)
+    # ══════════════════════════════════════════════════════════
+    sep = "=" * 60
+    sys_parts = []
 
-    parts = []
+    sys_parts.append("Sei un copywriter. Scrivi copy breve, diretto, che converte. Odi i muri di testo.")
 
-    # 1. Identità + briefing operativo
-    parts.append(f"""Sei un copywriter professionista.
+    # Contesto strategico del cliente
+    sys_parts.append(f"{sep}\nDATI DEL CLIENTE\n{sep}\n{strategic_context}")
 
-{sep}
-BRIEFING
-{sep}
-{briefing}
-{f'{chr(10)}DESCRIZIONE ANGOLO: {request.angle_description}' if request.angle_description else ''}
-{f'{chr(10)}ISTRUZIONI UTENTE: {user_instr}' if user_instr else ''}""")
+    # Regole di scrittura (sempre)
+    sys_parts.append(f"{sep}\nREGOLE DI SCRITTURA\n{sep}\n{writing_knowledge}")
 
-    # 2. Knowledge base (sempre)
-    parts.append(f"""{sep}
-REGOLE DI SCRITTURA — Applica sempre
-{sep}
-{writing_knowledge}""")
-
-    # 3. Contesto strategico del cliente
-    parts.append(f"""{sep}
-DATI DEL CLIENTE — Usa il linguaggio del target, non del brand
-{sep}
-{strategic_context}""")
-
-    # 4. Awareness (se selezionato)
+    # Awareness (se selezionato)
     if awareness_section:
-        parts.append(f"""{sep}
-LIVELLO DI CONSAPEVOLEZZA — Come parlare al target
-{sep}
-{awareness_section}""")
+        sys_parts.append(f"{sep}\nLIVELLO DI CONSAPEVOLEZZA DEL TARGET\n{sep}\n{awareness_section}")
 
-    # 5. Framework (se selezionato)
+    # Framework knowledge di approfondimento (se selezionato)
     if framework_section:
-        parts.append(f"""{sep}
-FRAMEWORK — Struttura da seguire alla lettera
-{sep}
-{framework_section}""")
+        sys_parts.append(f"{sep}\nAPPROFONDIMENTO FRAMEWORK\n{sep}\n{framework_section}")
 
-    # 6. Vincoli tecnici del canale
+    # Vincoli tecnici del canale
     if type_knowledge:
-        parts.append(f"""{sep}
-VINCOLI DEL CANALE ({type_label})
-{sep}
-{type_knowledge}""")
+        sys_parts.append(f"{sep}\nVINCOLI CANALE: {type_label}\n{sep}\n{type_knowledge}")
 
-    # 7. Output
-    parts.append("OUTPUT: Scrivi SOLO il copy pronto all'uso. Nessuna premessa, nessuna spiegazione, nessun commento. Testo e basta. Usa **grassetto** dove serve.")
+    system_prompt = "\n\n".join(sys_parts)
 
-    system_prompt = "\n\n".join(parts)
+    # ══════════════════════════════════════════════════════════
+    # USER MESSAGE — Istruzioni operative (l'ordine vero)
+    # Questo è ciò che l'AI legge per ULTIMO prima di generare.
+    # Deve essere chiaro, diretto, specifico.
+    # ══════════════════════════════════════════════════════════
+    user_parts = []
+    user_parts.append(f"Scrivi un {type_label}.")
 
-    user_msg = f"Scrivi il {type_label.lower()}."
+    if word_limit > 0:
+        user_parts.append(f"MASSIMO {word_limit} PAROLE. Se ne scrivi di più, il copy è inutilizzabile. Sii conciso.")
+
+    if request.framework:
+        phases = FRAMEWORK_PHASES.get(request.framework, "")
+        if phases:
+            user_parts.append(f"STRUTTURA OBBLIGATORIA ({request.framework}):\n{phases}\nSegui questa struttura esatta. Ogni fase deve essere riconoscibile.")
+
+    if request.awareness_level:
+        user_parts.append(f"TONO: adattato al livello {request.awareness_level.replace('_', ' ').upper()} (vedi knowledge). Questo influenza il tono, NON la struttura.")
+
+    if request.angle_title:
+        user_parts.append(f"ANGOLO: {request.angle_title}")
+        if request.angle_description:
+            user_parts.append(f"DESCRIZIONE ANGOLO: {request.angle_description}")
+
+    if user_instr:
+        user_parts.append(f"ISTRUZIONI EXTRA: {user_instr}")
+
+    user_parts.append("Rispondi SOLO con il copy. Zero premesse, zero commenti, zero spiegazioni.")
+
+    user_msg = "\n\n".join(user_parts)
 
     try:
         raw = await ai_service._call_ai(
@@ -1660,8 +1658,8 @@ VINCOLI DEL CANALE ({type_label})
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_msg}
             ],
-            temperature=0.7,
-            max_tokens=2500
+            temperature=0.6,
+            max_tokens=1500
         )
         return {"copy_text": raw.strip()}
     except Exception as e:
