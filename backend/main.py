@@ -1568,15 +1568,38 @@ async def generate_copy(client_id: str, request: CopyRequest):
     }
     type_label = TYPE_LABELS.get(request.copy_type, request.copy_type.upper())
 
+    # Fasi operative per ogni framework — l'AI deve seguire questa sequenza
+    FRAMEWORK_PHASES = {
+        "AIDA": "1. ATTENTION — Ferma lo scroll con un pattern interrupt\n2. INTEREST — Fatti concreti che rendono il messaggio rilevante per il target\n3. DESIRE — Social proof, risultati, identità aspirazionale\n4. ACTION — CTA specifica e diretta",
+        "PAS": "1. PROBLEM — Descrivi il problema con il linguaggio del target\n2. AGITATE — Amplifica le conseguenze reali del problema\n3. SOLVE — Presenta la soluzione come liberazione",
+        "BAB": "1. BEFORE — La situazione attuale dolorosa\n2. AFTER — La vita dopo la soluzione\n3. BRIDGE — Come arrivare dal prima al dopo",
+        "FAB": "1. FEATURES — Caratteristiche chiave\n2. ADVANTAGES — Vantaggi concreti\n3. BENEFITS — Benefici emotivi nella vita reale del target",
+        "ACCA": "1. AWARENESS — Presenta il problema\n2. COMPREHENSION — Perché è importante per il target\n3. CONVICTION — Prove che la soluzione funziona\n4. ACTION — CTA a bassa frizione",
+        "SSS": "1. STAR — Presenta il protagonista (un cliente reale o archetipo)\n2. STORY — Racconta la sua storia — il lettore deve immedesimarsi\n3. SOLUTION — La soluzione che ha cambiato la situazione",
+        "4C": "Usa come checklist: il copy deve essere CHIARO, CONCISO, CREDIBILE, IRRESISTIBILE",
+        "4U": "Usa come checklist: il copy deve essere UTILE, URGENTE, UNICO, ULTRA-SPECIFICO",
+        "5_OBIEZIONI": "Smonta le obiezioni principali del target: tempo, soldi, scetticismo, fiducia, bisogno",
+        "3_MOTIVI": "Rispondi a: 1. Perché sei il migliore? 2. Perché dovrei crederti? 3. Perché comprare adesso?",
+        "E_QUINDI": "Per ogni affermazione chiediti 'E quindi?' fino ad arrivare al beneficio emotivo finale",
+        "HOOK_BODY_CTA": "1. HOOK — Prima riga devastante che ferma lo scroll\n2. BODY — Sviluppo con prove o benefici\n3. CTA — Chiamata all'azione specifica",
+        "INSPIRATIONAL_STAIR": "Segui le 5 fasi neurochimiche nell'ordine esatto descritto nel framework",
+    }
+
     # Costruisci il briefing operativo — la prima cosa che l'AI legge
     briefing = f"DEVI SCRIVERE: {type_label}"
     if request.framework:
         fw_label = request.framework.replace("_", " ")
-        briefing += f"\nFRAMEWORK: {fw_label} — questa è la STRUTTURA del copy. Ogni fase del framework deve essere presente e riconoscibile nel testo finale."
+        phases = FRAMEWORK_PHASES.get(request.framework, "")
+        briefing += f"\n\nFRAMEWORK: {fw_label}"
+        briefing += f"\nIl copy DEVE seguire questa struttura nell'ordine indicato:"
+        if phases:
+            briefing += f"\n{phases}"
+        briefing += f"\n\nOGNI FASE deve essere riconoscibile nel testo. Se il lettore non riesce a identificare le fasi, hai sbagliato."
     if request.awareness_level:
-        briefing += f"\nLIVELLO DI CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()} — questo definisce il TONO e il punto di ingresso. NON la struttura."
+        briefing += f"\n\nLIVELLO DI CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()}"
+        briefing += f"\nQuesto definisce il TONO e il punto di ingresso del messaggio. NON la struttura (la struttura è il framework)."
     if request.angle_title:
-        briefing += f"\nANGOLO: {request.angle_title}"
+        briefing += f"\n\nANGOLO: {request.angle_title}"
 
     parts = []
 
