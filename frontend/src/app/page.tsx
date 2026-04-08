@@ -1336,26 +1336,13 @@ export default function Dashboard() {
           {section === "angoli" && (
             <div>
               <h1 className="page-title" style={{ marginBottom: 6 }}>Angoli Comunicativi</h1>
-              <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 24 }}>Genera angoli strategici targettizzati per fase del funnel</p>
+              <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 24 }}>Genera angoli strategici basati sui dati reali del cliente</p>
 
               <div className="card" style={{ marginBottom: 16, padding: "16px 20px" }}>
                 <ClientSelector value={angCliId} onChange={id => { setAngCliId(id); setAngles([]); }} label="Cliente" />
               </div>
 
               {angCliId && (<>
-                <div className="card" style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 12 }}>Fase del Funnel</p>
-                  <div className="funnel-row">
-                    {FUNNEL_STAGES.map(st => (
-                      <button key={st.key} className={`funnel-btn ${angFunnel === st.key ? "active" : ""}`} onClick={() => setAngFunnel(angFunnel === st.key ? "" : st.key)}>
-                        <span className="funnel-emoji">{st.emoji}</span>
-                        <span className="funnel-label">{st.label}</span>
-                        <span className="funnel-desc">{st.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="card" style={{ marginBottom: 16 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
                     <div style={{ flex: 1 }}>
@@ -1370,7 +1357,7 @@ export default function Dashboard() {
 
                 {angles.length > 0 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 4 }}>Angoli generati {angFunnel && `· ${FUNNEL_STAGES.find(s => s.key === angFunnel)?.label}`}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 4 }}>Angoli generati</p>
                     {angles.map((angle: any, i: number) => (
                       <div key={i} className="angle-card" style={{ cursor: "default" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>

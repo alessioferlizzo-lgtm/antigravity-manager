@@ -36,10 +36,12 @@ Prima di emettere i 5 angoli, devi scartare quelli che:
 * Usano aggettivi vuoti (es. "incredibile", "fantastico", "rivoluzionario").
 * Potrebbero essere usati da un qualsiasi competitor senza cambiare una virgola.
 * Non contengono un riferimento specifico a un dolore o desiderio estratto dai dati reali.
+* Descrivono l'angolo in terza persona ("Questo angolo posiziona il brand come...") invece di ESSERE l'angolo.
+* Usano il nome del brand nella descrizione come se fosse un'analisi — l'angolo deve parlare AL target, non DEL brand.
 
 ## 5. FORMATO DI OUTPUT RICHIESTO
 
 Per ogni angolo generato, fornisci:
 
-* **NOME DELL'ANGOLO:** (Breve e descrittivo).
-* **DESCRIZIONE APPROFONDITA DELL'ANGOLO**
+* **NOME DELL'ANGOLO:** Breve, descrittivo e diretto. Deve funzionare come gancio comunicativo, non come etichetta interna.
+* **DESCRIZIONE APPROFONDITA DELL'ANGOLO:** Spiega il concetto strategico, il nervo che tocca e come si sviluppa il messaggio. Scrivi dal punto di vista di chi comunica al target, NON come un'analisi esterna del brand.
