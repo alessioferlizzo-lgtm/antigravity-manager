@@ -4038,6 +4038,14 @@ async def _do_complete_analysis(client_id: str, job_id: str):
     storage_service.save_metadata(client_id, metadata)
     print("✅ Metadata aggiornato con SWOT, Obiettivi e Strategia")
 
+    # Salva su file locale SEMPRE (backup sicuro — non si perde mai)
+    analysis_file = CLIENTS_DIR / client_id / "complete_analysis.json"
+    try:
+        analysis_file.write_text(json.dumps(complete_analysis, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"✅ Analisi salvata su file locale: {analysis_file}")
+    except Exception as e:
+        print(f"❌ Errore salvataggio file locale: {e}")
+
     # Salva in Supabase — con fallback se alcune colonne non esistono ancora
     try:
         supabase = _get_sb()
@@ -4167,19 +4175,29 @@ async def get_ai_costs_summary():
 async def get_complete_client_analysis(client_id: str):
     """
     Recupera l'analisi completa salvata per il cliente.
+    Prova Supabase prima, poi fallback su file locale.
     """
+    # 1. Prova Supabase
     try:
         supabase = _get_sb()
-        if not supabase:
-            return None
-        result = supabase.table("client_complete_analysis").select("*").eq("client_id", client_id).execute()
-        if result.data and len(result.data) > 0:
-            return result.data[0]
-        else:
-            return None
+        if supabase:
+            result = supabase.table("client_complete_analysis").select("*").eq("client_id", client_id).execute()
+            if result.data and len(result.data) > 0:
+                return result.data[0]
     except Exception as e:
-        print(f"Errore recupero analisi: {e}")
-        return None
+        print(f"⚠️ Errore recupero da Supabase: {e}")
+
+    # 2. Fallback: file locale
+    analysis_file = CLIENTS_DIR / client_id / "complete_analysis.json"
+    if analysis_file.exists():
+        try:
+            data = json.loads(analysis_file.read_text(encoding="utf-8"))
+            print(f"📁 Analisi caricata da file locale per {client_id}")
+            return data
+        except Exception as e:
+            print(f"❌ Errore lettura file locale analisi: {e}")
+
+    return None
 
 
 @app.delete("/clients/{client_id}/analysis/complete")
@@ -4214,6 +4232,12 @@ async def delete_complete_analysis(client_id: str):
         if supabase:
             supabase.table("client_complete_analysis").delete().eq("client_id", client_id).execute()
             print(f"🗑️ Analisi Supabase eliminata per {client_id}")
+
+        # 3. Elimina file locale
+        analysis_file = CLIENTS_DIR / client_id / "complete_analysis.json"
+        if analysis_file.exists():
+            analysis_file.unlink()
+            print(f"🗑️ File locale analisi eliminato per {client_id}")
 
         return {"success": True, "message": "Analisi, cache e dati generati eliminati. Pronto per una nuova analisi da zero."}
     except Exception as e:
