@@ -5,7 +5,16 @@ import json_repair
 import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from .knowledge_loader import get_awareness_context, get_script_knowledge
+from pathlib import Path
+from .knowledge_loader import get_script_knowledge
+
+
+def _load_angles_knowledge() -> str:
+    """Carica il file knowledge sugli angoli comunicativi."""
+    path = Path(__file__).parent / "knowledge" / "angoli_comunicativi.md"
+    if path.exists():
+        return path.read_text(encoding="utf-8")
+    return ""
 try:
     from .notion_service import notion_service, NOTION_ANGLES_VAULT_DB_ID, NOTION_COPY_VAULT_DB_ID
     _notion_available = True
@@ -323,12 +332,7 @@ RISPONDI ESCLUSIVAMENTE CON QUESTO JSON (nessun testo fuori dal JSON):
     async def generate_communication_angles(self, research_content: str, user_prompt: str = "", funnel_stage: str = "") -> List[Dict[str, str]]:
         """Uses Claude to extract communication angles."""
         user_reqs = f"REQUISTI ADDIZIONALI DELL'UTENTE:\n{user_prompt}" if user_prompt else ""
-        
-        funnel_context = ""
-        awareness_knowledge = get_awareness_context(funnel_stage)
-        if awareness_knowledge:
-            funnel_context = awareness_knowledge
-            
+
         # ── RAG DA NOTION (opzionale) ──
         framework_context = ""
         swipe_context = ""
@@ -340,26 +344,22 @@ RISPONDI ESCLUSIVAMENTE CON QUESTO JSON (nessun testo fuori dal JSON):
                 swipe_context = f"\n=== ESEMPI GOLD STANDARD ('Swipe File') ===\nPrendi ispirazione e modella i tuoi angoli basandoti sulla qualità e sullo stile di questi esempi vincenti del passato, ma NON copiarli letteralmente:\n{swipe_file_examples}\n" if swipe_file_examples else ""
             except Exception as _ne:
                 print(f"⚠️  Notion RAG non disponibile: {_ne}")
-        
+
+        # ── Knowledge angoli comunicativi ──
+        angles_knowledge = _load_angles_knowledge()
+
         prompt = f"""Basandoti su questa ricerca di mercato:
 {research_content}
 
 {user_reqs}
-{funnel_context}
 {framework_context}
 {swipe_context}
 
-Trova 5 angoli comunicativi unici e potenti per colpire il target in modo chirurgico.
-
-REQUISITI:
-1. NO BANALITÀ: Evita sconti, spedizioni gratis, clichés.
-2. AUTORITÀ: Parla come l'esperto che svela una verità nascosta.
-3. IMPATTO: Punta a trasformazioni identitarie o problemi profondi.
+{angles_knowledge}
 
 Per ogni angolo fornisci:
-- "title": Titolo provocatorio e diretto
-- "description": Concetto strategico
-- "emotion": Emozione dominante (Adrenalina, Ossitocina, Dopamina, ecc.)
+- "title": Nome dell'angolo (breve e descrittivo)
+- "description": Descrizione approfondita dell'angolo
 
 Rispondi ESCLUSIVAMENTE con un array JSON valido, senza testo prima o dopo."""
         

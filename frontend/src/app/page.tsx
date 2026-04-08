@@ -1378,7 +1378,6 @@ export default function Dashboard() {
                           <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6 }}>{angle.description}</p>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
-                          <span className="angle-emotion-badge">{angle.emotion}</span>
                           {/* ACTION BUTTONS — collegano Angoli → Script e Angoli → Copy */}
                           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
                             <button

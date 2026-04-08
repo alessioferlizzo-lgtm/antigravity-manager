@@ -26,35 +26,39 @@ def _load_file(filename: str) -> str:
 
 # ── Pre-load all knowledge at import time ────────────────────────────────────
 
-AWARENESS_LEVELS_KNOWLEDGE = _load_file("livelli_consapevolezza.md")
+AWARENESS_INTRO_KNOWLEDGE = _load_file("consapevolezza_intro.md")
 INSPIRATIONAL_STAIR_KNOWLEDGE = _load_file("inspirational_stair.md")
 VIGNALI_KNOWLEDGE = _load_file("scrittura_vignali.md")
 DOSIO_KNOWLEDGE = _load_file("narrativa_dosio.md")
 FRAMEWORK_COPY_KNOWLEDGE = _load_file("framework_copy.md")
 
-# Mapping: awareness_level key → label italiano per i prompt
+# Mapping: awareness_level key → file specifico + label italiano
 AWARENESS_LEVELS = {
-    "unaware":        "COMPLETAMENTE INCONSAPEVOLE (Unaware)",
-    "problem_aware":  "CONSAPEVOLE DEL PROBLEMA (Problem Aware)",
-    "solution_aware": "CONSAPEVOLE DELLA SOLUZIONE (Solution Aware)",
-    "product_aware":  "CONSAPEVOLE DEL PRODOTTO (Product Aware)",
-    "most_aware":     "PIENAMENTE CONSAPEVOLE (Most Aware)",
+    "unaware":        {"label": "COMPLETAMENTE INCONSAPEVOLE (Unaware)",        "file": "consapevolezza_1_unaware.md"},
+    "problem_aware":  {"label": "CONSAPEVOLE DEL PROBLEMA (Problem Aware)",     "file": "consapevolezza_2_problem_aware.md"},
+    "solution_aware": {"label": "CONSAPEVOLE DELLA SOLUZIONE (Solution Aware)", "file": "consapevolezza_3_solution_aware.md"},
+    "product_aware":  {"label": "CONSAPEVOLE DEL PRODOTTO (Product Aware)",     "file": "consapevolezza_4_product_aware.md"},
+    "most_aware":     {"label": "PIENAMENTE CONSAPEVOLE (Most Aware)",          "file": "consapevolezza_5_most_aware.md"},
 }
 
 
 def get_awareness_context(awareness_level: str = "") -> str:
     """
-    Restituisce il blocco di conoscenza sui livelli di consapevolezza.
-    Se viene specificato un livello, aggiunge l'indicazione su quale targetizzare.
+    Restituisce il contesto sui livelli di consapevolezza.
+    Se viene specificato un livello, carica SOLO il file di quel livello + l'intro.
+    Se non specificato, carica solo l'intro generale.
     """
-    if not AWARENESS_LEVELS_KNOWLEDGE:
+    if not AWARENESS_INTRO_KNOWLEDGE:
         return ""
 
-    context = f"\n{'='*60}\nFRAMEWORK LIVELLI DI CONSAPEVOLEZZA (Eugene Schwartz)\n{'='*60}\n{AWARENESS_LEVELS_KNOWLEDGE}\n"
+    context = f"\n{'='*60}\nFRAMEWORK LIVELLI DI CONSAPEVOLEZZA (Eugene Schwartz)\n{'='*60}\n{AWARENESS_INTRO_KNOWLEDGE}\n"
 
     if awareness_level and awareness_level in AWARENESS_LEVELS:
-        label = AWARENESS_LEVELS[awareness_level]
-        context += f"\n⚠️  LIVELLO TARGET SELEZIONATO: {label}\nAdatta TUTTO l'output alle leve chimiche e all'obiettivo comunicativo di questo specifico livello.\n"
+        level_info = AWARENESS_LEVELS[awareness_level]
+        level_content = _load_file(level_info["file"])
+        if level_content:
+            context += f"\n{'='*60}\nLIVELLO TARGET SELEZIONATO: {level_info['label']}\n{'='*60}\n{level_content}\n"
+            context += f"\nAdatta TUTTO l'output alle leve chimiche e all'obiettivo comunicativo di questo specifico livello.\n"
 
     return context
 
