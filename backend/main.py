@@ -1237,8 +1237,11 @@ async def get_angles(client_id: str, request: AngleRequest = AngleRequest()):
         if creative_intel:
             strategic_context += f"\n\n### INTELLIGENCE DALLE ADS REALI ({intel_data.get('period', 'storico')}, {intel_data.get('ads_count', '?')} ads analizzate):\nQuesti dati provengono dall'analisi delle inserzioni realmente mandate in pubblicazione. Usali come FONTE PRIMARIA per capire cosa ha già funzionato e cosa no. Gli angoli vincitori reali devono guidare i nuovi angoli suggeriti:\n{creative_intel}"
 
+    # DEBUG: Log del contesto strategico per verificare cosa vede l'AI
+    print(f"\n{'='*80}\n[ANGLES DEBUG] Strategic context per {client_id} ({len(strategic_context)} chars):\n{strategic_context[:3000]}\n{'='*80}\n")
+
     angles_data = await ai_service.generate_communication_angles(strategic_context, request.user_prompt, request.funnel_stage)
-    
+
     # Save angles
     angles_path = CLIENTS_DIR / client_id / "angles.json"
     with open(angles_path, "w") as f:
@@ -1677,12 +1680,10 @@ async def generate_copy(client_id: str, request: CopyRequest):
 
     sys_parts.append(
         "Sei un copywriter. Scrivi copy breve, diretto, che converte. Odi i muri di testo.\n\n"
-        "⚠️ REGOLA CRITICA — IDENTIFICAZIONE DEL TARGET:\n"
-        "Il BRAND è il soggetto che vende. Il TARGET sono i CLIENTI del brand — le persone a cui il brand vende.\n"
-        "Il brand NON è il target. Se il brand è un marketer, il target NON sono i marketer — sono i clienti del marketer.\n"
-        "Se il brand è un ristorante, il target sono le persone che mangiano fuori — NON i ristoratori.\n"
-        "Leggi CUSTOMER PERSONAS e BRAND IDENTITY nei dati del cliente per capire chi è il target.\n"
-        "Scrivi SEMPRE parlando al target, MAI al brand o ai suoi colleghi di settore."
+        "⚠️ PRIMA DI SCRIVERE — LEGGI I DATI:\n"
+        "Leggi CUSTOMER PERSONAS nei dati del cliente: quelle sono le persone a cui parli.\n"
+        "Leggi BRAND IDENTITY: quella è l'azienda/professionista che vende.\n"
+        "Il copy deve parlare al target descritto nelle personas, usando i loro dolori, desideri e linguaggio."
     )
 
     # Contesto strategico del cliente

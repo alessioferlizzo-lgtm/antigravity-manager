@@ -351,14 +351,10 @@ RISPONDI ESCLUSIVAMENTE CON QUESTO JSON (nessun testo fuori dal JSON):
         prompt = f"""DATI STRATEGICI DEL CLIENTE (brand, target, analisi):
 {research_content}
 
-⚠️ REGOLA CRITICA — IDENTIFICAZIONE DEL TARGET:
-Prima di generare qualsiasi angolo, DEVI identificare con precisione:
-1. CHI È IL BRAND: il soggetto che vende (nome, settore, cosa offre)
-2. CHI È IL TARGET: i CLIENTI del brand — le persone a cui il brand vende. Leggi la sezione CUSTOMER PERSONAS o BRAND IDENTITY per trovarli.
-
-Il brand NON è il target. Se il brand è un marketer, il target NON sono i marketer — sono i CLIENTI del marketer (es. titolari di e-commerce, ristoratori, professionisti).
-Se il brand è un ristorante, il target sono le persone che vanno a mangiare fuori — NON i ristoratori.
-Gli angoli devono parlare al TARGET, cioè ai clienti del brand. MAI al brand stesso o ai suoi colleghi di settore.
+⚠️ PRIMA DI GENERARE — LEGGI I DATI:
+1. Leggi la sezione CUSTOMER PERSONAS nei dati: quelle sono le persone a cui parliamo. Il target è descritto lì.
+2. Leggi BRAND IDENTITY: quella è l'azienda/professionista che vende.
+3. Gli angoli devono parlare AL TARGET descritto nelle personas. Basa ogni angolo sui dolori, desideri e linguaggio del target che trovi nei dati.
 
 {user_reqs}
 {framework_context}
@@ -488,10 +484,8 @@ Scrivi ESCLUSIVAMENTE le parole che vengono dette nel video.
 NON scrivere: "Ragionamento:", "Validazione:", "Note:", "Analisi:", "Framework:", commenti, spiegazioni, o qualsiasi testo che non sia lo script stesso.
 Se scrivi qualcosa che non sono le parole del video, hai fallito.
 
-⚠️ IDENTIFICAZIONE DEL TARGET:
-Il BRAND è chi vende. Il TARGET sono i CLIENTI del brand — le persone a cui il brand vende.
-Se il brand è un marketer, il target NON sono i marketer — sono i clienti del marketer (titolari di e-commerce, ristoratori, professionisti, ecc.).
-Lo script deve parlare al TARGET. Leggi CUSTOMER PERSONAS nel contesto per capire chi è.
+⚠️ PRIMA DI SCRIVERE — LEGGI I DATI:
+Leggi CUSTOMER PERSONAS nel contesto: quelle sono le persone a cui parli. Lo script deve parlare AL TARGET descritto nelle personas, usando i loro dolori, desideri e linguaggio.
 
 {user_instructions}
 
