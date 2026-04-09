@@ -39,7 +39,14 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
     model_choice = task.get("recommended_model", "claude")
     system_prompt_template = task["system_prompt"]
 
-    # 1. Gather Required Inputs
+    # 1. Gather Required Inputs — con limiti per contenere i costi
+    # Dati grezzi (scraping) sono enormi e ripetitivi; output AI precedenti sono compatti
+    RAW_DATA_KEYS = {"site_content", "social_data", "ads_data", "raw_docs",
+                     "google_reviews", "instagram_comments", "competitor_data",
+                     "products_csv", "services_txt"}
+    MAX_RAW_CHARS = 25000   # Dati grezzi: max 25K chars (abbastanza per analisi profonda)
+    MAX_AI_CHARS = 12000    # Output AI precedenti: max 12K chars (mantiene qualità)
+
     input_text = ""
     for req in task.get("required_inputs", []):
         if req in context and context[req]:
@@ -48,6 +55,10 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
                 val_str = json.dumps(val, indent=2, ensure_ascii=False)
             else:
                 val_str = str(val)
+            # Tronca per contenere token — limiti generosi per non perdere qualità
+            max_chars = MAX_RAW_CHARS if req in RAW_DATA_KEYS else MAX_AI_CHARS
+            if len(val_str) > max_chars:
+                val_str = val_str[:max_chars]
             input_text += f"\n--- {req.upper()} ---\n{val_str}\n"
 
     # Anti-hallucination as SYSTEM message (stronger enforcement than user message)
@@ -173,7 +184,7 @@ async def generate_complete_strategic_analysis(
     context = {
         "client_info": client_info,
         "site_url": site_url,
-        "site_content": site_content[:80000] if site_content else "",
+        "site_content": site_content[:40000] if site_content else "",
         "social_data": social_data,
         "ads_data": ads_data,
         "raw_docs": raw_docs,
