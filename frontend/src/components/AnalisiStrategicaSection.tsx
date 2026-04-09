@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowPathIcon, DocumentTextIcon, ChevronDownIcon, ChevronRightIcon, SparklesIcon, CheckCircleIcon, TrashIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, DocumentTextIcon, ChevronDownIcon, ChevronRightIcon, SparklesIcon, CheckCircleIcon, TrashIcon, MagnifyingGlassIcon, PencilIcon } from "@heroicons/react/24/outline";
 
 interface Props { clientId: string; apiUrl: string; onRefresh?: () => void; }
 
@@ -1052,6 +1052,8 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl, onRefresh }
     const [generationError, setGenerationError] = useState<string>("");
     const [sectionLoading, setSectionLoading] = useState<Record<string, boolean>>({});
     const [aiCosts, setAiCosts] = useState<{ costs: any[]; total_usd: number } | null>(null);
+    const [editingSection, setEditingSection] = useState<string | null>(null);
+    const [editInstructions, setEditInstructions] = useState<string>("");
 
     // ── Polling helper (riusabile da mount e da generate) ────────────────────
     const pollJob = async (jobId: string) => {
@@ -1258,6 +1260,34 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl, onRefresh }
         onRefresh?.();
     };
 
+    const handleEditSection = async (stepId: string) => {
+        if (!editInstructions.trim()) return;
+        setSectionLoading(prev => ({ ...prev, [stepId]: true }));
+        try {
+            const res = await fetch(`${apiUrl}/clients/${clientId}/analysis/edit/${stepId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ instructions: editInstructions.trim() })
+            });
+            if (res.ok) {
+                const result = await res.json();
+                if (result.new_data) {
+                    setAnalysis((prev: any) => ({ ...prev, [stepId]: result.new_data }));
+                }
+                setEditingSection(null);
+                setEditInstructions("");
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                console.error(`[Edit] Error:`, res.status, errorData);
+            }
+        } catch (e) {
+            console.error(`[Edit] Network Error:`, e);
+        }
+        setSectionLoading(prev => ({ ...prev, [stepId]: false }));
+        fetchCosts();
+        onRefresh?.();
+    };
+
     const toggleMacro = (i: number) => {
         const s = new Set(expandedMacros);
         s.has(i) ? s.delete(i) : s.add(i);
@@ -1391,6 +1421,16 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl, onRefresh }
                                                             {hasData && (
                                                                 <button
                                                                     className="btn-icon"
+                                                                    title="Modifica con istruzioni"
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingSection(editingSection === key ? null : key); setEditInstructions(""); }}
+                                                                    style={{ padding: 4, borderRadius: 4, color: editingSection === key ? "var(--lime)" : "var(--text-muted)" }}
+                                                                >
+                                                                    <PencilIcon style={{ width: 14, height: 14 }} />
+                                                                </button>
+                                                            )}
+                                                            {hasData && (
+                                                                <button
+                                                                    className="btn-icon"
                                                                     title="Approfondisci con ricerca online"
                                                                     onClick={(e) => handleDeepenSection(e, key)}
                                                                     style={{ padding: 4, borderRadius: 4, color: "var(--text-muted)" }}
@@ -1425,6 +1465,24 @@ export default function AnalisiStrategicaSection({ clientId, apiUrl, onRefresh }
                                                         <span style={{ fontSize: 10, color: "var(--text-muted)", background: "rgba(0,0,0,0.04)", padding: "2px 8px", borderRadius: 8 }}>Non generata</span>
                                                     )}
                                                 </div>
+                                                {editingSection === key && (
+                                                    <div style={{ padding: "12px 16px", background: "rgba(199,239,0,0.04)", borderTop: "1px solid var(--lime)", display: "flex", gap: 8, alignItems: "flex-end" }}>
+                                                        <textarea
+                                                            value={editInstructions}
+                                                            onChange={e => setEditInstructions(e.target.value)}
+                                                            placeholder="Es: Aggiungi i cocktail alla spina tra i prodotti..."
+                                                            style={{ flex: 1, background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px", color: "#ffffff", fontSize: 13, resize: "vertical", minHeight: 40, maxHeight: 120, fontFamily: "inherit" }}
+                                                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSection(key); } }}
+                                                        />
+                                                        <button
+                                                            onClick={() => handleEditSection(key)}
+                                                            disabled={!editInstructions.trim() || sectionLoading[key]}
+                                                            style={{ padding: "8px 16px", background: "var(--lime)", color: "#000", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", opacity: !editInstructions.trim() ? 0.4 : 1 }}
+                                                        >
+                                                            Applica
+                                                        </button>
+                                                    </div>
+                                                )}
                                                 {isOpen && (
                                                     <div style={{ padding: 16, background: "rgba(255,255,255,0.03)", fontSize: 13, color: "#ffffff", borderTop: "1px solid var(--border)" }}>
                                                         {hasData

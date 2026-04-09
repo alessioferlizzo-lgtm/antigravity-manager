@@ -4464,6 +4464,150 @@ async def regenerate_analysis_section(client_id: str, step_id: str):
     }
 
 
+class SectionEditRequest(BaseModel):
+    instructions: str
+
+
+@app.post("/clients/{client_id}/analysis/edit/{step_id}")
+async def edit_analysis_section(client_id: str, step_id: str, request: SectionEditRequest):
+    """
+    ✏️ MODIFICA SEZIONE CON AI — L'utente dà istruzioni testuali e l'AI modifica solo quella sezione.
+    Es: "Aggiungi i cocktail alla spina tra i prodotti" oppure "Leggi il nuovo documento e aggiorna"
+    """
+    metadata = storage_service.get_metadata(client_id)
+    snapshot = metadata.get("raw_data_snapshot")
+
+    if not snapshot:
+        raise HTTPException(status_code=400, detail="Nessun dato raccolto. Esegui prima un'analisi completa.")
+
+    # Carica sezione attuale da Supabase
+    existing_analysis = storage_service.get_complete_analysis(client_id) or {}
+    current_section = existing_analysis.get(step_id)
+
+    if not current_section:
+        raise HTTPException(status_code=400, detail=f"Sezione {step_id} non ancora generata. Rigenerala prima.")
+
+    # Carica documenti raw del cliente (per se l'utente dice "guarda il documento")
+    raw_docs = ""
+    raw_data_dir = CLIENTS_DIR / client_id / "raw_data"
+    if raw_data_dir.exists():
+        for file_path in raw_data_dir.glob("*"):
+            try:
+                fname = file_path.name.lower()
+                if fname.endswith('.pdf'):
+                    reader = pypdf.PdfReader(file_path)
+                    text = ""
+                    for page in reader.pages[:20]:
+                        text += page.extract_text() + "\n"
+                    raw_docs += f"\n--- PDF: {file_path.name} ---\n{text[:15000]}\n"
+                elif fname.endswith(('.doc', '.docx')):
+                    doc = docx.Document(file_path)
+                    text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                    raw_docs += f"\n--- DOCX: {file_path.name} ---\n{text[:15000]}\n"
+                elif fname.endswith(('.txt', '.md', '.csv')):
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        raw_docs += f"\n--- {file_path.name} ---\n{f.read()[:10000]}\n"
+            except Exception as e:
+                print(f"⚠️ Errore lettura {file_path.name} per edit: {e}")
+
+    # Sezione attuale come JSON
+    current_json = json.dumps(current_section, ensure_ascii=False, indent=2)
+
+    # Prompt per l'AI
+    client_name = metadata.get("name", "")
+    industry = metadata.get("industry", "")
+
+    SECTION_LABELS = {
+        "brand_identity": "Brand Identity & Posizionamento",
+        "brand_values": "Valori del Brand",
+        "product_portfolio": "Portafoglio Prodotti",
+        "reasons_to_buy": "Reasons to Buy",
+        "customer_personas": "Customer Personas",
+        "content_matrix": "Matrice Contenuti",
+        "product_vertical": "Analisi Verticale Prodotti",
+        "service_vertical": "Analisi Verticale Servizi",
+        "brand_voice": "Brand Voice & Guidelines",
+        "objections": "Gestione Obiezioni",
+        "reviews_voc": "Voice of Customer",
+        "battlecards": "Competitor Battlecards",
+        "seasonal_roadmap": "Roadmap Stagionale",
+        "psychographic_analysis": "Analisi Psicografica",
+        "visual_brief": "Visual Brief",
+    }
+    section_label = SECTION_LABELS.get(step_id, step_id)
+
+    messages = [
+        {"role": "system", "content": (
+            f"Sei un analista strategico. Devi MODIFICARE la sezione '{section_label}' dell'analisi strategica "
+            f"del cliente '{client_name}' (settore: {industry}) seguendo le istruzioni dell'utente.\n\n"
+            "REGOLE:\n"
+            "1. Restituisci la sezione COMPLETA modificata in formato JSON — stessa struttura dell'originale.\n"
+            "2. MANTIENI tutto il contenuto esistente che non viene toccato dalle istruzioni.\n"
+            "3. AGGIUNGI o MODIFICA solo ciò che l'utente chiede.\n"
+            "4. Se l'utente dice di guardare un documento, cerca le info nei DOCUMENTI CLIENTE forniti sotto.\n"
+            "5. Restituisci SOLO il JSON della sezione, nessun testo prima o dopo."
+        )},
+        {"role": "user", "content": (
+            f"ISTRUZIONI DELL'UTENTE:\n{request.instructions}\n\n"
+            f"SEZIONE ATTUALE ({section_label}):\n{current_json[:12000]}\n\n"
+            f"DOCUMENTI CLIENTE (per riferimento):\n{raw_docs[:20000] if raw_docs else '(Nessun documento caricato)'}"
+        )}
+    ]
+
+    ai_service.start_cost_tracking(f"edit_{step_id}")
+
+    try:
+        response_str = await ai_service._call_ai(
+            model="anthropic/claude-3.7-sonnet",
+            messages=messages,
+            max_tokens=6000
+        )
+        new_section = json_repair.loads(response_str)
+    except Exception as e:
+        ai_service.stop_cost_tracking()
+        raise HTTPException(status_code=500, detail=f"Errore AI: {e}")
+
+    cost_data = ai_service.stop_cost_tracking()
+
+    # Salva costo
+    if cost_data and cost_data.get("total_cost_usd", 0) > 0:
+        print(f"💰 Costo edit {step_id}: ${cost_data['total_cost_usd']:.4f}")
+        if "ai_costs" not in metadata:
+            metadata["ai_costs"] = []
+        from datetime import datetime
+        metadata["ai_costs"].append({
+            "operation": cost_data["operation"],
+            "cost_usd": round(cost_data["total_cost_usd"], 4),
+            "prompt_tokens": cost_data["total_prompt_tokens"],
+            "completion_tokens": cost_data["total_completion_tokens"],
+            "calls": cost_data["calls"],
+            "models": cost_data["models_used"],
+            "date": datetime.now().isoformat()
+        })
+
+    # Aggiorna raw backup
+    FRONTEND_TO_STEP = {"objections": "objections_management"}
+    workflow_step_id = FRONTEND_TO_STEP.get(step_id, step_id)
+    if "analysis_completa_raw" not in metadata:
+        metadata["analysis_completa_raw"] = {}
+    metadata["analysis_completa_raw"][workflow_step_id] = new_section
+    storage_service.save_metadata(client_id, metadata)
+
+    # Salva in Supabase
+    try:
+        existing_analysis[step_id] = new_section
+        storage_service.save_complete_analysis(client_id, existing_analysis)
+    except Exception as e:
+        print(f"Warning: Could not update Supabase after edit: {e}")
+
+    print(f"✏️ Sezione {step_id} modificata per {client_id}")
+    return {
+        "step_id": step_id,
+        "new_data": new_section,
+        "cost": cost_data
+    }
+
+
 @app.delete("/clients/{client_id}/analysis/section/{step_id}")
 async def delete_analysis_section(client_id: str, step_id: str):
     """🗑️ Cancella una singola sezione dell'analisi."""
