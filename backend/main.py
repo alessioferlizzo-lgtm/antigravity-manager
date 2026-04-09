@@ -4206,10 +4206,15 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                 "objectives": complete_analysis.get("objectives", {}),
                 "strategy": complete_analysis.get("strategy", ""),
             }
-            supabase.table("client_complete_analysis").upsert(upsert_data).execute()
-            print("✅ Analisi salvata in Supabase")
+            result = supabase.table("client_complete_analysis").upsert(upsert_data).execute()
+            if result.data:
+                print(f"✅ Analisi salvata in Supabase per {client_id} ({len(result.data)} rows)")
+            else:
+                print(f"⚠️ Supabase upsert non ha restituito dati per {client_id} — possibile errore silenzioso")
     except Exception as e:
-        print(f"❌ Errore salvataggio Supabase: {e}")
+        import traceback
+        print(f"❌ Errore salvataggio Supabase per {client_id}: {e}")
+        traceback.print_exc()
 
     # Stop cost tracking e salva
     cost_data = ai_service.stop_cost_tracking()
