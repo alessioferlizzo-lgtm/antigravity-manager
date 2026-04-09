@@ -181,55 +181,113 @@ async def generate_complete_strategic_analysis(
 
     _report(f"Workflow caricato: {workflow.get('workflow_name')}")
 
-    # 2. PRE-PROCESSING: Leggi il sito UNA VOLTA e crea un'estrazione strutturata
-    # Così paghiamo i token del sito una sola volta invece di 5-6
-    site_extraction = ""
+    # 2. PRE-PROCESSING: Leggi TUTTI i dati grezzi UNA VOLTA e crea estrazioni strutturate
+    # Invece di mandare dati grezzi (site 80K, reviews 25K, docs 25K, comments 25K)
+    # a 5-9 step ciascuno, li leggiamo una volta e estraiamo il succo.
+
+    # ── 2a. Pre-processing SITO WEB (usato in 5 step) ──
+    site_extraction = site_content or ""
     if site_content and len(site_content) > 500:
-        _report("Pre-analisi sito web (lettura unica)…")
-        extraction_prompt = f"""Analizza TUTTO il contenuto di questo sito web ed estrai in modo COMPLETO e STRUTTURATO:
-
-1. **CHI È**: Nome brand, settore, posizionamento, storia, mission, valori dichiarati
-2. **COSA OFFRE**: TUTTI i prodotti e servizi con descrizioni complete, prezzi se presenti, caratteristiche
-3. **COME LO OFFRE**: Processo di lavoro, metodologia, fasi, cosa include ogni servizio
-4. **A CHI SI RIVOLGE**: Target dichiarato, linguaggio usato, problemi che risolve
-5. **PROVE**: Testimonial, numeri, risultati, casi studio, partner, certificazioni
-6. **TONO E VOCE**: Come comunica, che parole usa, che stile ha
-7. **CTA E OFFERTE**: Cosa propone come prossimo passo, prezzi, garanzie
-8. **DIFFERENZIATORI**: Cosa lo distingue dalla concorrenza secondo il sito
-
-REGOLE:
-- Estrai TUTTO quello che trovi, non riassumere troppo — meglio abbondare
-- Usa le PAROLE ESATTE del sito, non parafrasare
-- Se trovi nomi di servizi/prodotti, riportali esattamente come scritti
-- Distingui cosa è un servizio (il professionista fa) vs consulenza (dà consigli)
-
-CONTENUTO SITO:
-{site_content[:80000]}"""
-
+        _report("Pre-analisi sito web…")
         try:
             site_extraction = await service._call_ai(
                 model="anthropic/claude-3.7-sonnet",
-                messages=[{"role": "user", "content": extraction_prompt}],
+                messages=[{"role": "user", "content": f"""Estrai TUTTO dal contenuto di questo sito web in modo COMPLETO e STRUTTURATO:
+
+1. CHI È: Nome brand, settore, posizionamento, storia, mission, valori
+2. COSA OFFRE: TUTTI prodotti/servizi con descrizioni, prezzi, caratteristiche
+3. COME LO OFFRE: Processo, metodologia, fasi, cosa include ogni servizio
+4. A CHI SI RIVOLGE: Target dichiarato, problemi che risolve
+5. PROVE: Testimonial, numeri, risultati, casi studio, certificazioni
+6. TONO E VOCE: Come comunica, parole usate, stile
+7. CTA E OFFERTE: Prossimi passi, prezzi, garanzie
+8. DIFFERENZIATORI: Cosa lo distingue dalla concorrenza
+
+REGOLE: Usa le PAROLE ESATTE del sito. Nomi servizi/prodotti esattamente come scritti. Non riassumere troppo.
+Distingui servizio (professionista fa) vs consulenza (dà consigli).
+
+CONTENUTO SITO:
+{site_content[:80000]}"""}],
                 max_tokens=6000
             )
-            _report(f"Pre-analisi completata ({len(site_extraction)} chars)")
+            _report(f"Pre-analisi sito completata ({len(site_extraction)} chars)")
         except Exception as e:
-            print(f"⚠️ Pre-analisi sito fallita: {e} — uso testo grezzo troncato")
-            site_extraction = site_content[:25000]
-    else:
-        site_extraction = site_content or ""
+            print(f"⚠️ Pre-analisi sito fallita: {e}")
+            site_extraction = site_content[:25000] if site_content else ""
 
-    # 3. Initialize the Global Context
-    # site_content ora è l'ESTRAZIONE strutturata, non il dump grezzo
+    # ── 2b. Pre-processing RECENSIONI + COMMENTI (reviews 5 step, comments 4 step) ──
+    reviews_extraction = google_reviews or ""
+    comments_extraction = instagram_comments or ""
+    has_reviews = google_reviews and len(google_reviews) > 200
+    has_comments = instagram_comments and len(instagram_comments) > 200
+    if has_reviews or has_comments:
+        _report("Pre-analisi recensioni e commenti…")
+        reviews_block = f"RECENSIONI GOOGLE:\n{google_reviews[:40000]}" if has_reviews else ""
+        comments_block = f"COMMENTI INSTAGRAM:\n{instagram_comments[:40000]}" if has_comments else ""
+        try:
+            voc_extraction = await service._call_ai(
+                model="anthropic/claude-3.7-sonnet",
+                messages=[{"role": "user", "content": f"""Analizza TUTTE le recensioni e i commenti e estrai in modo COMPLETO:
+
+1. GOLDEN HOOKS: Frasi esatte dei clienti che esprimono trasformazione/risultato (copia letteralmente)
+2. PAIN POINTS: Problemi, frustrazioni, dolori PRIMA del prodotto/servizio
+3. DESIDERI E RISULTATI: Cosa vogliono ottenere, cosa hanno ottenuto
+4. OBIEZIONI: Dubbi, esitazioni, scetticismo iniziale
+5. LINGUAGGIO REALE: Parole e espressioni usate dai clienti (non parafrasare)
+6. PATTERN: Temi ricorrenti, elementi più citati, sentiment generale
+7. SOCIAL PROOF: Storie specifiche, risultati quantificabili, nomi citati
+
+REGOLE: Cita letteralmente le frasi più potenti. Distingui recensioni del brand da quelle dei competitor (se marcate).
+
+{reviews_block}
+
+{comments_block}"""}],
+                max_tokens=5000
+            )
+            if has_reviews:
+                reviews_extraction = voc_extraction
+            if has_comments:
+                comments_extraction = voc_extraction
+            _report(f"Pre-analisi VoC completata ({len(voc_extraction)} chars)")
+        except Exception as e:
+            print(f"⚠️ Pre-analisi VoC fallita: {e}")
+
+    # ── 2c. Pre-processing DOCUMENTI CARICATI (usato in 9 step!) ──
+    docs_extraction = raw_docs or ""
+    if raw_docs and len(raw_docs) > 500:
+        _report("Pre-analisi documenti caricati…")
+        try:
+            docs_extraction = await service._call_ai(
+                model="anthropic/claude-3.7-sonnet",
+                messages=[{"role": "user", "content": f"""Estrai TUTTE le informazioni utili da questi documenti caricati dal cliente:
+
+1. INFO SUL BRAND: identità, storia, valori, posizionamento
+2. PRODOTTI/SERVIZI: descrizioni, prezzi, caratteristiche, processi
+3. TARGET: chi sono i clienti, come vengono descritti
+4. DATI E NUMERI: statistiche, risultati, metriche
+5. COMPETITOR: menzioni di concorrenti, differenziatori
+6. ALTRO: qualsiasi info rilevante per analisi marketing
+
+REGOLE: Estrai tutto, usa le parole esatte dei documenti.
+
+DOCUMENTI:
+{raw_docs[:50000]}"""}],
+                max_tokens=5000
+            )
+            _report(f"Pre-analisi documenti completata ({len(docs_extraction)} chars)")
+        except Exception as e:
+            print(f"⚠️ Pre-analisi documenti fallita: {e}")
+
+    # 3. Initialize the Global Context con dati PRE-PROCESSATI
     context = {
         "client_info": client_info,
         "site_url": site_url,
         "site_content": site_extraction,
         "social_data": social_data,
         "ads_data": ads_data,
-        "raw_docs": raw_docs,
-        "google_reviews": google_reviews,
-        "instagram_comments": instagram_comments,
+        "raw_docs": docs_extraction,
+        "google_reviews": reviews_extraction,
+        "instagram_comments": comments_extraction,
         "products_csv": products_csv,
         "services_txt": services_txt,
         "competitor_data": competitor_data
