@@ -41,11 +41,12 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
 
     # 1. Gather Required Inputs — con limiti per contenere i costi
     # Dati grezzi (scraping) sono enormi e ripetitivi; output AI precedenti sono compatti
-    RAW_DATA_KEYS = {"site_content", "social_data", "ads_data", "raw_docs",
+    # site_content è già pre-processato (estrazione strutturata), non serve troncarlo
+    RAW_DATA_KEYS = {"social_data", "ads_data", "raw_docs",
                      "google_reviews", "instagram_comments", "competitor_data",
                      "products_csv", "services_txt"}
-    MAX_RAW_CHARS = 25000   # Dati grezzi: max 25K chars (abbastanza per analisi profonda)
-    MAX_AI_CHARS = 12000    # Output AI precedenti: max 12K chars (mantiene qualità)
+    MAX_RAW_CHARS = 25000   # Dati grezzi: max 25K chars
+    MAX_AI_CHARS = 12000    # Output AI precedenti: max 12K chars
 
     input_text = ""
     for req in task.get("required_inputs", []):
@@ -180,11 +181,50 @@ async def generate_complete_strategic_analysis(
 
     _report(f"Workflow caricato: {workflow.get('workflow_name')}")
 
-    # 2. Initialize the Global Context
+    # 2. PRE-PROCESSING: Leggi il sito UNA VOLTA e crea un'estrazione strutturata
+    # Così paghiamo i token del sito una sola volta invece di 5-6
+    site_extraction = ""
+    if site_content and len(site_content) > 500:
+        _report("Pre-analisi sito web (lettura unica)…")
+        extraction_prompt = f"""Analizza TUTTO il contenuto di questo sito web ed estrai in modo COMPLETO e STRUTTURATO:
+
+1. **CHI È**: Nome brand, settore, posizionamento, storia, mission, valori dichiarati
+2. **COSA OFFRE**: TUTTI i prodotti e servizi con descrizioni complete, prezzi se presenti, caratteristiche
+3. **COME LO OFFRE**: Processo di lavoro, metodologia, fasi, cosa include ogni servizio
+4. **A CHI SI RIVOLGE**: Target dichiarato, linguaggio usato, problemi che risolve
+5. **PROVE**: Testimonial, numeri, risultati, casi studio, partner, certificazioni
+6. **TONO E VOCE**: Come comunica, che parole usa, che stile ha
+7. **CTA E OFFERTE**: Cosa propone come prossimo passo, prezzi, garanzie
+8. **DIFFERENZIATORI**: Cosa lo distingue dalla concorrenza secondo il sito
+
+REGOLE:
+- Estrai TUTTO quello che trovi, non riassumere troppo — meglio abbondare
+- Usa le PAROLE ESATTE del sito, non parafrasare
+- Se trovi nomi di servizi/prodotti, riportali esattamente come scritti
+- Distingui cosa è un servizio (il professionista fa) vs consulenza (dà consigli)
+
+CONTENUTO SITO:
+{site_content[:80000]}"""
+
+        try:
+            site_extraction = await service._call_ai(
+                model="anthropic/claude-3.7-sonnet",
+                messages=[{"role": "user", "content": extraction_prompt}],
+                max_tokens=6000
+            )
+            _report(f"Pre-analisi completata ({len(site_extraction)} chars)")
+        except Exception as e:
+            print(f"⚠️ Pre-analisi sito fallita: {e} — uso testo grezzo troncato")
+            site_extraction = site_content[:25000]
+    else:
+        site_extraction = site_content or ""
+
+    # 3. Initialize the Global Context
+    # site_content ora è l'ESTRAZIONE strutturata, non il dump grezzo
     context = {
         "client_info": client_info,
         "site_url": site_url,
-        "site_content": site_content[:40000] if site_content else "",
+        "site_content": site_extraction,
         "social_data": social_data,
         "ads_data": ads_data,
         "raw_docs": raw_docs,
