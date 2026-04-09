@@ -36,10 +36,13 @@ load_dotenv(Path(__file__).parent / ".env")
 from .ai_service import AIService
 from .storage_service import StorageService, CLIENTS_DIR, TASKS_FILE, _get_sb
 try:
-    from .notion_service import notion_service
+    from .notion_service import notion_service, NOTION_COPY_VAULT_DB_ID
+    _notion_available = True
 except Exception as _ne:
     print(f"⚠️  Notion service non disponibile in main.py: {_ne}")
     notion_service = None
+    NOTION_COPY_VAULT_DB_ID = None
+    _notion_available = False
 from .strategic_context_loader import get_strategic_context_for_generator
 from .knowledge_loader import get_awareness_context
 from .smart_lists_service import smart_lists_service
@@ -1673,6 +1676,24 @@ async def generate_copy(client_id: str, request: CopyRequest):
         ),
     }
 
+    # ═══════════════════════════════════════════════════════
+    # RAG DA NOTION — Esempi gold standard (copy a 5 stelle)
+    # Costo: zero (è una chiamata API Notion, non AI)
+    # ═══════════════════════════════════════════════════════
+    swipe_context = ""
+    if _notion_available and notion_service:
+        try:
+            swipe_file_examples = await notion_service.get_vault_examples(NOTION_COPY_VAULT_DB_ID)
+            if swipe_file_examples:
+                swipe_context = (
+                    f"\n{'='*60}\nESEMPI GOLD STANDARD (Copy valutati 5 stelle)\n{'='*60}\n"
+                    "Prendi ispirazione dalla qualità e stile di questi copy vincenti, "
+                    "ma NON copiarli — adattali al cliente e all'angolo richiesto:\n"
+                    f"{swipe_file_examples}\n"
+                )
+        except Exception as e:
+            print(f"⚠️ Notion vault copy non disponibile: {e}")
+
     # ══════════════════════════════════════════════════════════
     # SYSTEM PROMPT — Background knowledge (contesto)
     # ══════════════════════════════════════════════════════════
@@ -1704,6 +1725,10 @@ async def generate_copy(client_id: str, request: CopyRequest):
     # Vincoli tecnici del canale
     if type_knowledge:
         sys_parts.append(f"{sep}\nVINCOLI CANALE: {type_label}\n{sep}\n{type_knowledge}")
+
+    # Esempi gold standard dal vault Notion (se disponibili)
+    if swipe_context:
+        sys_parts.append(swipe_context)
 
     system_prompt = "\n\n".join(sys_parts)
 
