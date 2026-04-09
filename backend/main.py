@@ -1501,7 +1501,7 @@ async def generate_copy(client_id: str, request: CopyRequest):
         client_id=client_id,
         metadata=metadata,
         supabase_client=supabase,
-        focus_areas=["brand_voice", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
+        focus_areas=["brand_identity", "brand_voice", "customer_personas", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
     )
 
     from .knowledge_loader import (

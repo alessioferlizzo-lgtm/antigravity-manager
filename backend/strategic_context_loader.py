@@ -210,16 +210,71 @@ Le informazioni disponibili sono limitate. Consiglia all'utente di generare prim
         return "\n".join(context_parts)
 
 
+    async def load_focused_context(self, client_id: str, metadata: dict, focus_areas: list[str]) -> str:
+        """
+        Carica SOLO le sezioni specificate di focus_areas — riduce drasticamente i token.
+        """
+        analysis = await self._fetch_strategic_analysis(client_id)
+        client_name = metadata.get("name", client_id)
+        industry = metadata.get("industry", "")
+
+        parts = [f"CLIENTE: {client_name} | SETTORE: {industry}"]
+
+        if not analysis:
+            parts.append("⚠️ Analisi Strategica non ancora generata per questo cliente.")
+            return "\n".join(parts)
+
+        SECTION_LABELS = {
+            "brand_identity": "BRAND IDENTITY & POSIZIONAMENTO",
+            "brand_values": "VALORI DEL BRAND",
+            "product_portfolio": "PORTAFOGLIO PRODOTTI",
+            "reasons_to_buy": "REASONS TO BUY",
+            "customer_personas": "CUSTOMER PERSONAS",
+            "content_matrix": "MATRICE CONTENUTI",
+            "product_vertical": "ANALISI VERTICALE PRODOTTI",
+            "service_vertical": "ANALISI VERTICALE SERVIZI",
+            "brand_voice": "BRAND VOICE & GUIDELINES",
+            "objections": "GESTIONE OBIEZIONI",
+            "reviews_voc": "VOICE OF CUSTOMER",
+            "battlecards": "COMPETITOR BATTLECARDS",
+            "seasonal_roadmap": "ROADMAP STAGIONALE",
+            "psychographic_analysis": "ANALISI PSICOGRAFICA",
+            "visual_brief": "VISUAL BRIEF",
+            "ad_copy_creation": "COPY ADS",
+            "video_scripts": "SCRIPT VIDEO",
+            "franzcopy_scaling": "FRANZCOPY SCALING",
+        }
+
+        for area in focus_areas:
+            data = analysis.get(area)
+            if data:
+                label = SECTION_LABELS.get(area, area.upper())
+                parts.append(f"\n【{label}】\n{self._format_json_section(data, max_chars=2500)}")
+
+        return "\n".join(parts)
+
     async def _fetch_strategic_analysis(self, client_id: str) -> Optional[Dict[str, Any]]:
-        """Fetch Analisi Strategica da Supabase."""
+        """Fetch Analisi Strategica da Supabase (client is synchronous, no await)."""
         try:
-            result = await self.supabase.table("client_complete_analysis").select("*").eq("client_id", client_id).execute()
+            result = self.supabase.table("client_complete_analysis").select("*").eq("client_id", client_id).execute()
             if result.data and len(result.data) > 0:
                 return result.data[0]
-            return None
         except Exception as e:
-            print(f"Errore fetch analisi strategica: {e}")
-            return None
+            print(f"Errore fetch analisi strategica da Supabase: {e}")
+
+        # Fallback: file locale
+        import pathlib
+        project_root = pathlib.Path(__file__).parent.parent
+        analysis_file = project_root / "clients" / client_id / "complete_analysis.json"
+        if analysis_file.exists():
+            try:
+                data = json.loads(analysis_file.read_text(encoding="utf-8"))
+                print(f"📁 Strategic loader: analisi caricata da file locale per {client_id}")
+                return data
+            except Exception as e:
+                print(f"❌ Errore lettura file locale in strategic loader: {e}")
+
+        return None
 
 
     def _format_json_section(self, data: Any, max_chars: int = 2000) -> str:
@@ -250,31 +305,11 @@ async def get_strategic_context_for_generator(
 ) -> str:
     """
     Funzione helper rapida per ottenere contesto strategico.
-
-    Args:
-        client_id: ID cliente
-        metadata: Metadata cliente
-        supabase_client: Client Supabase
-        focus_areas: Lista opzionale di aree su cui focalizzarsi
-                    (es. ["brand_voice", "personas", "visual_brief"])
-
-    Returns:
-        str: Contesto completo o focalizzato
+    Se focus_areas è specificato, carica SOLO quelle sezioni (riduce token).
     """
     loader = StrategicContextLoader(supabase_client)
-    full_context = await loader.load_full_context(client_id, metadata)
 
-    # Se richiesto focus specifico, aggiungi nota
     if focus_areas:
-        focus_note = f"""
-╔═══════════════════════════════════════════════════════════╗
-║ FOCUS AREAS PER QUESTA GENERAZIONE:                      ║
-╚═══════════════════════════════════════════════════════════╝
-{', '.join(focus_areas)}
+        return await loader.load_focused_context(client_id, metadata, focus_areas)
 
-Usa principalmente queste sezioni, ma consulta tutto il contesto se necessario.
-
-"""
-        return focus_note + full_context
-
-    return full_context
+    return await loader.load_full_context(client_id, metadata)
