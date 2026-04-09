@@ -590,12 +590,16 @@ STILE: Naturale come un vocale. Zero clichés. Zero "Scopri di più"."""
         kpi_text = "\n".join(kpi_lines)
         period = report_data.get("period_label", "periodo non specificato")
 
+        strategic_ctx = client_info.get('_strategic_context', '')
+        strategic_block = f"\nCONTESTO STRATEGICO DEL CLIENTE:\n{strategic_ctx}\n" if strategic_ctx else ""
+
         prompt = f"""Sei un Performance Marketing Analyst senior. Analizza i seguenti dati di performance del cliente e produci un report strategico chiaro e azionabile.
 
 CLIENTE: {client_info.get('name', 'N/D')}
 PERIODO: {period}
 OBIETTIVI: {client_info.get('objectives', 'Non specificati')}
 STRATEGIA: {client_info.get('strategy', 'Non specificata')}
+{strategic_block}
 
 KPI E DATI:
 {kpi_text}

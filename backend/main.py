@@ -1576,20 +1576,97 @@ async def generate_copy(client_id: str, request: CopyRequest):
     word_limit = WORD_LIMITS.get(request.copy_type, 200)
 
     # ── Fasi operative per ogni framework ──
+    # Ogni framework ha istruzioni PRECISE su cosa scrivere in ogni fase.
+    # L'AI deve seguire esattamente questa sequenza — ogni fase deve essere
+    # riconoscibile nel testo finale (senza etichette visibili).
     FRAMEWORK_PHASES = {
-        "AIDA": "[A] ATTENTION: 1-2 righe che fermano lo scroll\n[I] INTEREST: 2-3 righe di fatti concreti\n[D] DESIRE: 2-3 righe di social proof o risultati\n[A] ACTION: 1 riga di CTA diretta",
-        "PAS": "[P] PROBLEM: 1-2 righe che descrivono il problema\n[A] AGITATE: 2-3 righe che amplificano le conseguenze\n[S] SOLVE: 2-3 righe con la soluzione",
-        "BAB": "[B] BEFORE: la situazione dolorosa attuale\n[A] AFTER: la vita dopo la soluzione\n[B] BRIDGE: come arrivarci",
-        "FAB": "[F] FEATURES: caratteristiche chiave\n[A] ADVANTAGES: vantaggi concreti\n[B] BENEFITS: benefici emotivi nella vita reale",
-        "ACCA": "[A] AWARENESS: presenta il problema\n[C] COMPREHENSION: perché è importante per il target\n[C] CONVICTION: prove che la soluzione funziona\n[A] ACTION: CTA a bassa frizione",
-        "SSS": "[S] STAR: il protagonista\n[S] STORY: la sua storia\n[S] SOLUTION: la soluzione",
-        "4C": "Checklist: CHIARO + CONCISO + CREDIBILE + IRRESISTIBILE",
-        "4U": "Checklist: UTILE + URGENTE + UNICO + ULTRA-SPECIFICO",
-        "5_OBIEZIONI": "Smonta le 2-3 obiezioni più forti per questo target",
-        "3_MOTIVI": "1. Perché sei il migliore? 2. Perché crederti? 3. Perché ora?",
-        "E_QUINDI": "Per ogni affermazione: 'E quindi?' fino al beneficio emotivo finale",
-        "HOOK_BODY_CTA": "[HOOK] 1 riga devastante\n[BODY] 3-5 righe di sviluppo\n[CTA] 1 riga di azione",
-        "INSPIRATIONAL_STAIR": "Segui le 5 fasi neurochimiche nell'ordine esatto",
+        "AIDA": (
+            "Scrivi il copy in ESATTAMENTE 4 blocchi, in quest'ordine:\n"
+            "1. ATTENTION (1-2 righe): Domanda provocatoria, dato sorprendente o affermazione contro-intuitiva che ferma lo scroll.\n"
+            "2. INTEREST (2-3 righe): Fatti concreti e specifici. Perché questo è rilevante per il target ORA.\n"
+            "3. DESIRE (2-3 righe): Social proof, risultati reali, identità aspirazionale. Il target deve VOLERE quello che offri.\n"
+            "4. ACTION (1 riga): CTA specifica e diretta. Non 'Scopri di più' — scrivi cosa deve fare concretamente."
+        ),
+        "PAS": (
+            "Scrivi il copy in ESATTAMENTE 3 blocchi, in quest'ordine:\n"
+            "1. PROBLEM (1-2 righe): Descrivi il problema con il linguaggio esatto del target. Specifico, non generico.\n"
+            "2. AGITATE (2-3 righe): Amplifica le conseguenze reali. Costi nascosti, frustrazioni quotidiane, cosa perde ogni giorno. Tensione crescente.\n"
+            "3. SOLVE (2-3 righe): La soluzione arriva come sollievo. Chiara, diretta, collegata al problema. CTA finale."
+        ),
+        "BAB": (
+            "Scrivi il copy in ESATTAMENTE 3 blocchi, in quest'ordine:\n"
+            "1. BEFORE (2-3 righe): Descrivi la situazione dolorosa attuale del target. Dettagli specifici e riconoscibili.\n"
+            "2. AFTER (2-3 righe): Dipingi la vita DOPO la soluzione. Dettagli vividi e desiderabili. Come si sente? Cosa fa di diverso?\n"
+            "3. BRIDGE (1-2 righe): Il prodotto/servizio è il ponte naturale tra le due realtà. CTA."
+        ),
+        "FAB": (
+            "Scrivi il copy in ESATTAMENTE 3 blocchi, in quest'ordine:\n"
+            "1. FEATURES (1-2 righe): Caratteristiche chiave del prodotto/servizio — quelle che differenziano.\n"
+            "2. ADVANTAGES (1-2 righe): Vantaggi concreti e misurabili che derivano da quelle feature.\n"
+            "3. BENEFITS (2-3 righe): Benefici EMOTIVI nella vita reale del cliente. Non tecnici — identitari, esperienziali. CTA."
+        ),
+        "ACCA": (
+            "Scrivi il copy in ESATTAMENTE 4 blocchi, in quest'ordine:\n"
+            "1. AWARENESS (1-2 righe): Presenta il problema con uno scenario riconoscibile. Non assumere che il target lo conosca già.\n"
+            "2. COMPREHENSION (2-3 righe): Perché questo problema è importante per LUI specificamente. Dati, conseguenze concrete.\n"
+            "3. CONVICTION (2-3 righe): Prove che la soluzione funziona. Risultati numerici, casi studio, testimonial. Non opinioni — fatti.\n"
+            "4. ACTION (1 riga): CTA a bassa frizione — il minor commitment possibile (call, demo, prova)."
+        ),
+        "SSS": (
+            "Scrivi il copy come una STORIA in ESATTAMENTE 3 blocchi:\n"
+            "1. STAR (1-2 righe): Presenta il protagonista — un cliente reale o archetipo credibile. Nome, età, situazione. Deve essere 'uno come me' per il target.\n"
+            "2. STORY (3-4 righe): Racconta la sua storia. Il dolore, le frustrazioni, i tentativi falliti. Dettagli specifici che creano immedesimazione.\n"
+            "3. SOLUTION (1-2 righe): La scoperta del prodotto/servizio come svolta naturale. Risultato credibile. CTA."
+        ),
+        "4C": (
+            "Scrivi un copy che rispetta TUTTE e 4 queste qualità contemporaneamente:\n"
+            "- CHIARO: messaggio comprensibile immediatamente, zero ambiguità\n"
+            "- CONCISO: ogni parola ha un motivo, zero grasso\n"
+            "- CREDIBILE: ogni claim supportato da prove (dati, testimonial, garanzie)\n"
+            "- COMPELLING (irresistibile): il lettore non può ignorare l'offerta\n"
+            "Il copy deve essere breve, diretto e potente. Ogni frase supera il test di tutte e 4 le C."
+        ),
+        "4U": (
+            "Scrivi un copy che rispetta TUTTE e 4 queste qualità contemporaneamente:\n"
+            "- UTILE: beneficio tangibile e immediatamente percepito\n"
+            "- URGENTE: ragione reale per agire ORA (scarsità vera, costo dell'inazione)\n"
+            "- UNICO: angolo o claim che nessun competitor sta usando\n"
+            "- ULTRA-SPECIFICO: numeri precisi, dati concreti. 'Risparmi 3 ore' non 'Risparmi tempo'\n"
+            "Il copy deve essere breve, tagliente, con dati specifici. Ogni frase supera il test di tutte e 4 le U."
+        ),
+        "5_OBIEZIONI": (
+            "Identifica le 2-3 obiezioni più forti per QUESTO target e QUESTO prodotto tra:\n"
+            "- 'Non ho tempo' / 'Non ho soldi' / 'Non funzionerà per me' / 'Non ti credo' / 'Non ne ho bisogno'\n"
+            "Smontale in modo indiretto e conversazionale (non difensivo). Usa prove concrete: testimonial, dati, garanzie.\n"
+            "Struttura: Hook → Obiezione 1 smontata → Obiezione 2 smontata → Obiezione 3 smontata → CTA."
+        ),
+        "3_MOTIVI": (
+            "Scrivi il copy rispondendo a ESATTAMENTE 3 domande, in quest'ordine:\n"
+            "1. PERCHÉ SEI IL MIGLIORE? Differenziatori reali e verificabili — non aggettivi vuoti.\n"
+            "2. PERCHÉ DOVREI CREDERTI? Social proof forte: numeri precisi, nomi reali, risultati misurabili.\n"
+            "3. PERCHÉ DOVREI COMPRARE ADESSO? Scarsità reale o costo concreto dell'inazione.\n"
+            "Ogni risposta è un blocco di 2-3 righe. CTA finale."
+        ),
+        "E_QUINDI": (
+            "Parti dall'affermazione principale del brand/prodotto e applica il processo 'E quindi?' 3-5 volte\n"
+            "fino ad arrivare al beneficio emotivo finale. USA L'ULTIMA RISPOSTA come corpo del copy.\n"
+            "Non usare la versione superficiale — scava fino all'identità e al desiderio profondo del target.\n"
+            "Il copy finale è breve e colpisce il beneficio emotivo reale, non quello funzionale."
+        ),
+        "HOOK_BODY_CTA": (
+            "Scrivi il copy in ESATTAMENTE 3 blocchi:\n"
+            "1. HOOK (1 riga): Frase devastante che ferma lo scroll in 0.3 secondi. Domanda, dato shock, provocazione.\n"
+            "2. BODY (3-5 righe): Sviluppo con prove, storia breve o benefici. Supporta l'hook senza ripeterlo.\n"
+            "3. CTA (1 riga): Azione specifica. Non 'Scopri di più' — scrivi cosa deve fare e cosa ottiene."
+        ),
+        "INSPIRATIONAL_STAIR": (
+            "Segui le 5 fasi neurochimiche di Borzacchiello nell'ordine esatto:\n"
+            "1. CORTISOLO (paura/urgenza): Attiva la minaccia — cosa rischia se non agisce?\n"
+            "2. DOPAMINA (ricompensa/visione): Mostra il futuro desiderabile — cosa ottiene?\n"
+            "3. OSSITOCINA (connessione/fiducia): Crea vicinanza — 'ti capisco, ci sono passato'\n"
+            "4. ENDORFINA (sollievo/piacere): Il momento di liberazione — la soluzione concreta\n"
+            "5. SEROTONINA (sicurezza/azione): Conferma finale — CTA con sicurezza e urgenza positiva"
+        ),
     }
 
     # ══════════════════════════════════════════════════════════
@@ -1634,7 +1711,15 @@ async def generate_copy(client_id: str, request: CopyRequest):
     if request.framework:
         phases = FRAMEWORK_PHASES.get(request.framework, "")
         if phases:
-            user_parts.append(f"STRUTTURA OBBLIGATORIA ({request.framework}):\n{phases}\nSegui questa struttura esatta. Ogni fase deve essere riconoscibile.")
+            user_parts.append(
+                f"⚠️ STRUTTURA OBBLIGATORIA — FRAMEWORK {request.framework}:\n"
+                f"{phases}\n\n"
+                f"REGOLE FRAMEWORK:\n"
+                f"- Segui ESATTAMENTE questa sequenza di fasi. Non saltarne nessuna.\n"
+                f"- Ogni fase deve essere riconoscibile nel testo (ma senza etichette visibili come [ATTENTION] o [PROBLEM]).\n"
+                f"- NON mescolare le fasi. NON aggiungere fasi extra.\n"
+                f"- Il framework è la STRUTTURA del copy. Non inventare una struttura diversa."
+            )
 
     if request.awareness_level:
         user_parts.append(f"TONO: adattato al livello {request.awareness_level.replace('_', ' ').upper()} (vedi knowledge). Questo influenza il tono, NON la struttura.")
@@ -1735,6 +1820,13 @@ async def generate_battlecards(client_id: str):
     if not competitors:
         raise HTTPException(status_code=400, detail="Nessun competitor salvato nel profilo. Aggiungili nella sezione Sorgenti.")
 
+    # Carica contesto strategico completo dal Supabase/file locale
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id, metadata=metadata, supabase_client=supabase,
+        focus_areas=["brand_identity", "brand_values", "product_portfolio", "reasons_to_buy", "customer_personas"]
+    )
+
     research_text = ""
     research_path = CLIENTS_DIR / client_id / "research" / "market_research.md"
     if research_path.exists():
@@ -1749,6 +1841,9 @@ async def generate_battlecards(client_id: str):
 
     system_prompt = f"""Sei un analista strategico esperto di marketing competitivo e Meta Ads.
 Analizza i competitor di {client_name} e crea Battlecard strutturate per ogni concorrente.
+
+DATI DEL CLIENTE:
+{strategic_context}
 
 BRAND CLIENTE: {client_name}
 COMPETITOR DA ANALIZZARE:
@@ -1821,13 +1916,19 @@ async def generate_psychographic(client_id: str):
     """Analisi psicografica a 3 livelli di profondità del cliente ideale."""
     metadata = storage_service.get_metadata(client_id)
     client_name = metadata.get("name", client_id)
-    ctx = _load_full_client_context(client_id, metadata)
+
+    # Carica contesto strategico completo dal Supabase/file locale
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id, metadata=metadata, supabase_client=supabase,
+        focus_areas=["brand_identity", "customer_personas", "reviews_voc", "reasons_to_buy", "objections", "brand_voice"]
+    )
 
     system_prompt = f"""Sei uno psicologo del consumatore e stratega di marketing con 20 anni di esperienza.
 Il tuo compito è creare un'analisi psicografica profonda a 3 livelli del cliente ideale di {client_name}.
 
-CONTESTO DISPONIBILE:
-{ctx[:4000]}
+DATI DEL CLIENTE:
+{strategic_context}
 
 STRUTTURA ANALISI:
 
@@ -1920,14 +2021,19 @@ async def generate_visual_brief(client_id: str):
     """Genera un brief visivo completo per designer e videomaker."""
     metadata = storage_service.get_metadata(client_id)
     client_name = metadata.get("name", client_id)
-    ctx = _load_full_client_context(client_id, metadata)
-    bi = metadata.get("brand_identity", {})
+
+    # Carica contesto strategico completo dal Supabase/file locale
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id, metadata=metadata, supabase_client=supabase,
+        focus_areas=["brand_identity", "brand_voice", "brand_values", "customer_personas", "product_portfolio", "content_matrix"]
+    )
 
     system_prompt = f"""Sei un Creative Director con esperienza in brand identity e advertising per Meta/TikTok.
 Genera un Visual Brief professionale per {client_name} che possa essere consegnato direttamente a designer e videomaker.
 
-CONTESTO:
-{ctx[:4000]}
+DATI DEL CLIENTE:
+{strategic_context}
 
 Il brief deve coprire:
 1. MOOD & AESTHETIC: Atmosfera visiva del brand
@@ -2007,13 +2113,19 @@ async def generate_seasonality(client_id: str):
     metadata = storage_service.get_metadata(client_id)
     client_name = metadata.get("name", client_id)
     industry = metadata.get("industry", "")
-    ctx = _load_full_client_context(client_id, metadata)
+
+    # Carica contesto strategico completo dal Supabase/file locale
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id, metadata=metadata, supabase_client=supabase,
+        focus_areas=["brand_identity", "product_portfolio", "customer_personas", "seasonal_roadmap", "content_matrix"]
+    )
 
     system_prompt = f"""Sei un esperto di marketing stagionale e pianificazione campagne Meta Ads.
 Crea una Seasonality Roadmap completa per {client_name} nel settore {industry or "analizzato"}.
 
-CONTESTO:
-{ctx[:3000]}
+DATI DEL CLIENTE:
+{strategic_context}
 
 Per ogni mese/periodo identifica:
 - Evento/stagione rilevante per il settore
@@ -3351,6 +3463,15 @@ async def generate_report_ai(client_id: str, report_id: str):
     report = next((r for r in reports if r["id"] == report_id), None)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    # Carica contesto strategico per report più intelligenti
+    supabase = _get_sb()
+    strategic_context = await get_strategic_context_for_generator(
+        client_id=client_id, metadata=metadata, supabase_client=supabase,
+        focus_areas=["brand_identity", "customer_personas", "reasons_to_buy"]
+    )
+    metadata["_strategic_context"] = strategic_context
+
     try:
         ai_text = await ai_service.generate_performance_report(metadata, report)
     except Exception as e:
