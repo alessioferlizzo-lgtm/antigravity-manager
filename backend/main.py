@@ -6,6 +6,7 @@ from typing import List, Optional, Dict, Any
 import os
 import io
 import pypdf
+import docx
 import json
 import json_repair
 import base64
@@ -4008,6 +4009,16 @@ async def _do_complete_analysis(client_id: str, job_id: str):
                     print(f"✅ Estratto testo da PDF: {file_path.name} ({len(text)} caratteri)")
                 except Exception as e:
                     print(f"❌ Errore lettura PDF {file_path.name}: {e}")
+
+            # Cerca DOC/DOCX (Dossier, documenti Word)
+            elif file_name_lower.endswith(('.doc', '.docx')):
+                try:
+                    doc = docx.Document(file_path)
+                    text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                    raw_docs += f"\n\n--- DOCX: {file_path.name} ---\n{text[:20000]}"
+                    print(f"✅ Estratto testo da DOCX: {file_path.name} ({len(text)} caratteri)")
+                except Exception as e:
+                    print(f"❌ Errore lettura DOCX {file_path.name}: {e}")
 
             # Altri documenti generici (TXT)
             elif file_name_lower.endswith(('.txt', '.md', '.json')):

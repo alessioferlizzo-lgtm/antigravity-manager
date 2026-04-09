@@ -4,6 +4,7 @@ python-dotenv
 python-multipart
 httpx
 pypdf
+python-docx
 json_repair
 fal_client
 Pillow
