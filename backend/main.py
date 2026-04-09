@@ -4182,29 +4182,32 @@ async def _do_complete_analysis(client_id: str, job_id: str):
         if not supabase:
             print("⚠️  Supabase non configurato - analisi NON salvata nel database")
         else:
+            # IMPORTANTE: usa `or {}` / `or []` — .get() può restituire None
+            # se la chiave esiste ma il valore è null, e Supabase rifiuta null
+            # per colonne NOT NULL
             upsert_data = {
                 "client_id": client_id,
-                "brand_identity": complete_analysis.get("brand_identity", {}),
-                "brand_values": complete_analysis.get("brand_values", {}),
-                "product_portfolio": complete_analysis.get("product_portfolio", {}),
-                "reasons_to_buy": complete_analysis.get("reasons_to_buy", {}),
-                "customer_personas": complete_analysis.get("customer_personas", []),
-                "content_matrix": complete_analysis.get("content_matrix", []),
-                "product_vertical": complete_analysis.get("product_vertical", []),
-                "service_vertical": complete_analysis.get("service_vertical", []),
-                "brand_voice": complete_analysis.get("brand_voice", {}),
-                "objections": complete_analysis.get("objections", {}),
-                "reviews_voc": complete_analysis.get("reviews_voc", {}),
-                "battlecards": complete_analysis.get("battlecards", {}),
-                "seasonal_roadmap": complete_analysis.get("seasonal_roadmap", {}),
-                "psychographic_analysis": complete_analysis.get("psychographic_analysis", {}),
-                "visual_brief": complete_analysis.get("visual_brief", {}),
-                "ad_copy_creation": complete_analysis.get("ad_copy_creation", {}),
-                "video_scripts": complete_analysis.get("video_scripts", {}),
-                "franzcopy_scaling": complete_analysis.get("franzcopy_scaling", {}),
-                "swot": complete_analysis.get("swot", {}),
-                "objectives": complete_analysis.get("objectives", {}),
-                "strategy": complete_analysis.get("strategy", ""),
+                "brand_identity": complete_analysis.get("brand_identity") or {},
+                "brand_values": complete_analysis.get("brand_values") or {},
+                "product_portfolio": complete_analysis.get("product_portfolio") or {},
+                "reasons_to_buy": complete_analysis.get("reasons_to_buy") or {},
+                "customer_personas": complete_analysis.get("customer_personas") or [],
+                "content_matrix": complete_analysis.get("content_matrix") or [],
+                "product_vertical": complete_analysis.get("product_vertical") or [],
+                "service_vertical": complete_analysis.get("service_vertical") or [],
+                "brand_voice": complete_analysis.get("brand_voice") or {},
+                "objections": complete_analysis.get("objections") or {},
+                "reviews_voc": complete_analysis.get("reviews_voc") or {},
+                "battlecards": complete_analysis.get("battlecards") or {},
+                "seasonal_roadmap": complete_analysis.get("seasonal_roadmap") or {},
+                "psychographic_analysis": complete_analysis.get("psychographic_analysis") or {},
+                "visual_brief": complete_analysis.get("visual_brief") or {},
+                "ad_copy_creation": complete_analysis.get("ad_copy_creation") or {},
+                "video_scripts": complete_analysis.get("video_scripts") or {},
+                "franzcopy_scaling": complete_analysis.get("franzcopy_scaling") or {},
+                "swot": complete_analysis.get("swot") or {},
+                "objectives": complete_analysis.get("objectives") or {},
+                "strategy": complete_analysis.get("strategy") or "",
             }
             result = supabase.table("client_complete_analysis").upsert(upsert_data).execute()
             if result.data:
