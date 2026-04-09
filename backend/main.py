@@ -1225,7 +1225,7 @@ async def get_angles(client_id: str, request: AngleRequest = AngleRequest()):
         client_id=client_id,
         metadata=metadata,
         supabase_client=supabase,
-        focus_areas=["battlecards", "customer_personas", "psychographic_analysis", "reasons_to_buy", "objections"]
+        focus_areas=["brand_identity", "customer_personas", "psychographic_analysis", "reasons_to_buy", "objections", "battlecards"]
     )
 
     # Enrich with creative intelligence from real ad performance if available
@@ -1675,7 +1675,15 @@ async def generate_copy(client_id: str, request: CopyRequest):
     sep = "=" * 60
     sys_parts = []
 
-    sys_parts.append("Sei un copywriter. Scrivi copy breve, diretto, che converte. Odi i muri di testo.")
+    sys_parts.append(
+        "Sei un copywriter. Scrivi copy breve, diretto, che converte. Odi i muri di testo.\n\n"
+        "⚠️ REGOLA CRITICA — IDENTIFICAZIONE DEL TARGET:\n"
+        "Il BRAND è il soggetto che vende. Il TARGET sono i CLIENTI del brand — le persone a cui il brand vende.\n"
+        "Il brand NON è il target. Se il brand è un marketer, il target NON sono i marketer — sono i clienti del marketer.\n"
+        "Se il brand è un ristorante, il target sono le persone che mangiano fuori — NON i ristoratori.\n"
+        "Leggi CUSTOMER PERSONAS e BRAND IDENTITY nei dati del cliente per capire chi è il target.\n"
+        "Scrivi SEMPRE parlando al target, MAI al brand o ai suoi colleghi di settore."
+    )
 
     # Contesto strategico del cliente
     sys_parts.append(f"{sep}\nDATI DEL CLIENTE\n{sep}\n{strategic_context}")
