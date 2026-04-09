@@ -78,11 +78,11 @@ const STATUS_CYCLE: Record<string, string> = { todo: "doing", doing: "done", don
 const PRIORITY_ORDER: Record<string, number> = { alta: 0, media: 1, bassa: 2 };
 const GFX_FORMATS = ["Feed IG (1:1)", "Feed IG (4:5)", "Stories (9:16)", "Banner (16:9)", "Carosello", "LinkedIn (1.91:1)", "Pinterest (2:3)"];
 const FUNNEL_STAGES = [
-  { key: "unaware", emoji: "🔍", label: "Inconsapevole", desc: "Non sa di avere un problema" },
-  { key: "problem_aware", emoji: "💡", label: "Problema", desc: "Sente il disagio, non sa come risolverlo" },
-  { key: "solution_aware", emoji: "⚡", label: "Soluzione", desc: "Confronta le opzioni disponibili" },
-  { key: "product_aware", emoji: "🎯", label: "Prodotto", desc: "Conosce il brand, è indeciso" },
-  { key: "most_aware", emoji: "🔥", label: "Pronto", desc: "Serve solo la spinta finale" },
+  { key: "unaware", emoji: "🔍", label: "Unaware", desc: "Non sa di avere un problema" },
+  { key: "problem_aware", emoji: "💡", label: "Problem Aware", desc: "Sente il disagio, non sa come risolverlo" },
+  { key: "solution_aware", emoji: "⚡", label: "Solution Aware", desc: "Confronta le opzioni disponibili" },
+  { key: "product_aware", emoji: "🎯", label: "Product Aware", desc: "Conosce il brand, è indeciso" },
+  { key: "most_aware", emoji: "🔥", label: "Most Aware", desc: "Serve solo la spinta finale" },
 ];
 
 /* ═══════════════════════════════════════════════════════════
