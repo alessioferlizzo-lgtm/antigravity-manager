@@ -2238,6 +2238,27 @@ async def export_client_report(client_id: str):
     # ── Carica l'analisi completa da Supabase ──
     analysis = storage_service.get_complete_analysis(client_id) or {}
 
+    def sanitize(text):
+        """Rimuovi caratteri non supportati da Latin-1 (Helvetica)."""
+        if not text:
+            return ""
+        s = str(text)
+        # Sostituisci emoji comuni con testo
+        replacements = {
+            "🎯": "[*]", "💎": "[*]", "📦": "[*]", "🔧": "[*]", "📊": "[*]",
+            "👥": "[*]", "🛡️": "[*]", "🗣️": "[*]", "✍️": "[*]", "📐": "[*]",
+            "📅": "[*]", "⚔️": "[*]", "🧠": "[*]", "🎨": "[*]", "🏷️": "[*]",
+            "⭐": "*", "✅": "[v]", "❌": "[x]", "⚡": ">", "💰": "$",
+            "🪝": ">", "😤": "", "✨": "*", "🤔": "", "🔮": "", "🔍": "",
+            "📱": "", "♻️": "", "🔬": "", "✏️": "", "🗑️": "",
+            "⚠️": "!", "💪": "", "•": "-", "→": "->", "←": "<-",
+            "—": "-", "–": "-", "\u200b": "", "\u00a0": " ",
+        }
+        for old, new in replacements.items():
+            s = s.replace(old, new)
+        # Rimuovi qualsiasi carattere non-Latin-1
+        return s.encode("latin-1", errors="replace").decode("latin-1")
+
     # ── Mappa sezioni ──
     SECTION_CONFIG = [
         ("brand_identity",        "BRAND IDENTITY & POSIZIONAMENTO"),
@@ -2277,13 +2298,13 @@ async def export_client_report(client_id: str):
     pdf.cell(0, 6, "ANTIGRAVITY OPERATIVE MANAGER", align="L", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(6)
     pdf.set_font("Helvetica", "B", 28)
-    pdf.cell(0, 14, client_name, align="L", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 14, sanitize(client_name), align="L", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
     pdf.set_font("Helvetica", "", 12)
     pdf.set_text_color(180, 200, 220)
     pdf.cell(0, 7, "Analisi Strategica Avanzata", align="L", new_x="LMARGIN", new_y="NEXT")
     if industry:
-        pdf.cell(0, 7, f"Settore: {industry}", align="L", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 7, sanitize(f"Settore: {industry}"), align="L", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_y(85)
     pdf.set_font("Helvetica", "", 9)
@@ -2344,11 +2365,15 @@ async def export_client_report(client_id: str):
         if not text:
             pdf_obj.ln(2)
             return
+        clean = sanitize(text)
+        if not clean.strip():
+            pdf_obj.ln(2)
+            return
         style = "B" if is_bold else ""
         pdf_obj.set_font("Helvetica", style, 10)
         # Calcola larghezza disponibile
         available_w = 210 - 20 - 10 - len(indent_prefix) * 2  # margini
-        wrapped = textwrap.wrap(text, width=int(available_w / 2.1))
+        wrapped = textwrap.wrap(clean, width=int(available_w / 2.1))
         for line in wrapped:
             pdf_obj.cell(len(indent_prefix) * 2, 5, "", new_x="END")
             pdf_obj.cell(0, 5, line, new_x="LMARGIN", new_y="NEXT")
@@ -2364,7 +2389,7 @@ async def export_client_report(client_id: str):
         pdf.set_fill_color(0, 51, 102)
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 12, f"  {title}", fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 12, sanitize(f"  {title}"), fill=True, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(4)
 
         # Linea accent
