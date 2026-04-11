@@ -2227,195 +2227,114 @@ async def get_seasonality(client_id: str):
 async def export_client_report(client_id: str):
     """Genera un report HTML completo formattato, pronto da stampare come PDF e presentare al cliente."""
     from fastapi.responses import HTMLResponse
+    import html as html_mod
     metadata = storage_service.get_metadata(client_id)
     client_name = metadata.get("name", client_id)
     industry = metadata.get("industry", "")
-    bi = metadata.get("brand_identity", {})
     today = datetime.now().strftime("%d %B %Y")
 
-    def load_json(path: str):
-        p = CLIENTS_DIR / client_id / path
-        if p.exists():
-            try:
-                return json.loads(p.read_text())
-            except Exception:
-                pass
-        return None
+    # ── Carica l'analisi completa da Supabase ──
+    analysis = storage_service.get_complete_analysis(client_id) or {}
 
-    research_text = ""
-    rp = CLIENTS_DIR / client_id / "research" / "market_research.md"
-    if rp.exists():
-        research_text = rp.read_text()
+    # ── Helper generici per renderizzare qualsiasi struttura dati ──
+    def esc(text):
+        """Escape HTML."""
+        if not text:
+            return "—"
+        return html_mod.escape(str(text)).replace("\n", "<br>")
 
-    voc = load_json("voc_analysis.json")
-    psych = load_json("psychographic.json")
-    battlecards = load_json("battlecards.json")
-    seasonality = load_json("seasonality.json")
-    visual_brief = load_json("visual_brief.json")
-    angles_raw = load_json("angles.json")
-    intel = load_json("creative_intelligence.json")
+    def render_value(value, depth=0):
+        """Renderizza qualsiasi valore in HTML leggibile."""
+        if value is None:
+            return "<span style='color:#999'>—</span>"
+        if isinstance(value, str):
+            return f"<p style='font-size:13px;color:#333;margin-bottom:6px'>{esc(value)}</p>"
+        if isinstance(value, (int, float, bool)):
+            return f"<span style='font-weight:600'>{value}</span>"
+        if isinstance(value, list):
+            if not value:
+                return "<span style='color:#999'>—</span>"
+            # Lista di stringhe semplici
+            if all(isinstance(i, str) for i in value):
+                items = "".join(
+                    f"<div style='display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;font-size:13px'>"
+                    f"<span style='width:7px;height:7px;border-radius:50%;background:#ff9e1c;flex-shrink:0;margin-top:5px'></span>"
+                    f"<span>{esc(i)}</span></div>" for i in value if i
+                )
+                return items or "<span style='color:#999'>—</span>"
+            # Lista di oggetti
+            parts = []
+            for i, item in enumerate(value):
+                if isinstance(item, dict):
+                    # Prova a usare un campo titolo se esiste
+                    title_key = next((k for k in ["name", "title", "nome", "titolo", "competitor_name", "persona_name", "month"] if k in item), None)
+                    if title_key:
+                        parts.append(f"<div style='background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:10px'>")
+                        parts.append(f"<h4 style='font-size:14px;font-weight:700;color:#003366;margin-bottom:10px'>{esc(item[title_key])}</h4>")
+                        for k, v in item.items():
+                            if k == title_key:
+                                continue
+                            label = k.replace("_", " ").title()
+                            parts.append(f"<div style='margin-bottom:8px'><strong style='font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888'>{esc(label)}</strong>{render_value(v, depth+1)}</div>")
+                        parts.append("</div>")
+                    else:
+                        parts.append(f"<div style='background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:10px'>")
+                        for k, v in item.items():
+                            label = k.replace("_", " ").title()
+                            parts.append(f"<div style='margin-bottom:8px'><strong style='font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888'>{esc(label)}</strong>{render_value(v, depth+1)}</div>")
+                        parts.append("</div>")
+                else:
+                    parts.append(render_value(item, depth+1))
+            return "".join(parts)
+        if isinstance(value, dict):
+            if not value:
+                return "<span style='color:#999'>—</span>"
+            parts = []
+            for k, v in value.items():
+                label = k.replace("_", " ").title()
+                pad = 10 if depth > 0 else 0
+                border = "3px solid #e0e0e0" if depth > 0 else "none"
+                parts.append(
+                    f"<div style='padding-left:{pad}px;border-left:{border};margin-bottom:12px;padding-bottom:4px'>"
+                    f"<strong style='font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:4px'>{esc(label)}</strong>"
+                    f"{render_value(v, depth+1)}</div>"
+                )
+            return "".join(parts)
+        return f"<span>{esc(str(value))}</span>"
 
-    def j(d, *keys, default="—"):
-        for k in keys:
-            if not isinstance(d, dict):
-                return default
-            d = d.get(k, {})
-        return d if d else default
+    def section_html(title, icon, data, color="#003366"):
+        content = render_value(data)
+        return (
+            f'<div class="section"><div class="section-header" style="border-left:4px solid {color}">'
+            f'<span class="section-icon">{icon}</span><h2>{title}</h2></div>'
+            f'<div class="section-body">{content}</div></div>'
+        )
 
-    def list_items(items, color="#ff9e1c"):
-        if not items or not isinstance(items, list):
-            return "<p style='color:#999'>—</p>"
-        return "".join(f"<div class='list-item'><span class='dot' style='background:{color}'></span><span>{i}</span></div>" for i in items if i)
+    # ── Mappa sezioni → label, icona, colore ──
+    SECTION_CONFIG = {
+        "brand_identity":        ("Brand Identity & Posizionamento", "🏷️", "#003366"),
+        "brand_values":          ("Valori del Brand", "💎", "#6366f1"),
+        "product_portfolio":     ("Portafoglio Prodotti", "📦", "#10b981"),
+        "service_vertical":      ("Analisi Verticale Servizi", "🔧", "#0ea5e9"),
+        "product_vertical":      ("Analisi Verticale Prodotti", "📊", "#8b5cf6"),
+        "customer_personas":     ("Customer Personas", "👥", "#f59e0b"),
+        "reasons_to_buy":        ("Reasons to Buy", "🎯", "#ef4444"),
+        "objections":            ("Gestione Obiezioni", "🛡️", "#6366f1"),
+        "reviews_voc":           ("Voice of Customer", "🗣️", "#f59e0b"),
+        "brand_voice":           ("Brand Voice & Guidelines", "✍️", "#ec4899"),
+        "content_matrix":        ("Matrice Contenuti", "📐", "#ff9e1c"),
+        "seasonal_roadmap":      ("Roadmap Stagionale", "📅", "#10b981"),
+        "battlecards":           ("Competitor Battlecards", "⚔️", "#ef4444"),
+        "psychographic_analysis":("Analisi Psicografica", "🧠", "#8b5cf6"),
+        "visual_brief":          ("Visual Brief", "🎨", "#ec4899"),
+    }
 
-    def section(title, icon, content, color="#003366"):
-        return f"""<div class="section"><div class="section-header" style="border-left:4px solid {color}"><span class="section-icon">{icon}</span><h2>{title}</h2></div><div class="section-body">{content}</div></div>"""
-
-    # Build HTML sections
-    sections_html = ""
-
-    # 1. Brand Identity
-    bi_html = f"""
-    <div class="grid-2">
-      <div class="card-inner"><h4>Tono di voce</h4><p>{bi.get('tone','—')}</p></div>
-      <div class="card-inner"><h4>Visual Identity</h4><p>{bi.get('visuals','—')}</p></div>
-    </div>
-    {"<div class='tag-list'>" + "".join(f"<span class='tag' style='background:{c}'>{c}</span>" for c in bi.get('colors',[])) + "</div>" if bi.get('colors') else ""}
-    {"<div class='card-inner'><h4>Settore</h4><p>" + industry + "</p></div>" if industry else ""}
-    """
-    sections_html += section("Brand Identity", "🏷️", bi_html, "#003366")
-
-    # 2. Ricerca di Mercato
-    if research_text:
-        sections_html += section("Ricerca di Mercato", "🔍", f"<div class='research-text'>{research_text[:3000].replace(chr(10),'<br>')}</div>", "#6366f1")
-
-    # 3. Voice of Customer
-    if voc and voc.get("data"):
-        d = voc["data"]
-        voc_html = f"""
-        {"<div class='highlight-box lime'><h4>ICP Summary</h4><p>" + d.get('icp_summary','') + "</p></div>" if d.get('icp_summary') else ""}
-        <div class="grid-2">
-          <div class="card-inner"><h4>🪝 Golden Hooks</h4>{list_items(d.get('golden_hooks',[]),'#f59e0b')}</div>
-          <div class="card-inner"><h4>😤 Pain Points</h4>{list_items(d.get('pain_points',[]),'#ef4444')}</div>
-          <div class="card-inner"><h4>✨ Desideri & Outcome</h4>{list_items(d.get('desires_outcomes',[]),'#10b981')}</div>
-          <div class="card-inner"><h4>🤔 Obiezioni</h4>{list_items(d.get('objections',[]),'#6366f1')}</div>
-        </div>
-        {"<div class='highlight-box orange'><h4>Insights Strategici</h4><p>" + d.get('strategic_insights','') + "</p></div>" if d.get('strategic_insights') else ""}
-        <div class="card-inner"><h4>✍️ Frasi pronte per il copy</h4>{list_items(d.get('top_copy_phrases',[]),'#ff9e1c')}</div>
-        """
-        sections_html += section("Voice of Customer — Review Mining", "🎯", voc_html, "#f59e0b")
-
-    # 4. Psychographic Analysis
-    if psych and psych.get("data"):
-        d = psych["data"]
-        l1 = d.get("level_1_primary", {})
-        l2 = d.get("level_2_secondary", {})
-        l3 = d.get("level_3_unconscious", {})
-        ci = d.get("copywriting_implications", {})
-        psych_html = f"""
-        <div class="psych-levels">
-          <div class="psych-level level1"><div class="level-badge">LIVELLO 1</div><h4>Psicografia Primaria — Consapevole</h4>
-            <p><strong>Cosa vuole:</strong> {l1.get('desires','—')}</p>
-            {list_items(l1.get('explicit_goals',[]),'#3b82f6')}
-          </div>
-          <div class="psych-level level2"><div class="level-badge">LIVELLO 2</div><h4>Psicografia Secondaria — Identitaria</h4>
-            <p><strong>Identità aspirazionale:</strong> {l2.get('aspirational_identity','—')}</p>
-            <p><strong>Tribù:</strong> {l2.get('tribe','—')}</p>
-            <p class="identity-stmt">"{l2.get('identity_statement','')}"</p>
-          </div>
-          <div class="psych-level level3"><div class="level-badge">LIVELLO 3</div><h4>Psicografia Terziaria — Inconscia</h4>
-            <p><strong>Archetipi:</strong> {l3.get('archetypes','—')}</p>
-            <p><strong>Vera ragione d'acquisto:</strong> {l3.get('real_purchase_reason','—')}</p>
-            <p><strong>Conflitto identitario risolto:</strong> {l3.get('identity_conflict','—')}</p>
-          </div>
-        </div>
-        <div class="card-inner" style="margin-top:16px"><h4>Implicazioni Copywriting</h4>
-          <p><strong>Parole che attivano:</strong> {', '.join(ci.get('words_that_activate',[]))}</p>
-          <p><strong>Parole da evitare:</strong> {', '.join(ci.get('words_to_avoid',[]))}</p>
-          <p><strong>Narrative arc:</strong> {ci.get('narrative_arc','—')}</p>
-        </div>
-        """
-        sections_html += section("Analisi Psicografica — 3 Livelli", "🧠", psych_html, "#8b5cf6")
-
-    # 5. Competitor Battlecards
-    if battlecards and battlecards.get("data"):
-        cards = battlecards["data"] if isinstance(battlecards["data"], list) else []
-        bc_html = ""
-        if battlecards.get("overall"):
-            bc_html += f"<div class='highlight-box blue'><p>{battlecards['overall']}</p></div>"
-        for bc in cards:
-            bc_html += f"""
-            <div class="battlecard">
-              <div class="battlecard-header"><h4>vs {bc.get('competitor_name','?')}</h4></div>
-              <div class="grid-2">
-                <div><h5>💪 Loro punti forti</h5>{list_items(bc.get('strengths',[]),'#ef4444')}</div>
-                <div><h5>🎯 Loro debolezze</h5>{list_items(bc.get('weaknesses',[]),'#10b981')}</div>
-              </div>
-              <div class="advantage-box"><h5>⚡ Nostro vantaggio</h5><p>{bc.get('our_advantage','—')}</p></div>
-              <div><h5>🪝 Hook per sottrarre i loro clienti</h5>{list_items(bc.get('steal_customers_hooks',[]),'#f59e0b')}</div>
-            </div>
-            """
-        sections_html += section("Competitor Battlecards", "⚔️", bc_html, "#ef4444")
-
-    # 6. Angoli di Comunicazione
-    if angles_raw and isinstance(angles_raw, list) and len(angles_raw) > 0:
-        ang_html = ""
-        for i, ang in enumerate(angles_raw[:6]):
-            title = ang.get("title", ang.get("angolo","")) if isinstance(ang, dict) else str(ang)
-            desc = ang.get("description", ang.get("descrizione","")) if isinstance(ang, dict) else ""
-            funnel = ang.get("funnel_stage","") if isinstance(ang, dict) else ""
-            ang_html += f"""<div class="angle-card"><span class="angle-num">{i+1}</span><div><h4>{title}</h4>{"<p class='funnel-badge'>" + funnel + "</p>" if funnel else ""}<p>{desc}</p></div></div>"""
-        sections_html += section("Angoli di Comunicazione", "📐", ang_html, "#ff9e1c")
-
-    # 7. Visual Brief
-    if visual_brief and visual_brief.get("data"):
-        d = visual_brief["data"]
-        vb_html = f"""
-        <div class="grid-2">
-          <div class="card-inner"><h4>Mood & Aesthetic</h4><p>{d.get('mood_aesthetic','—')}</p></div>
-          <div class="card-inner"><h4>Reference Aesthetic</h4><p>{d.get('reference_aesthetic','—')}</p></div>
-        </div>
-        <div class="grid-2">
-          <div class="card-inner"><h4>✅ Do's</h4>{list_items(d.get('dos',[]),'#10b981')}</div>
-          <div class="card-inner"><h4>❌ Don'ts</h4>{list_items(d.get('donts',[]),'#ef4444')}</div>
-        </div>
-        <div class="card-inner"><h4>🪝 Hook visivi (primi 3 secondi)</h4>{list_items(d.get('visual_hooks_3sec',[]),'#ff9e1c')}</div>
-        """
-        vs = d.get("video_structure", {})
-        if vs:
-            vb_html += f"""<div class="video-timeline"><h4>📱 Struttura Video</h4>
-              <div class="timeline-row"><span class="time-badge">0-3s</span><p>{vs.get('0_3s','—')}</p></div>
-              <div class="timeline-row"><span class="time-badge">3-15s</span><p>{vs.get('3_15s','—')}</p></div>
-              <div class="timeline-row"><span class="time-badge">15-30s</span><p>{vs.get('15_30s','—')}</p></div>
-            </div>"""
-        sections_html += section("Visual Brief", "🎨", vb_html, "#ec4899")
-
-    # 8. Seasonality Roadmap
-    if seasonality and seasonality.get("data"):
-        d = seasonality["data"]
-        months = d.get("months", [])
-        priority_color = {"alta": "#ef4444", "media": "#f59e0b", "bassa": "#6b7280"}
-        sea_html = ""
-        if d.get("year_overview"):
-            sea_html += f"<div class='highlight-box lime'><p>{d['year_overview']}</p></div>"
-        sea_html += "<div class='months-grid'>"
-        for m in months:
-            prio = m.get("budget_priority","media").lower()
-            sea_html += f"""
-            <div class="month-card" style="border-top:3px solid {priority_color.get(prio,'#6b7280')}">
-              <div class="month-name">{m.get('month','')}</div>
-              <div class="month-angle">{m.get('recommended_angle','—')}</div>
-              <div class="month-offer">💰 {m.get('offer_type','—')}</div>
-              <div class="month-urgency">⚡ {m.get('urgency_trigger','—')}</div>
-              <div class="month-priority" style="color:{priority_color.get(prio,'#6b7280')}">Budget: {prio}</div>
-            </div>"""
-        sea_html += "</div>"
-        if d.get("peak_periods"):
-            sea_html += f"<div class='highlight-box orange'><h4>Periodi di picco</h4><p>{', '.join(d['peak_periods'])}</p></div>"
-        sections_html += section("Seasonality Roadmap", "📅", sea_html, "#10b981")
-
-    # 9. Creative Intelligence (se disponibile)
-    if intel and intel.get("analysis"):
-        sections_html += section("Intelligence Ads Reali", "📊", f"<div class='research-text'>{str(intel['analysis'])[:2000].replace(chr(10),'<br>')}</div>", "#6366f1")
+    # ── Genera le sezioni HTML ──
+    sections_out = ""
+    for key, (label, icon, color) in SECTION_CONFIG.items():
+        data = analysis.get(key)
+        if data and (isinstance(data, str) or (isinstance(data, (dict, list)) and len(data) > 0)):
+            sections_out += section_html(label, icon, data, color)
 
     html = f"""<!DOCTYPE html>
 <html lang="it">
@@ -2506,7 +2425,7 @@ async def export_client_report(client_id: str):
 </div>
 <div class="orange-bar"></div>
 <div class="container">
-{sections_html}
+{sections_out}
 </div>
 <div class="footer">Analisi generata da Antigravity Operative Manager · {today}</div>
 </body>
