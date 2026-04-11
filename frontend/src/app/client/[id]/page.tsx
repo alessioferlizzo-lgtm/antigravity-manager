@@ -807,10 +807,16 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                     const a = document.createElement("a");
                                     a.href = url;
                                     a.download = `${client.name || id}-analisi-strategica.pdf`;
+                                    document.body.appendChild(a);
                                     a.click();
+                                    document.body.removeChild(a);
                                     URL.revokeObjectURL(url);
+                                } else {
+                                    const errText = await r.text().catch(() => "");
+                                    console.error("Export error:", r.status, errText);
+                                    alert(`Errore export: ${r.status}`);
                                 }
-                            } catch { /* noop */ }
+                            } catch (e) { console.error("Export fetch error:", e); alert("Errore di rete nell'export"); }
                             setExportLoading(false);
                         }}
                         disabled={exportLoading}
