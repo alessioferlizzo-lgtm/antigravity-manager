@@ -5,6 +5,7 @@ python-multipart
 httpx
 pypdf
 python-docx
+fpdf2
 json_repair
 fal_client
 Pillow

@@ -802,12 +802,11 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                             try {
                                 const r = await fetch(`${API}/clients/${id}/export`);
                                 if (r.ok) {
-                                    const html = await r.text();
-                                    const blob = new Blob([html], { type: "text/html" });
+                                    const blob = await r.blob();
                                     const url = URL.createObjectURL(blob);
                                     const a = document.createElement("a");
                                     a.href = url;
-                                    a.download = `${client.name || id}-analisi-strategica.html`;
+                                    a.download = `${client.name || id}-analisi-strategica.pdf`;
                                     a.click();
                                     URL.revokeObjectURL(url);
                                 }

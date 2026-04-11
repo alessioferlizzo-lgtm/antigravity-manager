@@ -2225,213 +2225,177 @@ async def get_seasonality(client_id: str):
 
 @app.get("/clients/{client_id}/export")
 async def export_client_report(client_id: str):
-    """Genera un report HTML completo formattato, pronto da stampare come PDF e presentare al cliente."""
-    from fastapi.responses import HTMLResponse
-    import html as html_mod
+    """Genera un report PDF con tutte le sezioni dell'analisi strategica."""
+    from fastapi.responses import Response
+    from fpdf import FPDF
+    import textwrap
+
     metadata = storage_service.get_metadata(client_id)
     client_name = metadata.get("name", client_id)
     industry = metadata.get("industry", "")
-    today = datetime.now().strftime("%d %B %Y")
+    today = datetime.now().strftime("%d/%m/%Y")
 
     # ── Carica l'analisi completa da Supabase ──
     analysis = storage_service.get_complete_analysis(client_id) or {}
 
-    # ── Helper generici per renderizzare qualsiasi struttura dati ──
-    def esc(text):
-        """Escape HTML."""
-        if not text:
-            return "—"
-        return html_mod.escape(str(text)).replace("\n", "<br>")
+    # ── Mappa sezioni ──
+    SECTION_CONFIG = [
+        ("brand_identity",        "BRAND IDENTITY & POSIZIONAMENTO"),
+        ("brand_values",          "VALORI DEL BRAND"),
+        ("product_portfolio",     "PORTAFOGLIO PRODOTTI"),
+        ("service_vertical",      "ANALISI VERTICALE SERVIZI"),
+        ("product_vertical",      "ANALISI VERTICALE PRODOTTI"),
+        ("customer_personas",     "CUSTOMER PERSONAS"),
+        ("reasons_to_buy",        "REASONS TO BUY"),
+        ("objections",            "GESTIONE OBIEZIONI"),
+        ("reviews_voc",           "VOICE OF CUSTOMER"),
+        ("brand_voice",           "BRAND VOICE & GUIDELINES"),
+        ("content_matrix",        "MATRICE CONTENUTI"),
+        ("seasonal_roadmap",      "ROADMAP STAGIONALE"),
+        ("battlecards",           "COMPETITOR BATTLECARDS"),
+        ("psychographic_analysis","ANALISI PSICOGRAFICA"),
+        ("visual_brief",          "VISUAL BRIEF"),
+    ]
 
-    def render_value(value, depth=0):
-        """Renderizza qualsiasi valore in HTML leggibile."""
+    # ── Crea PDF ──
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
+
+    # Font: usa Helvetica (built-in, supporta bene l'italiano)
+    # Per emoji/unicode usiamo un fallback testuale
+
+    # ══ COPERTINA ══
+    pdf.add_page()
+    pdf.set_fill_color(0, 51, 102)  # navy
+    pdf.rect(0, 0, 210, 100, "F")
+    pdf.set_fill_color(255, 158, 28)  # orange bar
+    pdf.rect(0, 100, 210, 3, "F")
+
+    pdf.set_y(25)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 6, "ANTIGRAVITY OPERATIVE MANAGER", align="L", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(6)
+    pdf.set_font("Helvetica", "B", 28)
+    pdf.cell(0, 14, client_name, align="L", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "", 12)
+    pdf.set_text_color(180, 200, 220)
+    pdf.cell(0, 7, "Analisi Strategica Avanzata", align="L", new_x="LMARGIN", new_y="NEXT")
+    if industry:
+        pdf.cell(0, 7, f"Settore: {industry}", align="L", new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_y(85)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(150, 170, 190)
+    pdf.cell(0, 5, f"Generato il {today} - Riservato e confidenziale", align="L", new_x="LMARGIN", new_y="NEXT")
+
+    # ══ HELPER per scrivere contenuto ricorsivamente ══
+    def flatten_value(value, indent=0):
+        """Converte qualsiasi struttura dati in linee di testo."""
+        lines = []
+        prefix = "  " * indent
         if value is None:
-            return "<span style='color:#999'>—</span>"
+            return lines
         if isinstance(value, str):
-            return f"<p style='font-size:13px;color:#333;margin-bottom:6px'>{esc(value)}</p>"
+            if value.strip():
+                lines.append((prefix, value.strip(), False))
+            return lines
         if isinstance(value, (int, float, bool)):
-            return f"<span style='font-weight:600'>{value}</span>"
+            lines.append((prefix, str(value), False))
+            return lines
         if isinstance(value, list):
-            if not value:
-                return "<span style='color:#999'>—</span>"
-            # Lista di stringhe semplici
-            if all(isinstance(i, str) for i in value):
-                items = "".join(
-                    f"<div style='display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;font-size:13px'>"
-                    f"<span style='width:7px;height:7px;border-radius:50%;background:#ff9e1c;flex-shrink:0;margin-top:5px'></span>"
-                    f"<span>{esc(i)}</span></div>" for i in value if i
-                )
-                return items or "<span style='color:#999'>—</span>"
-            # Lista di oggetti
-            parts = []
-            for i, item in enumerate(value):
-                if isinstance(item, dict):
-                    # Prova a usare un campo titolo se esiste
+            for item in value:
+                if isinstance(item, str):
+                    lines.append((prefix + "  ", f"- {item}", False))
+                elif isinstance(item, dict):
+                    # Cerca un campo titolo
                     title_key = next((k for k in ["name", "title", "nome", "titolo", "competitor_name", "persona_name", "month"] if k in item), None)
                     if title_key:
-                        parts.append(f"<div style='background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:10px'>")
-                        parts.append(f"<h4 style='font-size:14px;font-weight:700;color:#003366;margin-bottom:10px'>{esc(item[title_key])}</h4>")
+                        lines.append((prefix + "  ", item[title_key], True))
                         for k, v in item.items():
                             if k == title_key:
                                 continue
-                            label = k.replace("_", " ").title()
-                            parts.append(f"<div style='margin-bottom:8px'><strong style='font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888'>{esc(label)}</strong>{render_value(v, depth+1)}</div>")
-                        parts.append("</div>")
+                            label = k.replace("_", " ").upper()
+                            lines.append((prefix + "    ", f"{label}:", True))
+                            lines.extend(flatten_value(v, indent + 3))
+                        lines.append(("", "", False))  # spacer
                     else:
-                        parts.append(f"<div style='background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:10px'>")
                         for k, v in item.items():
-                            label = k.replace("_", " ").title()
-                            parts.append(f"<div style='margin-bottom:8px'><strong style='font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888'>{esc(label)}</strong>{render_value(v, depth+1)}</div>")
-                        parts.append("</div>")
+                            label = k.replace("_", " ").upper()
+                            lines.append((prefix + "  ", f"{label}:", True))
+                            lines.extend(flatten_value(v, indent + 2))
+                        lines.append(("", "", False))
                 else:
-                    parts.append(render_value(item, depth+1))
-            return "".join(parts)
+                    lines.extend(flatten_value(item, indent + 1))
+            return lines
         if isinstance(value, dict):
-            if not value:
-                return "<span style='color:#999'>—</span>"
-            parts = []
             for k, v in value.items():
-                label = k.replace("_", " ").title()
-                pad = 10 if depth > 0 else 0
-                border = "3px solid #e0e0e0" if depth > 0 else "none"
-                parts.append(
-                    f"<div style='padding-left:{pad}px;border-left:{border};margin-bottom:12px;padding-bottom:4px'>"
-                    f"<strong style='font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:4px'>{esc(label)}</strong>"
-                    f"{render_value(v, depth+1)}</div>"
-                )
-            return "".join(parts)
-        return f"<span>{esc(str(value))}</span>"
+                label = k.replace("_", " ").upper()
+                lines.append((prefix, f"{label}:", True))
+                lines.extend(flatten_value(v, indent + 1))
+                lines.append(("", "", False))  # spacer
+            return lines
+        lines.append((prefix, str(value), False))
+        return lines
 
-    def section_html(title, icon, data, color="#003366"):
-        content = render_value(data)
-        return (
-            f'<div class="section"><div class="section-header" style="border-left:4px solid {color}">'
-            f'<span class="section-icon">{icon}</span><h2>{title}</h2></div>'
-            f'<div class="section-body">{content}</div></div>'
-        )
+    def write_wrapped(pdf_obj, text, indent_prefix="", is_bold=False):
+        """Scrive testo con word-wrap automatico."""
+        if not text:
+            pdf_obj.ln(2)
+            return
+        style = "B" if is_bold else ""
+        pdf_obj.set_font("Helvetica", style, 10)
+        # Calcola larghezza disponibile
+        available_w = 210 - 20 - 10 - len(indent_prefix) * 2  # margini
+        wrapped = textwrap.wrap(text, width=int(available_w / 2.1))
+        for line in wrapped:
+            pdf_obj.cell(len(indent_prefix) * 2, 5, "", new_x="END")
+            pdf_obj.cell(0, 5, line, new_x="LMARGIN", new_y="NEXT")
 
-    # ── Mappa sezioni → label, icona, colore ──
-    SECTION_CONFIG = {
-        "brand_identity":        ("Brand Identity & Posizionamento", "🏷️", "#003366"),
-        "brand_values":          ("Valori del Brand", "💎", "#6366f1"),
-        "product_portfolio":     ("Portafoglio Prodotti", "📦", "#10b981"),
-        "service_vertical":      ("Analisi Verticale Servizi", "🔧", "#0ea5e9"),
-        "product_vertical":      ("Analisi Verticale Prodotti", "📊", "#8b5cf6"),
-        "customer_personas":     ("Customer Personas", "👥", "#f59e0b"),
-        "reasons_to_buy":        ("Reasons to Buy", "🎯", "#ef4444"),
-        "objections":            ("Gestione Obiezioni", "🛡️", "#6366f1"),
-        "reviews_voc":           ("Voice of Customer", "🗣️", "#f59e0b"),
-        "brand_voice":           ("Brand Voice & Guidelines", "✍️", "#ec4899"),
-        "content_matrix":        ("Matrice Contenuti", "📐", "#ff9e1c"),
-        "seasonal_roadmap":      ("Roadmap Stagionale", "📅", "#10b981"),
-        "battlecards":           ("Competitor Battlecards", "⚔️", "#ef4444"),
-        "psychographic_analysis":("Analisi Psicografica", "🧠", "#8b5cf6"),
-        "visual_brief":          ("Visual Brief", "🎨", "#ec4899"),
-    }
-
-    # ── Genera le sezioni HTML ──
-    sections_out = ""
-    for key, (label, icon, color) in SECTION_CONFIG.items():
+    # ══ SEZIONI ══
+    for key, title in SECTION_CONFIG:
         data = analysis.get(key)
-        if data and (isinstance(data, str) or (isinstance(data, (dict, list)) and len(data) > 0)):
-            sections_out += section_html(label, icon, data, color)
+        if not data or (isinstance(data, (dict, list)) and len(data) == 0):
+            continue
 
-    html = f"""<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Analisi Strategica — {client_name}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: 'Inter', sans-serif; background: #f8f9fa; color: #1a1a2e; font-size: 14px; line-height: 1.6; }}
-  .cover {{ background: linear-gradient(135deg, #003366 0%, #001a33 100%); color: white; padding: 80px 60px; min-height: 280px; display: flex; flex-direction: column; justify-content: space-between; }}
-  .cover-top {{ display: flex; justify-content: space-between; align-items: flex-start; }}
-  .cover-brand {{ font-size: 11px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 8px; }}
-  .cover h1 {{ font-size: 42px; font-weight: 900; letter-spacing: -.02em; margin-bottom: 8px; }}
-  .cover-subtitle {{ font-size: 16px; color: rgba(255,255,255,.65); }}
-  .cover-meta {{ font-size: 12px; color: rgba(255,255,255,.4); margin-top: 40px; }}
-  .orange-bar {{ background: #ff9e1c; height: 5px; }}
-  .container {{ max-width: 960px; margin: 0 auto; padding: 40px 24px; }}
-  .section {{ background: white; border-radius: 12px; margin-bottom: 28px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }}
-  .section-header {{ display: flex; align-items: center; gap: 12px; padding: 20px 24px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }}
-  .section-icon {{ font-size: 20px; }}
-  .section-header h2 {{ font-size: 16px; font-weight: 700; color: #003366; letter-spacing: -.01em; }}
-  .section-body {{ padding: 24px; }}
-  .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }}
-  .card-inner {{ background: #f8f9fa; border-radius: 8px; padding: 16px; }}
-  .card-inner h4 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 8px; }}
-  .card-inner p {{ font-size: 13px; color: #333; }}
-  .highlight-box {{ border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; }}
-  .highlight-box.lime {{ background: rgba(199,239,0,.08); border: 1px solid rgba(199,239,0,.3); }}
-  .highlight-box.orange {{ background: rgba(255,158,28,.06); border: 1px solid rgba(255,158,28,.25); }}
-  .highlight-box.blue {{ background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2); }}
-  .highlight-box h4 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 6px; }}
-  .list-item {{ display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; font-size: 13px; }}
-  .dot {{ width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }}
-  .tag-list {{ display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }}
-  .tag {{ font-size: 12px; font-weight: 700; color: white; padding: 4px 12px; border-radius: 20px; }}
-  .research-text {{ font-size: 12.5px; line-height: 1.8; color: #444; white-space: pre-wrap; }}
-  .psych-levels {{ display: flex; flex-direction: column; gap: 16px; }}
-  .psych-level {{ border-radius: 10px; padding: 20px; }}
-  .level1 {{ background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.15); }}
-  .level2 {{ background: rgba(139,92,246,.05); border: 1px solid rgba(139,92,246,.15); }}
-  .level3 {{ background: rgba(236,72,153,.05); border: 1px solid rgba(236,72,153,.15); }}
-  .level-badge {{ font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #888; margin-bottom: 8px; }}
-  .psych-level h4 {{ font-size: 13px; font-weight: 700; margin-bottom: 12px; }}
-  .psych-level p {{ font-size: 13px; margin-bottom: 6px; }}
-  .identity-stmt {{ font-style: italic; font-weight: 600; color: #6366f1; }}
-  .battlecard {{ background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 16px; }}
-  .battlecard-header h4 {{ font-size: 15px; font-weight: 700; color: #003366; margin-bottom: 14px; }}
-  .battlecard h5 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 8px; }}
-  .advantage-box {{ background: rgba(199,239,0,.1); border: 1px solid rgba(199,239,0,.3); border-radius: 8px; padding: 14px; margin: 14px 0; }}
-  .advantage-box h5 {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 6px; }}
-  .angle-card {{ display: flex; gap: 16px; align-items: flex-start; padding: 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; }}
-  .angle-num {{ background: #003366; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }}
-  .angle-card h4 {{ font-size: 14px; font-weight: 700; margin-bottom: 4px; }}
-  .angle-card p {{ font-size: 13px; color: #555; }}
-  .funnel-badge {{ display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #ff9e1c; background: rgba(255,158,28,.1); padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; }}
-  .video-timeline {{ margin-top: 16px; }}
-  .video-timeline h4 {{ font-size: 13px; font-weight: 700; margin-bottom: 12px; }}
-  .timeline-row {{ display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }}
-  .time-badge {{ background: #003366; color: white; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }}
-  .months-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }}
-  .month-card {{ background: #f8f9fa; border-radius: 8px; padding: 14px; font-size: 12px; }}
-  .month-name {{ font-weight: 800; font-size: 13px; color: #003366; margin-bottom: 6px; }}
-  .month-angle {{ font-weight: 600; margin-bottom: 4px; color: #333; }}
-  .month-offer {{ color: #555; margin-bottom: 3px; }}
-  .month-urgency {{ color: #555; margin-bottom: 4px; }}
-  .month-priority {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }}
-  .footer {{ text-align: center; padding: 40px; color: #bbb; font-size: 12px; }}
-  @media print {{
-    body {{ background: white; }}
-    .section {{ box-shadow: none; border: 1px solid #eee; page-break-inside: avoid; }}
-    .cover {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
-    .months-grid {{ grid-template-columns: repeat(3,1fr); }}
-  }}
-</style>
-</head>
-<body>
-<div class="cover">
-  <div class="cover-top">
-    <div>
-      <div class="cover-brand">Antigravity Operative Manager</div>
-      <h1>{client_name}</h1>
-      <div class="cover-subtitle">Analisi Strategica Avanzata — Meta Ads & Brand Intelligence</div>
-    </div>
-  </div>
-  <div class="cover-meta">Generato il {today} · Riservato e confidenziale</div>
-</div>
-<div class="orange-bar"></div>
-<div class="container">
-{sections_out}
-</div>
-<div class="footer">Analisi generata da Antigravity Operative Manager · {today}</div>
-</body>
-</html>"""
+        # Intestazione sezione
+        pdf.add_page()
+        pdf.set_fill_color(0, 51, 102)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 12, f"  {title}", fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(4)
 
-    return HTMLResponse(content=html, media_type="text/html")
+        # Linea accent
+        pdf.set_fill_color(255, 158, 28)
+        pdf.rect(10, pdf.get_y(), 40, 1.5, "F")
+        pdf.ln(6)
+
+        # Contenuto
+        pdf.set_text_color(30, 30, 30)
+        lines = flatten_value(data)
+        for prefix, text, is_bold in lines:
+            if pdf.get_y() > 265:
+                pdf.add_page()
+            write_wrapped(pdf, text, prefix, is_bold)
+
+    # ══ FOOTER ══
+    pdf.add_page()
+    pdf.set_y(130)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_text_color(150, 150, 150)
+    pdf.cell(0, 8, f"Report generato da Antigravity Operative Manager", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, today, align="C", new_x="LMARGIN", new_y="NEXT")
+
+    # ── Output PDF ──
+    pdf_bytes = pdf.output()
+    filename = f"{client_name.replace(' ', '_')}-analisi-strategica.pdf"
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 # ══════════════════════════════════════════════════════════
