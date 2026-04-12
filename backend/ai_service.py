@@ -509,12 +509,26 @@ PREFERENZE E REGOLE:
 
 === PROTOCOLLO OBBLIGATORIO: TRASMISSIONE DELLA QUALITÀ (CONCISIONE ESTREMA) ===
 REGOLA ASSOLUTA: Trasmetti la qualità tramite dettagli concreti (Show, Don't Tell), ma DEVI essere chirurgico e veloce. Non stiamo scrivendo un film, ma uno script per un video da 20-30 secondi.
-- NO (Assertivo/Pigro): "Abbiamo cibo di qualità." 
+- NO (Assertivo/Pigro): "Abbiamo cibo di qualità."
 - NO (Verboso/Film): "Senti il profumo della brace che sale lenta mentre la croccantezza del carré appena servito delizia il palato." (TROPPO LUNGO)
 - SÌ (Video Style): "Senti la croccantezza del carré appena uscito dalla brace." (VELOCE E PUNCHY)
 
-STRUTTURA: Hook (2-3 sec) → Sviluppo (15-20 sec) → CTA (3-5 sec). Totale: 20-35 secondi parlati.
-FORMATO: Paragrafi di 2-3 frasi separati da una riga vuota. Non scrivere ogni frase su una riga separata.{' Per il framework, scrivi il nome sezione in MAIUSCOLO come riga separata.' if script_instructions else ''}
+⚠️ STRUTTURA OBBLIGATORIA — INSPIRATIONAL STAIR (Borzacchiello):
+Lo script DEVE seguire ESATTAMENTE queste 5 fasi nell'ordine indicato. Ogni fase è breve (pochi secondi parlati) ma DEVE essere presente e riconoscibile:
+
+1. INDIFFERENT (2-3 sec): Schiaffo cognitivo. Ferma lo scroll con verità scomoda, dato che spaventa, domanda che colpisce un nervo. Deve PUNGERE.
+2. INTERESTING (5-8 sec): Empatia. Descrivi un momento PRECISO della vita del target — una scena che solo chi ha vissuto quel problema riconosce. Fai sentire il target VISTO. Usa "tu".
+3. INSUPERABLE (5-8 sec): Presenta la soluzione con FATTI concreti. Il differenziatore unico. Numeri, prove, dettagli reali — niente aggettivi vuoti.
+4. IMPERATIVE (2-3 sec): CTA secca e autoritaria. "Se vuoi X, fai Y." Zero ambiguità, zero "potresti provare".
+5. IRRESISTIBLE (2-3 sec): Sfida l'utente. Ribalta il potere: non sei tu che vendi, è lui che deve meritarlo. Scarsità reale o filtro di selezione.
+
+REGOLE:
+- Segui ESATTAMENTE questa sequenza. NON saltare nessuna fase.
+- Ogni fase deve essere riconoscibile nel testo (senza etichette visibili come [FASE 1]).
+- NON usare Hook→Sviluppo→CTA — usa Borzacchiello.
+- Totale: 20-35 secondi parlati.
+
+FORMATO: Paragrafi di 2-3 frasi separati da una riga vuota. Non scrivere ogni frase su una riga separata.
 STILE: Naturale come un vocale. Zero clichés. Zero "Scopri di più"."""
 
         messages = [{"role": "user", "content": prompt}]
