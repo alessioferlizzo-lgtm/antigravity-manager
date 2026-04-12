@@ -477,62 +477,101 @@ IMPORTANTE: Questo script DEVE differire completamente dalle altre variazioni ne
             except Exception as _ne:
                 print(f"⚠️  Notion RAG non disponibile: {_ne}")
 
-        prompt = f"""SEI UN COPYWRITER ESPERTO DI VIDEO BREVI. Il tuo output sarà letto direttamente in camera.
+        # ══════════════════════════════════════════════════════════
+        # SYSTEM PROMPT — Contesto e conoscenza (background)
+        # ══════════════════════════════════════════════════════════
+        sep = "=" * 60
+        sys_parts = []
 
-REGOLA ASSOLUTA — LEGGI PRIMA DI TUTTO:
-Scrivi ESCLUSIVAMENTE le parole che vengono dette nel video.
-NON scrivere: "Ragionamento:", "Validazione:", "Note:", "Analisi:", "Framework:", commenti, spiegazioni, o qualsiasi testo che non sia lo script stesso.
-Se scrivi qualcosa che non sono le parole del video, hai fallito.
+        sys_parts.append(
+            "Sei un copywriter di video brevi. Il tuo output sarà letto direttamente in camera.\n\n"
+            "REGOLA ASSOLUTA:\n"
+            "Scrivi ESCLUSIVAMENTE le parole che vengono dette nel video.\n"
+            "NON scrivere: ragionamenti, validazioni, note, analisi, commenti, spiegazioni.\n"
+            "Se scrivi qualcosa che non sono le parole del video, hai fallito.\n\n"
+            "PRIMA DI SCRIVERE — LEGGI I DATI:\n"
+            "Leggi CUSTOMER PERSONAS nei dati del cliente: quelle sono le persone a cui parli.\n"
+            "Lo script deve parlare AL TARGET descritto nelle personas, usando i loro dolori, desideri e linguaggio."
+        )
 
-⚠️ PRIMA DI SCRIVERE — LEGGI I DATI:
-Leggi CUSTOMER PERSONAS nel contesto: quelle sono le persone a cui parli. Lo script deve parlare AL TARGET descritto nelle personas, usando i loro dolori, desideri e linguaggio.
+        # Dati strategici del cliente
+        sys_parts.append(f"{sep}\nDATI DEL CLIENTE\n{sep}\n{research}")
 
-{user_instructions}
+        # Knowledge: Borzacchiello + regole scrittura Vignali + Dosio
+        sys_parts.append(get_script_knowledge())
 
-ANGOLO: {angle['title']}
-{angle.get('description', '')}
+        # Notion RAG (framework e swipe file)
+        if framework_context:
+            sys_parts.append(framework_context)
+        if swipe_context:
+            sys_parts.append(swipe_context)
 
-CONTESTO DI SUPPORTO (usa per dettagli e credibilità):
-{research}
+        system_prompt = "\n\n".join(sys_parts)
 
-{get_script_knowledge()}
+        # ══════════════════════════════════════════════════════════
+        # USER MESSAGE — Istruzioni operative (l'AI legge questo per ULTIMO)
+        # ══════════════════════════════════════════════════════════
+        user_parts = []
 
-PREFERENZE E REGOLE:
-- Tono: {preferences.get('tone', 'naturale e diretto')}
-- Evita: {', '.join(preferences.get('avoid_words', [])) or 'nessuna'}
-{feedback_context}
-{user_instructions}
-{framework_context}
-{swipe_context}
+        # Angolo
+        user_parts.append(f"ANGOLO: {angle['title']}")
+        if angle.get('description'):
+            user_parts.append(angle['description'])
 
-{variation_block}
+        # Istruzioni utente (menu, idea, evento)
+        if user_instructions:
+            user_parts.append(user_instructions)
 
-=== PROTOCOLLO OBBLIGATORIO: TRASMISSIONE DELLA QUALITÀ (CONCISIONE ESTREMA) ===
-REGOLA ASSOLUTA: Trasmetti la qualità tramite dettagli concreti (Show, Don't Tell), ma DEVI essere chirurgico e veloce. Non stiamo scrivendo un film, ma uno script per un video da 20-30 secondi.
-- NO (Assertivo/Pigro): "Abbiamo cibo di qualità."
-- NO (Verboso/Film): "Senti il profumo della brace che sale lenta mentre la croccantezza del carré appena servito delizia il palato." (TROPPO LUNGO)
-- SÌ (Video Style): "Senti la croccantezza del carré appena uscito dalla brace." (VELOCE E PUNCHY)
+        # Rifinitura
+        if refinement_context:
+            user_parts.append(refinement_context)
 
-⚠️ STRUTTURA OBBLIGATORIA — INSPIRATIONAL STAIR (Borzacchiello):
-Lo script DEVE seguire ESATTAMENTE queste 5 fasi nell'ordine indicato. Ogni fase è breve (pochi secondi parlati) ma DEVE essere presente e riconoscibile:
+        # Preferenze
+        tone = preferences.get('tone', 'naturale e diretto')
+        avoid = ', '.join(preferences.get('avoid_words', [])) or 'nessuna'
+        user_parts.append(f"TONO: {tone}\nEVITA: {avoid}")
+        if feedback_context:
+            user_parts.append(feedback_context)
 
-1. INDIFFERENT (2-3 sec): Schiaffo cognitivo. Ferma lo scroll con verità scomoda, dato che spaventa, domanda che colpisce un nervo. Deve PUNGERE.
-2. INTERESTING (5-8 sec): Empatia. Descrivi un momento PRECISO della vita del target — una scena che solo chi ha vissuto quel problema riconosce. Fai sentire il target VISTO. Usa "tu".
-3. INSUPERABLE (5-8 sec): Presenta la soluzione con FATTI concreti. Il differenziatore unico. Numeri, prove, dettagli reali — niente aggettivi vuoti.
-4. IMPERATIVE (2-3 sec): CTA secca e autoritaria. "Se vuoi X, fai Y." Zero ambiguità, zero "potresti provare".
-5. IRRESISTIBLE (2-3 sec): Sfida l'utente. Ribalta il potere: non sei tu che vendi, è lui che deve meritarlo. Scarsità reale o filtro di selezione.
+        # Variazione creativa (solo per variazioni multiple)
+        if total_variations > 1:
+            var = variation_directives[variation_index % len(variation_directives)]
+            user_parts.append(
+                f"VARIAZIONE {variation_index + 1}/{total_variations}:\n"
+                f"Per la Fase 1 (INDIFFERENT) usa questo approccio: {var['hook_type']} — {var['opening']}\n"
+                f"Il tono generale di questo script: {var['tone']}\n"
+                f"Ma la struttura a 5 fasi Borzacchiello resta IDENTICA."
+            )
 
-REGOLE:
-- Segui ESATTAMENTE questa sequenza. NON saltare nessuna fase.
-- Ogni fase deve essere riconoscibile nel testo (senza etichette visibili come [FASE 1]).
-- NON usare Hook→Sviluppo→CTA — usa Borzacchiello.
-- Totale: 20-35 secondi parlati.
+        # STRUTTURA OBBLIGATORIA — ULTIMA cosa che l'AI legge
+        user_parts.append(
+            "STRUTTURA OBBLIGATORIA — INSPIRATIONAL STAIR (Borzacchiello):\n"
+            "Lo script DEVE seguire ESATTAMENTE queste 5 fasi, in quest'ordine:\n\n"
+            "1. INDIFFERENT (2-3 sec): Schiaffo cognitivo. Verita scomoda, dato che spaventa, "
+            "domanda che colpisce un nervo. Deve PUNGERE — non essere generico.\n"
+            "2. INTERESTING (5-8 sec): Empatia. Descrivi un momento PRECISO della vita del target "
+            "— una scena che solo chi ha vissuto quel problema riconosce. Usa 'tu'. "
+            "Fai sentire il target VISTO.\n"
+            "3. INSUPERABLE (5-8 sec): La soluzione con FATTI concreti. Il differenziatore unico "
+            "del brand. Dettagli sensoriali reali, non aggettivi vuoti. Show don't tell.\n"
+            "4. IMPERATIVE (2-3 sec): CTA secca. 'Se vuoi X, fai Y.' Zero ambiguita.\n"
+            "5. IRRESISTIBLE (2-3 sec): Sfida l'utente. Non sei tu che vendi, e lui che deve meritarlo.\n\n"
+            "REGOLE:\n"
+            "- Segui ESATTAMENTE questa sequenza. NON saltare nessuna fase.\n"
+            "- Ogni fase deve essere riconoscibile (senza etichette visibili).\n"
+            "- Trasmetti qualita con DETTAGLI CONCRETI, non aggettivi.\n"
+            "- Totale: 20-35 secondi parlati. Sii chirurgico.\n"
+            "- FORMATO: Paragrafi di 2-3 frasi separati da riga vuota.\n"
+            "- STILE: Naturale come un vocale. Zero cliches. Zero 'Scopri di piu'.\n\n"
+            "Rispondi SOLO con lo script. Zero premesse, zero commenti."
+        )
 
-FORMATO: Paragrafi di 2-3 frasi separati da una riga vuota. Non scrivere ogni frase su una riga separata.
-STILE: Naturale come un vocale. Zero clichés. Zero "Scopri di più"."""
+        user_msg = "\n\n".join(user_parts)
 
-        messages = [{"role": "user", "content": prompt}]
-        # Increase temperature per variation for genuine diversity
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_msg}
+        ]
         temp = min(0.75 + (variation_index * 0.08), 1.0)
         return await self._call_ai("anthropic/claude-3.7-sonnet", messages, temperature=temp)
 
