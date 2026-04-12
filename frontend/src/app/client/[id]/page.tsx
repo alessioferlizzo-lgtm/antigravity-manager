@@ -983,7 +983,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
                                              })}
                                          </div>
 
-                                         <div style={{ display: "flex", gap: 6, alignItems: "center", background: "#fff", padding: "4px 8px", borderRadius: 8, border: "1px dashed var(--border)" }}>
+                                         <div style={{ display: "flex", gap: 6, alignItems: "center", background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: 8, border: "1px dashed var(--border)" }}>
                                              <input 
                                                  className="input" 
                                                  style={{ border: "none", background: "transparent", fontSize: 12, flex: 2 }} 
