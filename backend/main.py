@@ -1528,9 +1528,8 @@ async def generate_copy(client_id: str, request: CopyRequest):
     # LAYER 2 — Livello di consapevolezza (se selezionato)
     # Dice all'AI COME parlare al target in base a dove si trova
     # ═══════════════════════════════════════════════════════
-    awareness_section = ""
-    if request.awareness_level:
-        awareness_section = get_awareness_context(request.awareness_level)
+    # Awareness: gestita come AWARENESS_BRIEFING nel user message (concetto Schwartz).
+    # I file di consapevolezza con leve chimiche NON vengono iniettati nel system prompt.
 
     # ═══════════════════════════════════════════════════════
     # LAYER 3 — Framework (se selezionato)
@@ -1676,69 +1675,77 @@ async def generate_copy(client_id: str, request: CopyRequest):
         ),
     }
 
-    # ── Briefing sulla persona per livello di consapevolezza ──
-    # NON sono regole di scrittura (quello lo fa il framework).
-    # Descrivono CHI è la persona che leggerà questo copy:
-    # cosa sa, cosa pensa, cosa sente, cosa cerca in questo momento.
-    # Se l'AI capisce davvero chi ha davanti, scrive il messaggio giusto.
+    # ── Livelli di consapevolezza (Schwartz) — COSA comunica il messaggio ──
+    # Il framework decide la STRUTTURA (come scrivere).
+    # Il livello di consapevolezza decide il CONCETTO (cosa comunicare).
+    # A ogni livello il messaggio trasporta un'informazione DIVERSA.
     AWARENESS_BRIEFING = {
         "unaware": (
-            "CHI LEGGE QUESTO COPY — STATO MENTALE DEL TARGET:\n"
-            "Questa persona NON sa di avere un problema. Non sta cercando nulla, non conosce il brand, "
-            "non conosce il settore. Sta scrollando distrattamente il feed. Il suo cervello è in modalità "
-            "risparmio energetico — filtra tutto ciò che non sembra urgente o sorprendente.\n"
-            "Non ha un bisogno percepito. Non ha un dolore cosciente. Se gli parli del prodotto, "
-            "non capisce perché dovrebbe interessargli. L'unica cosa che può fermarlo è qualcosa "
-            "che rompe il suo schema mentale: un dato che non si aspettava, una verità scomoda "
-            "che lo riguarda senza che lo sapesse, una domanda che lo costringe a pensare.\n"
-            "Stai parlando a qualcuno che non ti sta ascoltando. Devi prima guadagnarti la sua attenzione."
+            "LIVELLO CONSAPEVOLEZZA: UNAWARE — Il target NON sa di avere un problema.\n\n"
+            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
+            "Il copy parla di un'EMOZIONE o un'IDENTITÀ che il target già vive, "
+            "senza menzionare il prodotto, il brand o il problema.\n"
+            "Stai vendendo una CONVERSAZIONE, non una soluzione.\n\n"
+            "REGOLA FONDAMENTALE: Il nome del brand e il prodotto NON compaiono nel copy, "
+            "o compaiono solo nell'ultima riga come scoperta naturale. "
+            "L'hook e il corpo parlano di chi è il target, di cosa desidera, "
+            "di un'emozione universale — MAI del prodotto.\n\n"
+            "ESEMPIO CONCETTUALE (altro settore):\n"
+            "\"Perché alcune persone mangiano quello che vogliono senza ingrassare mai\" "
+            "→ curiosità pura, zero prodotto, zero problema dichiarato."
         ),
         "problem_aware": (
-            "CHI LEGGE QUESTO COPY — STATO MENTALE DEL TARGET:\n"
-            "Questa persona SENTE che qualcosa non va. Ha un disagio — fisico, emotivo, economico — "
-            "ma non sa ancora come risolverlo. Sta cercando qualcuno che dia un nome al suo dolore.\n"
-            "È frustrata. Ha provato a capire da sola ma non ha trovato risposte chiare. "
-            "Quando legge qualcosa che descrive esattamente la sua situazione, si ferma — "
-            "perché finalmente qualcuno la CAPISCE.\n"
-            "Non conosce il brand. Non sa che esiste una soluzione specifica. "
-            "Ma è aperta ad ascoltare chiunque dimostri di capire davvero cosa sta vivendo. "
-            "Cerca empatia e comprensione prima di qualsiasi proposta."
+            "LIVELLO CONSAPEVOLEZZA: PROBLEM AWARE — Il target sente un disagio ma non sa come risolverlo.\n\n"
+            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
+            "Il copy DÀ UN NOME al dolore/frustrazione del target. "
+            "Lo descrive con le sue parole esatte, così specifico che pensa 'questo parla di me'.\n"
+            "Il prodotto è ancora INVISIBILE. Non proponi nulla — cristallizzi il problema.\n\n"
+            "REGOLA FONDAMENTALE: Il copy si concentra SOLO sul problema. "
+            "Non presentare il brand, non spiegare la soluzione, non fare pitch. "
+            "Il massimo consentito è un accenno finale a 'esiste un modo' senza nominare il brand.\n\n"
+            "ESEMPIO CONCETTUALE (altro settore):\n"
+            "\"Quel calo di energia dopo pranzo ti sta costando 2 ore produttive al giorno\" "
+            "→ nomina il dolore specifico, zero soluzione."
         ),
         "solution_aware": (
-            "CHI LEGGE QUESTO COPY — STATO MENTALE DEL TARGET:\n"
-            "Questa persona sa di avere un problema e sa che esistono soluzioni. "
-            "Sta attivamente CONFRONTANDO le opzioni disponibili. È in modalità analitica.\n"
-            "Legge recensioni, confronta prezzi, guarda casi studio. Cerca la prova che una soluzione "
-            "sia migliore delle altre. Potrebbe aver già sentito parlare del brand, ma non è convinta "
-            "che sia la scelta giusta PER LEI.\n"
-            "Vuole dati concreti, differenziatori reali, risultati misurabili. "
-            "Le affermazioni generiche ('il migliore', 'qualità superiore') la lasciano indifferente — "
-            "ha già sentito le stesse parole da tutti gli altri. Cerca qualcosa che gli altri NON offrono."
+            "LIVELLO CONSAPEVOLEZZA: SOLUTION AWARE — Il target sa che esistono soluzioni e le sta confrontando.\n\n"
+            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
+            "Il copy presenta il MECCANISMO UNICO — l'approccio, il metodo, il 'come' "
+            "che distingue questo brand dagli altri. Cosa fa di DIVERSO rispetto alle alternative?\n"
+            "Il target sta confrontando: devi vincere il confronto con FATTI e DIFFERENZIATORI.\n\n"
+            "REGOLA FONDAMENTALE: Il copy spiega PERCHÉ questo approccio è diverso dagli altri. "
+            "Dati concreti, caratteristiche uniche, risultati misurabili. "
+            "Il brand compare come portatore del meccanismo unico.\n\n"
+            "ESEMPIO CONCETTUALE (altro settore):\n"
+            "\"L'unico integratore con biodisponibilità 3x — certificato da laboratori indipendenti\" "
+            "→ meccanismo unico + prova concreta."
         ),
         "product_aware": (
-            "CHI LEGGE QUESTO COPY — STATO MENTALE DEL TARGET:\n"
-            "Questa persona CONOSCE GIÀ il brand e il prodotto. Sa cosa offri, ha visto i contenuti, "
-            "forse ha già visitato il sito più volte. È quasi convinta, ma ESITA.\n"
-            "L'indecisione la blocca: 'E se non funziona per me?', 'E se spendo soldi per niente?', "
-            "'Forse aspetto ancora un po'...'. Ha bisogno di qualcuno che elimini il dubbio con certezza.\n"
-            "Non ha bisogno di spiegazioni su chi sei o cosa fai — lo sa già. Non ha bisogno che gli "
-            "descrivi il problema — lo ha già superato mentalmente. Ha bisogno di AUTORITÀ: qualcuno "
-            "che le dica con fermezza che questa è la strada giusta e che deve agire ora.\n"
-            "Stai parlando a qualcuno che è già sulla porta. Non devi convincerlo ad entrare nel negozio — "
-            "devi dargli la sicurezza di completare l'acquisto."
+            "LIVELLO CONSAPEVOLEZZA: PRODUCT AWARE — Il target conosce GIÀ il brand e il prodotto.\n\n"
+            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
+            "Il copy PRESUPPONE che il target sappia già chi sei e cosa offri. "
+            "Non spiegare, non presentarti. Risolvi l'ultimo dubbio: "
+            "social proof decisivo, obiezioni smontate, garanzie, risk reversal.\n"
+            "Stai parlando a qualcuno che è sulla porta — dagli la sicurezza per entrare.\n\n"
+            "REGOLA FONDAMENTALE: Il brand viene citato come qualcosa di GIÀ NOTO. "
+            "Zero spiegazioni su cosa fai o come funziona — lo sa già. "
+            "Il copy ruota attorno a PROVE e CERTEZZA: testimonial, numeri, garanzie.\n\n"
+            "ESEMPIO CONCETTUALE (altro settore):\n"
+            "\"14.000 clienti hanno già scelto MetaBoost — ecco cosa è cambiato dalla versione 2\" "
+            "→ presuppone conoscenza, aggiunge prova decisiva."
         ),
         "most_aware": (
-            "CHI LEGGE QUESTO COPY — STATO MENTALE DEL TARGET:\n"
-            "Questa persona è PRONTA. Conosce il brand, il prodotto, i benefici. Ha già deciso "
-            "mentalmente, ma non ha ancora agito. Aspetta il momento giusto — un'offerta, un segnale, "
-            "una spinta.\n"
-            "È in tensione pre-acquisto: sa cosa vuole ma rimanda per pigrizia, paura dell'impegno, "
-            "o semplicemente perché nessuno le ha detto 'fallo ORA'. Ha bisogno di urgenza reale "
-            "e di sentirsi sfidata.\n"
-            "Non servono informazioni — le ha già tutte. Non servono prove — ci crede già. "
-            "Serve una provocazione: 'Sei serio o stai solo guardando?'. Serve un deadline: "
-            "'Questa opportunità scade'. Serve la sensazione che se non agisce adesso, perde qualcosa "
-            "che non torna."
+            "LIVELLO CONSAPEVOLEZZA: MOST AWARE — Il target è pronto, aspetta solo la spinta finale.\n\n"
+            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
+            "Il copy è PURA OFFERTA. Prezzo, sconto, deadline, bonus, scarsità. "
+            "Non servono spiegazioni, non servono prove — il target sa già tutto.\n"
+            "Serve urgenza reale e un motivo per agire ORA invece che domani.\n\n"
+            "REGOLA FONDAMENTALE: Il copy è breve, diretto, transazionale. "
+            "L'informazione principale è L'OFFERTA, non il brand o il prodotto. "
+            "Deadline concreta, quantità limitata, o conseguenza di non agire ora.\n\n"
+            "ESEMPIO CONCETTUALE (altro settore):\n"
+            "\"MetaBoost -40%, 3 bottiglie + spedizione gratis. Solo oggi.\" "
+            "→ pura offerta, zero educazione."
         ),
     }
 
@@ -1780,9 +1787,10 @@ async def generate_copy(client_id: str, request: CopyRequest):
     # Regole di scrittura (sempre)
     sys_parts.append(f"{sep}\nREGOLE DI SCRITTURA\n{sep}\n{writing_knowledge}")
 
-    # Awareness (se selezionato)
-    if awareness_section:
-        sys_parts.append(f"{sep}\nLIVELLO DI CONSAPEVOLEZZA DEL TARGET\n{sep}\n{awareness_section}")
+    # Awareness: il concetto da comunicare è nel user message (AWARENESS_BRIEFING).
+    # NON iniettare i file di consapevolezza nel system prompt — le leve chimiche
+    # (cortisolo, serotonina, ecc.) distraggono l'AI dal concetto Schwartz e producono
+    # lo stesso messaggio a tutti i livelli, solo con emozioni diverse.
 
     # Framework knowledge di approfondimento (se selezionato)
     if framework_section:
