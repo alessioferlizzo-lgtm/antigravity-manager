@@ -14,6 +14,15 @@ La domanda a cui risponde il copy è: "Ma funziona davvero? È sicuro? Vale il p
 
 Il brand viene citato come qualcosa di GIÀ NOTO — non viene presentato, viene confermato. Il copy parla come se il target fosse un amico che conosce già il brand: "Sai già come funziona. Ecco perché funziona davvero."
 
+## Cosa NON fare a questo livello
+
+- NON presentare il brand come se fosse la prima volta — ti conosce già
+- NON spiegare cosa fai o come funziona — lo sa già
+- NON parlare del problema come se il target non lo conoscesse
+- NON fare confronti con alternative — ha già scelto te, deve solo convincersi
+- NON usare urgenza o offerte — non è pronto a comprare, è pronto a fidarsi
+- NON creare curiosità generica — il target vuole certezze, non suspense
+
 ## Esempi pratici (altri settori)
 
 **Software per copywriter:**

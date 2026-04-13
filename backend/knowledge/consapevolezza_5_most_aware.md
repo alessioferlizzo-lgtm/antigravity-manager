@@ -10,9 +10,20 @@ Il copy è PURA OFFERTA. Prezzo, sconto, deadline, bonus, scarsità. Non servono
 
 La domanda a cui risponde il copy è: "Perché devo comprare ADESSO e non domani?"
 
+IMPORTANTE: l'urgenza deve essere REALE. Se il brand ha una promozione attiva, usala. Se ha posti limitati, usali. Se non c'è nessuna urgenza reale nei dati del cliente, non inventarla — piuttosto usa un incentivo basato su fatti reali (es. "spedizione gratuita", "pacco regalo incluso" SE il brand li offre davvero).
+
 ## Il prodotto nel copy
 
 Il nome del prodotto compare come riferimento rapido — non viene spiegato, viene offerto. Il copy è breve, diretto, transazionale. L'informazione principale è L'OFFERTA, non il brand.
+
+## Cosa NON fare a questo livello
+
+- NON spiegare il prodotto — il target lo conosce già
+- NON educare, raccontare storie o creare curiosità — è il momento di chiudere
+- NON rispondere a obiezioni — le ha già superate
+- NON usare copy lungo e narrativo — il copy a questo livello è il PIÙ BREVE di tutti
+- NON inventare sconti, promozioni o scadenze che non esistono nei dati del cliente
+- NON usare scarsità finta (es. "ultimi 3 posti" se non è vero)
 
 ## Esempi pratici (altri settori)
 

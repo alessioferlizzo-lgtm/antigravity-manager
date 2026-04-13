@@ -14,6 +14,15 @@ Il prodotto è ancora INVISIBILE. Non proponi nulla — cristallizzi il problema
 
 Il brand NON compare nel corpo del copy. Al massimo un cenno nell'ultima riga tipo "Scopri di più" o "C'è un modo per risolvere questo." La forza del copy è nel riconoscimento del problema, non nella presentazione della soluzione.
 
+## Cosa NON fare a questo livello
+
+- NON nominare il brand, il prodotto o le sue caratteristiche
+- NON presentare una soluzione concreta — il target non sa ancora che esistono
+- NON confrontare alternative — non è in fase di confronto
+- NON usare prove sociali o testimonianze — troppo presto
+- NON parlare di prezzo, offerte o urgenza
+- NON descrivere il meccanismo del prodotto
+
 ## Esempi pratici (altri settori)
 
 **Software per copywriter:**

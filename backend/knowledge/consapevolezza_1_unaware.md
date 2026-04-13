@@ -14,6 +14,14 @@ Stai vendendo una CONVERSAZIONE, non una soluzione. L'obiettivo è catturare l'a
 
 Il nome del brand e il prodotto NON compaiono nel copy, o compaiono solo nell'ultima riga come scoperta naturale. L'hook e il corpo parlano di chi è il target, di cosa desidera, di un'emozione universale.
 
+## Cosa NON fare a questo livello
+
+- NON nominare il brand o il prodotto nel corpo del copy
+- NON descrivere un problema — il target non sa di averlo
+- NON presentare una soluzione — non c'è ancora un problema dichiarato
+- NON usare linguaggio da vendita (scopri, acquista, ordina)
+- NON confrontare con alternative — il target non sta confrontando nulla
+
 ## Esempi pratici (altri settori)
 
 **Software per copywriter:**
