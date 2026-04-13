@@ -1,26 +1,37 @@
 # Livello 4 — CONSAPEVOLE DEL PRODOTTO (Product Aware)
 
-**Definizione:** L'utente conosce il tuo brand e il tuo prodotto. È quasi convinto, ma è bloccato dall'indecisione o dalla paura di sbagliare scelta.
+## Chi è questa persona
 
-**Profilo Psicologico:** Bisogno di leadership. L'utente cerca una figura autorevole che elimini l'incertezza e gli dia un ordine d'azione.
+Conosce il brand e il prodotto. Sa cosa offri, ha visto i contenuti, forse ha già visitato il sito. È quasi convinta ma ESITA — ha ancora dubbi, potrebbe confrontare con altri o cerca ulteriori garanzie.
 
-**Profilo Comportamentale:** Torna sul sito, guarda le testimonianze finali, ma non clicca ancora sul tasto "Acquista".
+## Cosa comunica il copy
 
-**Obiettivo Comunicativo:** Stabilire autorità e creare un presupposto di necessità assoluta.
+Il copy PRESUPPONE che il target sappia già chi sei e cosa offri. Non spiegare, non presentarti. Il copy risponde alle obiezioni, mostra prove concrete, rassicura con garanzie e social proof decisivo.
 
-**Leve Chimiche** (SEROTONINA + TESTOSTERONE):
-- **Presupposti di Necessità:** Dichiarare con fermezza che per ottenere il risultato desiderato è obbligatorio seguire il tuo metodo. Il testosterone risponde all'autorità e alla sfida.
-- **Connessione Diretta:** Collegare ciò che l'utente vuole con l'azione precisa che gli stai dicendo di fare. La serotonina arriva dalla chiarezza e dalla certezza del percorso.
+La domanda a cui risponde il copy è: "Ma funziona davvero? È sicuro? Vale il prezzo?"
 
-**Esempi e Meccanismi:**
+## Il prodotto nel copy
 
-> "Se vuoi eliminare gli errori fiscali una volta per tutte, devi smettere di usare Excel e passare al nostro sistema automatizzato oggi stesso."
-> **Meccanismo:** Struttura "Se vuoi X, devi fare Y". Il presupposto elimina le alternative dalla mente → serotonina da chiarezza decisionale. Il "oggi stesso" aggiunge urgenza che attiva il testosterone → impulso all'azione.
+Il brand viene citato come qualcosa di GIÀ NOTO — non viene presentato, viene confermato. Il copy parla come se il target fosse un amico che conosce già il brand: "Sai già come funziona. Ecco perché funziona davvero."
 
-> "Per scalare oltre i 10k al mese, non serve lavorare di più. Devi seguire il mio protocollo di delega alla lettera. È l'unico modo."
-> **Meccanismo:** Negazione della credenza comune ("non serve lavorare di più") + dichiarazione di autorità assoluta ("l'unico modo"). Il cervello si arrende all'autorità percepita → serotonina da sicurezza + testosterone da sfida accettata.
+## Esempi pratici (altri settori)
 
-> "Per trasformare il tuo ufficio in un ambiente che ispira produttività, devi integrare queste postazioni ergonomiche. Non accontentarti di soluzioni a metà."
-> **Meccanismo:** Comando diretto + squalifica delle alternative ("soluzioni a metà"). L'utente viene messo davanti a una scelta binaria: fare come dico io o accontentarsi. Il testosterone reagisce al "non accontentarti" come a una sfida personale.
+**Software per copywriter:**
+"ChatGPT ti aiuta a scrivere il doppio più velocemente. Ma funziona davvero? Guarda come Marco, copywriter freelance, ha aumentato i suoi guadagni del 30%."
+→ Presuppone conoscenza del prodotto, aggiunge prova sociale con risultato specifico.
 
-**Transizione → Most Aware:** Dopo aver stabilito l'autorità e la necessità, creare il momento decisionale finale. Passare da "devi farlo" a "fallo adesso o perdi l'opportunità". L'autorità deve trasformarsi in urgenza concreta.
+**Corso online:**
+"Stai ancora pensando al corso? Ecco cosa dicono i 2.847 studenti che l'hanno completato. E se non sei soddisfatto, rimborso totale entro 30 giorni."
+→ Social proof massivo + risk reversal. Zero spiegazioni su cosa è il corso.
+
+**E-commerce:**
+"Lo hai visto, lo hai messo nel carrello. Cosa ti blocca? Spedizione gratuita, reso in 30 giorni, garanzia 2 anni."
+→ Parla direttamente all'esitazione. Presuppone che conosce già il prodotto.
+
+## Strategia
+
+- Rispondi alle obiezioni più comuni (prezzo, funzionamento, affidabilità)
+- Usa FAQ, recensioni dettagliate e testimonianze video
+- Mostra casi studio o risultati concreti con numeri specifici
+- Offri garanzie: soddisfatti o rimborsati, prova gratuita, reso facile
+- La landing page ideale avrebbe una sezione FAQ e una garanzia chiara

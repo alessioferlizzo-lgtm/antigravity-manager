@@ -1,27 +1,36 @@
 # Livello 1 — COMPLETAMENTE INCONSAPEVOLE (Unaware)
 
-**Definizione:** L'utente non sa di avere un problema o una necessità. Vive in uno stato di equilibrio neutro e non sta cercando attivamente nulla.
+## Chi è questa persona
 
-**Profilo Psicologico:** Indifferenza totale. Il cervello è in modalità "risparmio energetico" e filtra ogni stimolo che non sembri vitale o estremamente curioso.
+Non sa di avere un problema. Non sta cercando nulla. Non conosce il brand, non conosce il settore. Sta scrollando il feed distrattamente.
 
-**Profilo Comportamentale:** Ignora i messaggi pubblicitari diretti. Non clicca su offerte.
+## Cosa comunica il copy
 
-**Obiettivo Comunicativo:** Rompere l'indifferenza (Pattern Interrupt) e forzare l'attenzione attivando i sensi di allerta.
+Il copy parla di un'EMOZIONE, un'IDENTITÀ o una CURIOSITÀ che il target già vive — senza menzionare il prodotto, il brand o il problema.
 
-**Leve Chimiche** (ADRENALINA + CORTISOLO):
-- **Loss Aversion (Paura della perdita):** Evidenziare un problema imminente o un pericolo nascosto per attivare l'amigdala.
-- **Novità:** Introdurre un concetto mai sentito per stimolare la curiosità attraverso un picco adrenalinico.
-- **Reciprocità:** Fornire un valore immediato e gratuito per creare un senso di debito psicologico.
+Stai vendendo una CONVERSAZIONE, non una soluzione. L'obiettivo è catturare l'attenzione con qualcosa che il target riconosce come rilevante per sé, senza capire che è pubblicità.
 
-**Esempi e Meccanismi:**
+## Il prodotto nel copy
 
-> "Il 60% delle piccole imprese chiude entro 6 mesi da un attacco hacker che non sapevano nemmeno di aver subito."
-> **Meccanismo:** Dato statistico + conseguenza catastrofica personale. L'amigdala percepisce una minaccia concreta e quantificata → il cervello esce dalla modalità risparmio energetico per valutare il pericolo.
+Il nome del brand e il prodotto NON compaiono nel copy, o compaiono solo nell'ultima riga come scoperta naturale. L'hook e il corpo parlano di chi è il target, di cosa desidera, di un'emozione universale.
 
-> "Perché allenarsi duramente dopo i 40 anni potrebbe effettivamente accelerare l'invecchiamento cellulare."
-> **Meccanismo:** Rovesciamento di una credenza comune. Il cervello registra una contraddizione con ciò che "sa" → picco adrenalinico da curiosità perché il modello mentale esistente viene minacciato.
+## Esempi pratici (altri settori)
 
-> "Ecco il test rapido per scoprire se la tua azienda sta perdendo margini nei costi nascosti della logistica."
-> **Meccanismo:** Valore gratuito + paura nascosta. La reciprocità abbassa le difese ("è gratis, cosa ho da perdere?") mentre la Loss Aversion tiene alta l'attenzione ("e se sto davvero perdendo soldi?").
+**Software per copywriter:**
+"Mai rimasto bloccato davanti allo schermo bianco? Ecco una cosa che potrebbe cambiare il tuo modo di lavorare."
+→ Non nomina il software, non nomina il problema "produttività". Parla di un'esperienza universale.
 
-**Transizione → Problem Aware:** Una volta attivata l'adrenalina e catturata l'attenzione, guidare l'utente a dare un nome al problema. Passare da "c'è qualcosa che non sai" a "ecco cosa sta succedendo e perché ti riguarda". L'obiettivo è trasformare l'allarme generico in comprensione specifica del proprio disagio.
+**Integratore dimagrante:**
+"Perché alcune persone mangiano quello che vogliono senza ingrassare mai?"
+→ Curiosità pura. Zero prodotto, zero problema dichiarato.
+
+**Consulenza fiscale:**
+"Ecco il test rapido per scoprire se la tua azienda sta perdendo margini nei costi nascosti."
+→ Valore gratuito + curiosità. Il servizio non compare.
+
+## Strategia
+
+- Usa storytelling, educazione o emozione
+- Contenuti tipo video, reel, articoli che raccontano qualcosa di interessante
+- Non parlare direttamente del prodotto ma del contesto emotivo/identitario
+- La landing page ideale sarebbe un articolo di blog, un ebook gratuito, un contenuto di valore

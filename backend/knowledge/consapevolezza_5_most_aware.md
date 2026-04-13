@@ -1,24 +1,37 @@
 # Livello 5 — PIENAMENTE CONSAPEVOLE (Most Aware)
 
-**Definizione:** L'utente è pronto. Ha solo bisogno della spinta finale per superare l'ultimo attrito o la pigrizia.
+## Chi è questa persona
 
-**Profilo Psicologico:** Tensione pre-acquisto. Il cervello è pronto alla difesa delle proprie scelte e ha bisogno di una conferma di impegno serio.
+È pronta a comprare. Conosce il brand, il prodotto, i benefici. Ha già deciso mentalmente ma non ha ancora agito. Aspetta un'offerta, uno sconto, o semplicemente il momento giusto.
 
-**Profilo Comportamentale:** Aspetta un'offerta, uno sconto o un segnale di esclusività.
+## Cosa comunica il copy
 
-**Obiettivo Comunicativo:** Portare l'utente alla coerenza e all'impegno tramite uno stress positivo.
+Il copy è PURA OFFERTA. Prezzo, sconto, deadline, bonus, scarsità. Non servono spiegazioni, non servono prove — il target sa già tutto. Serve urgenza reale e un motivo per agire ORA.
 
-**Leve Chimiche** (CORTISOLO + DOPAMINA):
-- **Coerenza e Impegno:** Sfidare l'utente a confermare la sua volontà. Il cortisolo da "e se perdo questa occasione?" combinato con la dopamina da "ce la posso fare" crea la spinta finale.
-- **Stress Positivo:** Chiarire che il successo richiede impegno e che tu non regali nulla senza la loro parte di lavoro.
+La domanda a cui risponde il copy è: "Perché devo comprare ADESSO e non domani?"
 
-**Esempi e Meccanismi:**
+## Il prodotto nel copy
 
-> "Le iscrizioni chiudono stasera. Sei davvero pronto a studiare 10 ore a settimana o stai solo perdendo tempo? Se non sei serio, lascia il posto a un altro."
-> **Meccanismo:** Scarsità temporale ("stasera") + sfida all'identità ("sei serio o perdi tempo?") + esclusione sociale ("lascia il posto"). Il cortisolo da urgenza + la dopamina da desiderio di appartenenza creano una pressione che si risolve solo con l'azione.
+Il nome del prodotto compare come riferimento rapido — non viene spiegato, viene offerto. Il copy è breve, diretto, transazionale. L'informazione principale è L'OFFERTA, non il brand.
 
-> "Questa offerta scade tra 2 ore. Sei pronto a impegnarti per il tuo corpo o tra un mese sarai ancora qui a rimandare? Dimostralo ora."
-> **Meccanismo:** Deadline precisa + proiezione negativa del futuro ("ancora qui a rimandare") + imperativo ("Dimostralo"). Il cervello confronta due futuri: agire ora (dopamina) vs rimandare e ritrovarsi uguale (cortisolo da rimpianto anticipato). L'imperativo finale canalizza la tensione verso il click.
+## Esempi pratici (altri settori)
 
-> "Posso accettare solo un altro cliente questo mese. Sei sicuro di poter reggere il ritmo di lavoro che richiedo? Se sì, firma qui, altrimenti non iniziamo nemmeno."
-> **Meccanismo:** Scarsità reale ("un altro cliente") + inversione del potere ("sei sicuro di reggere?") + filtro di selezione ("altrimenti non iniziamo"). L'utente non sta più "comprando" — sta "venendo selezionato". Il testosterone da sfida + cortisolo da esclusione imminente producono azione immediata.
+**Software per copywriter:**
+"Ultime 24 ore per ottenere ChatGPT con il 20% di sconto! Offerta esclusiva per i nuovi utenti."
+→ Deadline + sconto + esclusività. Zero educazione.
+
+**Corso online:**
+"Il corso riapre lunedì. 197€ invece di 497€. Solo per i primi 50. Poi il prezzo torna pieno."
+→ Pura offerta con scarsità reale (posti limitati + deadline).
+
+**E-commerce:**
+"-30% su tutta la collezione. Solo fino a domenica 23:59. Spedizione gratuita sopra i 50€."
+→ Offerta, deadline, incentivo. Nessuna spiegazione del prodotto.
+
+## Strategia
+
+- Usa scarsità e urgenza REALI (non finte)
+- Offri uno sconto a tempo limitato o un bonus esclusivo
+- Promuovi pagamenti facilitati se rilevante
+- Timer con conto alla rovescia nella landing page
+- Il copy è il più BREVE di tutti i livelli — tutto l'inutile è eliminato

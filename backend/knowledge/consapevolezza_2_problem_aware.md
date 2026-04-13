@@ -1,25 +1,36 @@
 # Livello 2 — CONSAPEVOLE DEL PROBLEMA (Problem Aware)
 
-**Definizione:** L'utente sente che qualcosa non va. Prova un disagio (fisico, emotivo o economico) ma non sa ancora come risolverlo.
+## Chi è questa persona
 
-**Profilo Psicologico:** Frustrazione e ricerca di comprensione. L'utente cerca qualcuno che dia un nome al suo dolore e gli dia speranza.
+Sa di avere un problema. Sente un disagio — fisico, emotivo, economico — ma non sa ancora come risolverlo. Sta cercando qualcuno che dia un nome al suo dolore e lo faccia sentire capito.
 
-**Profilo Comportamentale:** Cerca informazioni sul "perché" sta male o "perché" ha quel problema. È ricettivo verso storie simili alla sua.
+## Cosa comunica il copy
 
-**Obiettivo Comunicativo:** Creare empatia cognitiva e connessione emotiva, portando l'utente a fidarsi del tuo punto di vista.
+Il copy DÀ UN NOME al dolore/frustrazione del target. Lo descrive con le sue parole esatte, così specifico che pensa "questo parla di me".
 
-**Leve Chimiche** (OSSITOCINA + SEROTONINA):
-- **Storytelling empatico:** Narrare scenari in cui il problema viene compreso e superato. Bisogna far sentire l'utente "visto" e capito, creando un legame di fiducia attraverso l'ossitocina.
+Il prodotto è ancora INVISIBILE. Non proponi nulla — cristallizzi il problema. Il massimo consentito è un accenno finale a "esiste un modo" senza nominare il brand.
 
-**Esempi e Meccanismi:**
+## Il prodotto nel copy
 
-> "Immagina di svegliarti finalmente riposato, senza quella nebbia mentale che ti accompagna ogni mattina da mesi."
-> **Meccanismo:** Proiezione positiva a partire dal dolore quotidiano. Il cervello simula lo scenario desiderato e produce ossitocina dalla sensazione di essere compreso + serotonina dall'anticipazione del benessere.
+Il brand NON compare nel corpo del copy. Al massimo un cenno nell'ultima riga tipo "Scopri di più" o "C'è un modo per risolvere questo." La forza del copy è nel riconoscimento del problema, non nella presentazione della soluzione.
 
-> "Riesci a pensare a cosa proveresti se potessi esporre le tue idee in riunione senza che la voce ti tremi o il cuore ti balzi in petto?"
-> **Meccanismo:** Descrizione iper-specifica del disagio fisico. Più il dettaglio è preciso, più l'utente sente "questo parla di me" → ossitocina da connessione. La domanda aperta lo costringe a immaginare attivamente la soluzione.
+## Esempi pratici (altri settori)
 
-> "Pensa a come sarebbe gestire la tua attività sapendo che ogni mese arriva un flusso costante di clienti, senza l'ansia del 'passaparola' che si ferma."
-> **Meccanismo:** Contrasto presente/futuro. Il disagio attuale ("ansia del passaparola") viene nominato con precisione → riconoscimento. Il futuro desiderato viene reso tangibile → serotonina da speranza concreta.
+**Software per copywriter:**
+"Il 73% dei copywriter perde ore a modificare testi. Scopri come risparmiare fino a 2 ore al giorno con questa tecnologia."
+→ Dato sul problema, accenno alla soluzione. Non nomina il prodotto.
 
-**Transizione → Solution Aware:** Dopo aver creato la connessione emotiva e la fiducia, introdurre l'idea che il problema ha soluzioni concrete. Passare da "ti capisco, il tuo dolore è reale" a "esiste un modo per risolvere questo, e ora ti mostro le opzioni". L'empatia deve trasformarsi in fiducia verso la guida.
+**Fitness dopo i 40:**
+"Ti svegli stanco anche dopo 8 ore di sonno. Non è l'età — è che il tuo corpo ha smesso di recuperare come prima."
+→ Nomina il dolore specifico con dettagli fisici riconoscibili.
+
+**E-commerce abbigliamento:**
+"Apri l'armadio pieno di vestiti e non hai niente da metterti. Il problema non è la quantità — è che nessuno di quei capi è stato scelto per il tuo corpo."
+→ Scenario quotidiano riconoscibile, zero brand.
+
+## Strategia
+
+- Mostra come il problema può essere risolto (senza dire da chi)
+- Usa dati, statistiche, scenari quotidiani riconoscibili
+- Sottolinea i benefici di trovare una soluzione
+- La landing page ideale sarebbe un video dimostrativo, una demo gratuita, un contenuto educativo
