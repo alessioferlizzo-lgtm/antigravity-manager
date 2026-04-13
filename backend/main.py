@@ -1511,10 +1511,24 @@ async def generate_copy(client_id: str, request: CopyRequest):
         focus_areas=["brand_identity", "brand_voice", "customer_personas", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
     )
 
-    # Knowledge files rimossi dal prompt — sovraccaricavano l'AI con istruzioni
-    # contraddittorie (Vignali, Dosio, framework knowledge, type knowledge).
-    # Claude è già un buon copywriter: servono solo i dati del cliente
-    # e UN'istruzione chiara su cosa scrivere.
+    from .knowledge_loader import (
+        get_writing_knowledge, get_awareness_context,
+        get_single_framework_knowledge, get_inspirational_stair,
+        get_copy_type_knowledge
+    )
+
+    # Carica tutta la knowledge come FORMAZIONE (non come regole).
+    # L'AI deve conoscere queste cose prima di scrivere, come un copywriter
+    # che ha studiato — poi scrive in autonomia basandosi sulla richiesta.
+    writing_knowledge = get_writing_knowledge()
+    awareness_knowledge = get_awareness_context(request.awareness_level) if request.awareness_level else ""
+    framework_knowledge = ""
+    if request.framework:
+        if request.framework == "INSPIRATIONAL_STAIR":
+            framework_knowledge = get_inspirational_stair()
+        else:
+            framework_knowledge = get_single_framework_knowledge(request.framework) or ""
+    type_knowledge = get_copy_type_knowledge(request.copy_type)
 
     # ── Contesto angolo ──
     angle_ctx = ""
@@ -1546,177 +1560,8 @@ async def generate_copy(client_id: str, request: CopyRequest):
     }
     word_limit = WORD_LIMITS.get(request.copy_type, 200)
 
-    # ── Fasi operative per ogni framework ──
-    # Ogni framework ha istruzioni PRECISE su cosa scrivere in ogni fase.
-    # L'AI deve seguire esattamente questa sequenza — ogni fase deve essere
-    # riconoscibile nel testo finale (senza etichette visibili).
-    FRAMEWORK_PHASES = {
-        "AIDA": (
-            "Scrivi il copy in ESATTAMENTE 4 blocchi, in quest'ordine:\n"
-            "1. ATTENTION (1-2 righe): Domanda provocatoria, dato sorprendente o affermazione contro-intuitiva che ferma lo scroll.\n"
-            "2. INTEREST (2-3 righe): Fatti concreti e specifici. Perché questo è rilevante per il target ORA.\n"
-            "3. DESIRE (2-3 righe): Social proof, risultati reali, identità aspirazionale. Il target deve VOLERE quello che offri.\n"
-            "4. ACTION (1 riga): CTA specifica e diretta. Non 'Scopri di più' — scrivi cosa deve fare concretamente."
-        ),
-        "PAS": (
-            "Scrivi il copy in ESATTAMENTE 3 blocchi, in quest'ordine:\n"
-            "1. PROBLEM (1-2 righe): Descrivi il problema con il linguaggio esatto del target. Specifico, non generico.\n"
-            "2. AGITATE (2-3 righe): Amplifica le conseguenze reali. Costi nascosti, frustrazioni quotidiane, cosa perde ogni giorno. Tensione crescente.\n"
-            "3. SOLVE (2-3 righe): La soluzione arriva come sollievo. Chiara, diretta, collegata al problema. CTA finale."
-        ),
-        "BAB": (
-            "Scrivi il copy in ESATTAMENTE 3 blocchi, in quest'ordine:\n"
-            "1. BEFORE (2-3 righe): Descrivi la situazione dolorosa attuale del target. Dettagli specifici e riconoscibili.\n"
-            "2. AFTER (2-3 righe): Dipingi la vita DOPO la soluzione. Dettagli vividi e desiderabili. Come si sente? Cosa fa di diverso?\n"
-            "3. BRIDGE (1-2 righe): Il prodotto/servizio è il ponte naturale tra le due realtà. CTA."
-        ),
-        "FAB": (
-            "Scrivi il copy in ESATTAMENTE 3 blocchi, in quest'ordine:\n"
-            "1. FEATURES (1-2 righe): Caratteristiche chiave del prodotto/servizio — quelle che differenziano.\n"
-            "2. ADVANTAGES (1-2 righe): Vantaggi concreti e misurabili che derivano da quelle feature.\n"
-            "3. BENEFITS (2-3 righe): Benefici EMOTIVI nella vita reale del cliente. Non tecnici — identitari, esperienziali. CTA."
-        ),
-        "ACCA": (
-            "Scrivi il copy in ESATTAMENTE 4 blocchi, in quest'ordine:\n"
-            "1. AWARENESS (1-2 righe): Presenta il problema con uno scenario riconoscibile. Non assumere che il target lo conosca già.\n"
-            "2. COMPREHENSION (2-3 righe): Perché questo problema è importante per LUI specificamente. Dati, conseguenze concrete.\n"
-            "3. CONVICTION (2-3 righe): Prove che la soluzione funziona. Risultati numerici, casi studio, testimonial. Non opinioni — fatti.\n"
-            "4. ACTION (1 riga): CTA a bassa frizione — il minor commitment possibile (call, demo, prova)."
-        ),
-        "SSS": (
-            "Scrivi il copy come una STORIA in ESATTAMENTE 3 blocchi:\n"
-            "1. STAR (1-2 righe): Presenta il protagonista — un cliente reale o archetipo credibile. Nome, età, situazione. Deve essere 'uno come me' per il target.\n"
-            "2. STORY (3-4 righe): Racconta la sua storia. Il dolore, le frustrazioni, i tentativi falliti. Dettagli specifici che creano immedesimazione.\n"
-            "3. SOLUTION (1-2 righe): La scoperta del prodotto/servizio come svolta naturale. Risultato credibile. CTA."
-        ),
-        "4C": (
-            "Scrivi un copy che rispetta TUTTE e 4 queste qualità contemporaneamente:\n"
-            "- CHIARO: messaggio comprensibile immediatamente, zero ambiguità\n"
-            "- CONCISO: ogni parola ha un motivo, zero grasso\n"
-            "- CREDIBILE: ogni claim supportato da prove (dati, testimonial, garanzie)\n"
-            "- COMPELLING (irresistibile): il lettore non può ignorare l'offerta\n"
-            "Il copy deve essere breve, diretto e potente. Ogni frase supera il test di tutte e 4 le C."
-        ),
-        "4U": (
-            "Scrivi un copy che rispetta TUTTE e 4 queste qualità contemporaneamente:\n"
-            "- UTILE: beneficio tangibile e immediatamente percepito\n"
-            "- URGENTE: ragione reale per agire ORA (scarsità vera, costo dell'inazione)\n"
-            "- UNICO: angolo o claim che nessun competitor sta usando\n"
-            "- ULTRA-SPECIFICO: numeri precisi, dati concreti. 'Risparmi 3 ore' non 'Risparmi tempo'\n"
-            "Il copy deve essere breve, tagliente, con dati specifici. Ogni frase supera il test di tutte e 4 le U."
-        ),
-        "5_OBIEZIONI": (
-            "Identifica le 2-3 obiezioni più forti per QUESTO target e QUESTO prodotto tra:\n"
-            "- 'Non ho tempo' / 'Non ho soldi' / 'Non funzionerà per me' / 'Non ti credo' / 'Non ne ho bisogno'\n"
-            "Smontale in modo indiretto e conversazionale (non difensivo). Usa prove concrete: testimonial, dati, garanzie.\n"
-            "Struttura: Hook → Obiezione 1 smontata → Obiezione 2 smontata → Obiezione 3 smontata → CTA."
-        ),
-        "3_MOTIVI": (
-            "Scrivi il copy rispondendo a ESATTAMENTE 3 domande, in quest'ordine:\n"
-            "1. PERCHÉ SEI IL MIGLIORE? Differenziatori reali e verificabili — non aggettivi vuoti.\n"
-            "2. PERCHÉ DOVREI CREDERTI? Social proof forte: numeri precisi, nomi reali, risultati misurabili.\n"
-            "3. PERCHÉ DOVREI COMPRARE ADESSO? Scarsità reale o costo concreto dell'inazione.\n"
-            "Ogni risposta è un blocco di 2-3 righe. CTA finale."
-        ),
-        "E_QUINDI": (
-            "Parti dall'affermazione principale del brand/prodotto e applica il processo 'E quindi?' 3-5 volte\n"
-            "fino ad arrivare al beneficio emotivo finale. USA L'ULTIMA RISPOSTA come corpo del copy.\n"
-            "Non usare la versione superficiale — scava fino all'identità e al desiderio profondo del target.\n"
-            "Il copy finale è breve e colpisce il beneficio emotivo reale, non quello funzionale."
-        ),
-        "HOOK_BODY_CTA": (
-            "Scrivi il copy in ESATTAMENTE 3 blocchi:\n"
-            "1. HOOK (1 riga): Frase devastante che ferma lo scroll in 0.3 secondi. Domanda, dato shock, provocazione.\n"
-            "2. BODY (3-5 righe): Sviluppo con prove, storia breve o benefici. Supporta l'hook senza ripeterlo.\n"
-            "3. CTA (1 riga): Azione specifica. Non 'Scopri di più' — scrivi cosa deve fare e cosa ottiene."
-        ),
-        "INSPIRATIONAL_STAIR": (
-            "Segui le 5 fasi neurochimiche di Borzacchiello nell'ordine esatto:\n"
-            "1. CORTISOLO (paura/urgenza): Attiva la minaccia — cosa rischia se non agisce?\n"
-            "2. DOPAMINA (ricompensa/visione): Mostra il futuro desiderabile — cosa ottiene?\n"
-            "3. OSSITOCINA (connessione/fiducia): Crea vicinanza — 'ti capisco, ci sono passato'\n"
-            "4. ENDORFINA (sollievo/piacere): Il momento di liberazione — la soluzione concreta\n"
-            "5. SEROTONINA (sicurezza/azione): Conferma finale — CTA con sicurezza e urgenza positiva"
-        ),
-    }
-
-    # ── Livelli di consapevolezza (Schwartz) — COSA comunica il messaggio ──
-    # Il framework decide la STRUTTURA (come scrivere).
-    # Il livello di consapevolezza decide il CONCETTO (cosa comunicare).
-    # A ogni livello il messaggio trasporta un'informazione DIVERSA.
-    AWARENESS_BRIEFING = {
-        "unaware": (
-            "LIVELLO CONSAPEVOLEZZA: UNAWARE — Il target NON sa di avere un problema.\n\n"
-            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
-            "Il copy parla di un'EMOZIONE o un'IDENTITÀ che il target già vive, "
-            "senza menzionare il prodotto, il brand o il problema.\n"
-            "Stai vendendo una CONVERSAZIONE, non una soluzione.\n\n"
-            "REGOLA FONDAMENTALE: Il nome del brand e il prodotto NON compaiono nel copy, "
-            "o compaiono solo nell'ultima riga come scoperta naturale. "
-            "L'hook e il corpo parlano di chi è il target, di cosa desidera, "
-            "di un'emozione universale — MAI del prodotto.\n\n"
-            "ESEMPIO CONCETTUALE (altro settore):\n"
-            "\"Perché alcune persone mangiano quello che vogliono senza ingrassare mai\" "
-            "→ curiosità pura, zero prodotto, zero problema dichiarato."
-        ),
-        "problem_aware": (
-            "LIVELLO CONSAPEVOLEZZA: PROBLEM AWARE — Il target sente un disagio ma non sa come risolverlo.\n\n"
-            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
-            "Il copy DÀ UN NOME al dolore/frustrazione del target. "
-            "Lo descrive con le sue parole esatte, così specifico che pensa 'questo parla di me'.\n"
-            "Il prodotto è ancora INVISIBILE. Non proponi nulla — cristallizzi il problema.\n\n"
-            "REGOLA FONDAMENTALE: Il copy si concentra SOLO sul problema. "
-            "Non presentare il brand, non spiegare la soluzione, non fare pitch. "
-            "Il massimo consentito è un accenno finale a 'esiste un modo' senza nominare il brand.\n\n"
-            "ESEMPIO CONCETTUALE (altro settore):\n"
-            "\"Quel calo di energia dopo pranzo ti sta costando 2 ore produttive al giorno\" "
-            "→ nomina il dolore specifico, zero soluzione."
-        ),
-        "solution_aware": (
-            "LIVELLO CONSAPEVOLEZZA: SOLUTION AWARE — Il target sa che esistono soluzioni e le sta confrontando.\n\n"
-            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
-            "Il copy presenta il MECCANISMO UNICO — l'approccio, il metodo, il 'come' "
-            "che distingue questo brand dagli altri. Cosa fa di DIVERSO rispetto alle alternative?\n"
-            "Il target sta confrontando: devi vincere il confronto con FATTI e DIFFERENZIATORI.\n\n"
-            "REGOLA FONDAMENTALE: Il copy spiega PERCHÉ questo approccio è diverso dagli altri. "
-            "Dati concreti, caratteristiche uniche, risultati misurabili. "
-            "Il brand compare come portatore del meccanismo unico.\n\n"
-            "ESEMPIO CONCETTUALE (altro settore):\n"
-            "\"L'unico integratore con biodisponibilità 3x — certificato da laboratori indipendenti\" "
-            "→ meccanismo unico + prova concreta."
-        ),
-        "product_aware": (
-            "LIVELLO CONSAPEVOLEZZA: PRODUCT AWARE — Il target conosce GIÀ il brand e il prodotto.\n\n"
-            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
-            "Il copy PRESUPPONE che il target sappia già chi sei e cosa offri. "
-            "Non spiegare, non presentarti. Risolvi l'ultimo dubbio: "
-            "social proof decisivo, obiezioni smontate, garanzie, risk reversal.\n"
-            "Stai parlando a qualcuno che è sulla porta — dagli la sicurezza per entrare.\n\n"
-            "REGOLA FONDAMENTALE: Il brand viene citato come qualcosa di GIÀ NOTO. "
-            "Zero spiegazioni su cosa fai o come funziona — lo sa già. "
-            "Il copy ruota attorno a PROVE e CERTEZZA: testimonial, numeri, garanzie.\n\n"
-            "ESEMPIO CONCETTUALE (altro settore):\n"
-            "\"14.000 clienti hanno già scelto MetaBoost — ecco cosa è cambiato dalla versione 2\" "
-            "→ presuppone conoscenza, aggiunge prova decisiva."
-        ),
-        "most_aware": (
-            "LIVELLO CONSAPEVOLEZZA: MOST AWARE — Il target è pronto, aspetta solo la spinta finale.\n\n"
-            "COSA DEVE COMUNICARE IL MESSAGGIO:\n"
-            "Il copy è PURA OFFERTA. Prezzo, sconto, deadline, bonus, scarsità. "
-            "Non servono spiegazioni, non servono prove — il target sa già tutto.\n"
-            "Serve urgenza reale e un motivo per agire ORA invece che domani.\n\n"
-            "REGOLA FONDAMENTALE: Il copy è breve, diretto, transazionale. "
-            "L'informazione principale è L'OFFERTA, non il brand o il prodotto. "
-            "Deadline concreta, quantità limitata, o conseguenza di non agire ora.\n\n"
-            "ESEMPIO CONCETTUALE (altro settore):\n"
-            "\"MetaBoost -40%, 3 bottiglie + spedizione gratis. Solo oggi.\" "
-            "→ pura offerta, zero educazione."
-        ),
-    }
-
     # ═══════════════════════════════════════════════════════
     # RAG DA NOTION — Esempi gold standard (copy a 5 stelle)
-    # Costo: zero (è una chiamata API Notion, non AI)
     # ═══════════════════════════════════════════════════════
     swipe_context = ""
     if _notion_available and notion_service:
@@ -1733,50 +1578,69 @@ async def generate_copy(client_id: str, request: CopyRequest):
             print(f"⚠️ Notion vault copy non disponibile: {e}")
 
     # ══════════════════════════════════════════════════════════
-    # SYSTEM PROMPT — Solo dati del cliente + esempi gold standard
+    # SYSTEM PROMPT — Formazione del copywriter
+    # Queste sono CONOSCENZE che l'AI deve avere prima di scrivere,
+    # come un copywriter che ha studiato. Non sono regole da spuntare.
+    # Poi nel user message arriva la richiesta semplice.
     # ══════════════════════════════════════════════════════════
     sys_parts = [
-        "Sei un copywriter esperto. Scrivi in italiano. "
-        "Frasi brevi, ritmo incalzante, zero filler.",
+        "Sei un copywriter professionista formato su copywriting a risposta diretta. "
+        "Scrivi in italiano. Quello che segue è la tua formazione e i dati del cliente. "
+        "Interiorizza tutto, poi attendi la richiesta.",
+
         f"DATI DEL CLIENTE:\n{strategic_context}",
     ]
+
+    # Formazione: qualità di scrittura (Vignali + Dosio)
+    if writing_knowledge:
+        sys_parts.append(f"FORMAZIONE — QUALITÀ DI SCRITTURA:\n{writing_knowledge}")
+
+    # Formazione: livelli di consapevolezza di Schwartz
+    if awareness_knowledge:
+        sys_parts.append(f"FORMAZIONE — LIVELLI DI CONSAPEVOLEZZA (Schwartz):\n{awareness_knowledge}")
+
+    # Formazione: il framework scelto in dettaglio
+    if framework_knowledge:
+        sys_parts.append(f"FORMAZIONE — FRAMEWORK COPY:\n{framework_knowledge}")
+
+    # Formazione: vincoli del canale/formato
+    if type_knowledge:
+        sys_parts.append(f"FORMAZIONE — FORMATO {type_label}:\n{type_knowledge}")
+
+    # Esempi gold standard dal vault Notion
     if swipe_context:
         sys_parts.append(swipe_context)
+
     system_prompt = "\n\n".join(sys_parts)
 
     # ══════════════════════════════════════════════════════════
-    # USER MESSAGE — Un'istruzione chiara, non un muro di vincoli
+    # USER MESSAGE — La richiesta, come la diresti a un copywriter umano
+    # La formazione è già nel system prompt. Qui solo cosa deve fare.
     # ══════════════════════════════════════════════════════════
     user_parts = []
-    user_parts.append(f"Scrivi un {type_label}.")
+
+    # Richiesta base
+    req_line = f"Scrivi un {type_label}"
+    if request.framework:
+        req_line += f" con struttura {request.framework}"
+    if request.awareness_level:
+        level_label = request.awareness_level.replace('_', ' ').title()
+        req_line += f" per un target {level_label}"
+    req_line += "."
+    user_parts.append(req_line)
 
     if word_limit > 0:
         user_parts.append(f"Massimo {word_limit} parole.")
 
-    # ── AWARENESS — cosa comunica il messaggio ──
-    if request.awareness_level:
-        awareness_briefing = AWARENESS_BRIEFING.get(request.awareness_level, "")
-        if awareness_briefing:
-            user_parts.append(awareness_briefing)
-
-    # ── FRAMEWORK — come organizzare il flusso ──
-    if request.framework:
-        phases = FRAMEWORK_PHASES.get(request.framework, "")
-        if phases:
-            user_parts.append(
-                f"Organizza il copy con la struttura {request.framework}:\n{phases}\n"
-                f"Le fasi devono essere riconoscibili nel testo ma senza etichette visibili."
-            )
-
     if request.angle_title:
-        user_parts.append(f"ANGOLO: {request.angle_title}")
+        user_parts.append(f"Angolo comunicativo: {request.angle_title}")
         if request.angle_description:
-            user_parts.append(f"DESCRIZIONE ANGOLO: {request.angle_description}")
+            user_parts.append(request.angle_description)
 
     if user_instr:
-        user_parts.append(f"ISTRUZIONI EXTRA: {user_instr}")
+        user_parts.append(user_instr)
 
-    user_parts.append("Rispondi SOLO con il copy. Zero premesse, zero commenti, zero spiegazioni.")
+    user_parts.append("Rispondi solo con il copy, senza premesse o commenti.")
 
     user_msg = "\n\n".join(user_parts)
 
