@@ -1511,6 +1511,12 @@ async def generate_copy(client_id: str, request: CopyRequest):
         focus_areas=["brand_identity", "brand_voice", "customer_personas", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
     )
 
+    from .knowledge_loader import (
+        get_writing_knowledge, get_awareness_context,
+        get_single_framework_knowledge, get_inspirational_stair,
+        get_copy_type_knowledge
+    )
+
     # ── Label e limiti ──
     TYPE_LABELS = {
         "caption": "Caption Instagram",
@@ -1527,51 +1533,16 @@ async def generate_copy(client_id: str, request: CopyRequest):
     }
     word_limit = WORD_LIMITS.get(request.copy_type, 200)
 
-    # ── Awareness: cosa comunica il messaggio (2 righe, non un trattato) ──
-    AWARENESS_CONCEPT = {
-        "unaware": (
-            "Il target NON sa di avere un problema e NON conosce il brand. "
-            "Il copy parla di un'emozione o identità che il target già vive. "
-            "Il prodotto e il brand NON compaiono nel copy — al massimo un cenno nell'ultima riga."
-        ),
-        "problem_aware": (
-            "Il target sente un disagio ma non sa come risolverlo e NON conosce il brand. "
-            "Il copy dà un nome al dolore del target, lo descrive così bene che pensa 'questo parla di me'. "
-            "Il prodotto è invisibile — il copy si concentra SOLO sul problema."
-        ),
-        "solution_aware": (
-            "Il target sa che esistono soluzioni e sta confrontando le opzioni. "
-            "Il copy presenta il meccanismo unico del brand — cosa lo rende DIVERSO dalle alternative. "
-            "Dati concreti, differenziatori, risultati misurabili."
-        ),
-        "product_aware": (
-            "Il target conosce GIÀ il brand e il prodotto — non presentarti, non spiegare cosa fai. "
-            "Il copy smonta le ultime obiezioni con social proof, garanzie, risultati di clienti reali. "
-            "Parla come se il target fosse un amico che ti conosce già."
-        ),
-        "most_aware": (
-            "Il target è pronto a comprare — sa già tutto. "
-            "Il copy è PURA OFFERTA: prezzo, sconto, deadline, scarsità. "
-            "Breve, diretto, transazionale. Zero educazione, zero spiegazioni."
-        ),
-    }
-
-    # ── Framework: la struttura del copy ──
-    FRAMEWORK_INSTRUCTIONS = {
-        "AIDA": "Struttura il copy in 4 fasi nell'ordine: Attention (ferma lo scroll) → Interest (perché è rilevante ora) → Desire (fallo volere) → Action (CTA specifica). Ogni fase deve essere riconoscibile ma senza etichette visibili.",
-        "PAS": "Struttura: Problem (descrivi il problema con le parole del target) → Agitate (amplifica le conseguenze) → Solve (la soluzione come sollievo + CTA).",
-        "BAB": "Struttura: Before (situazione dolorosa attuale) → After (vita dopo la soluzione, dettagli vividi) → Bridge (il prodotto è il ponte + CTA).",
-        "FAB": "Struttura: Features (caratteristiche chiave) → Advantages (vantaggi concreti) → Benefits (benefici emotivi nella vita reale + CTA).",
-        "HOOK_BODY_CTA": "Struttura: Hook (1 riga che ferma lo scroll) → Body (sviluppo con prove o benefici) → CTA (azione specifica).",
-        "4C": "Il copy deve essere simultaneamente: Chiaro, Conciso, Credibile, Compelling (irresistibile).",
-        "4U": "Il copy deve essere: Utile, Urgente, Unico, Ultra-specifico.",
-        "ACCA": "Struttura: Awareness (presenta il problema) → Comprehension (perché è importante per lui) → Conviction (prove che funziona) → Action (CTA a bassa frizione).",
-        "SSS": "Struttura narrativa: Star (protagonista credibile) → Story (la sua storia, dolori e tentativi) → Solution (il prodotto come svolta + CTA).",
-        "5_OBIEZIONI": "Identifica 2-3 obiezioni del target e smontale una per una. Struttura: Hook → Obiezioni smontate → CTA.",
-        "3_MOTIVI": "Rispondi a 3 domande: Perché sei il migliore? Perché dovrei crederti? Perché comprare adesso? Poi CTA.",
-        "E_QUINDI": "Parti dall'affermazione principale e applica 'E quindi?' 3-5 volte fino al beneficio emotivo profondo. Usa quello come corpo del copy.",
-        "INSPIRATIONAL_STAIR": "Segui le 5 fasi neurochimiche di Borzacchiello: Cortisolo (paura/urgenza) → Dopamina (visione) → Ossitocina (connessione) → Endorfina (sollievo) → Serotonina (sicurezza + CTA).",
-    }
+    # ── Carica tutta la knowledge ──
+    writing_knowledge = get_writing_knowledge()
+    awareness_knowledge = get_awareness_context(request.awareness_level) if request.awareness_level else ""
+    framework_knowledge = ""
+    if request.framework:
+        if request.framework == "INSPIRATIONAL_STAIR":
+            framework_knowledge = get_inspirational_stair()
+        else:
+            framework_knowledge = get_single_framework_knowledge(request.framework) or ""
+    type_knowledge = get_copy_type_knowledge(request.copy_type)
 
     # ── Notion gold standard ──
     swipe_context = ""
@@ -1584,52 +1555,75 @@ async def generate_copy(client_id: str, request: CopyRequest):
             pass
 
     # ══════════════════════════════════════════════════════════
-    # SYSTEM PROMPT — Solo dati del cliente. L'AI sa già scrivere copy.
+    # SYSTEM PROMPT — Knowledge completa + dati del cliente
+    #
+    # L'AI deve avere tutta la conoscenza necessaria per scrivere
+    # come un copywriter professionista: regole di scrittura,
+    # tecniche persuasive, livelli di consapevolezza, framework.
+    # Non sono regole da spuntare — sono la formazione del copywriter.
     # ══════════════════════════════════════════════════════════
-    system_prompt = (
-        "Sei un copywriter a risposta diretta. Scrivi in italiano.\n\n"
-        f"DATI DEL CLIENTE:\n{strategic_context}"
+    sep = "=" * 50
+    sys_parts = []
+
+    # Identità
+    sys_parts.append(
+        "Sei un copywriter professionista specializzato in copywriting a risposta diretta e "
+        "comunicazione persuasiva per i social media. Scrivi in italiano."
     )
+
+    # Dati del cliente
+    sys_parts.append(f"{sep}\nCLIENTE\n{sep}\n{strategic_context}")
+
+    # Regole di scrittura — come scrivere da umano, non da robot
+    if writing_knowledge:
+        sys_parts.append(f"{sep}\nCOME SI SCRIVE UN COPY\n{sep}\n{writing_knowledge}")
+
+    # Livello di consapevolezza — cosa sa il target, cosa comunicare
+    if awareness_knowledge:
+        sys_parts.append(f"{sep}\nIL TARGET A CUI SCRIVI\n{sep}\n{awareness_knowledge}")
+
+    # Framework — la struttura da seguire
+    if framework_knowledge:
+        sys_parts.append(f"{sep}\nFRAMEWORK DA UTILIZZARE\n{sep}\n{framework_knowledge}")
+
+    # Formato/canale — vincoli tecnici
+    if type_knowledge:
+        sys_parts.append(f"{sep}\nFORMATO: {type_label.upper()}\n{sep}\n{type_knowledge}")
+
+    # Esempi gold standard
     if swipe_context:
-        system_prompt += f"\n\n{swipe_context}"
+        sys_parts.append(swipe_context)
+
+    system_prompt = "\n\n".join(sys_parts)
 
     # ══════════════════════════════════════════════════════════
-    # USER MESSAGE — Istruzioni operative chiare
-    # L'AI conosce già AIDA, PAS, Schwartz etc. dal suo training.
-    # Non gli insegniamo nulla — gli diciamo cosa fare.
+    # USER MESSAGE — La richiesta
+    # Tutta la conoscenza è nel system prompt.
+    # Qui si dice solo cosa fare, come lo diresti a un copywriter.
     # ══════════════════════════════════════════════════════════
     user_parts = []
 
-    # 1. Tipo e limiti
     user_parts.append(f"Scrivi un {type_label}.")
     if word_limit > 0:
         user_parts.append(f"Massimo {word_limit} parole.")
 
-    # 2. Awareness — COSA comunica il messaggio
-    if request.awareness_level and request.awareness_level in AWARENESS_CONCEPT:
-        user_parts.append(f"LIVELLO TARGET: {AWARENESS_CONCEPT[request.awareness_level]}")
+    if request.awareness_level:
+        level_label = request.awareness_level.replace('_', ' ').upper()
+        user_parts.append(f"Il target è {level_label} — usa la conoscenza sui livelli di consapevolezza per decidere COSA comunicare nel messaggio.")
 
-    # 3. Framework — COME è strutturato il copy
-    if request.framework and request.framework in FRAMEWORK_INSTRUCTIONS:
-        user_parts.append(f"STRUTTURA: {FRAMEWORK_INSTRUCTIONS[request.framework]}")
+    if request.framework:
+        user_parts.append(f"Struttura il copy secondo il framework {request.framework} — le fasi devono essere riconoscibili nel testo ma senza etichette visibili.")
 
-    # 4. Angolo
     if request.angle_title:
-        angle_text = f"ANGOLO: {request.angle_title}"
+        angle_text = f"Angolo comunicativo: {request.angle_title}"
         if request.angle_description:
             angle_text += f" — {request.angle_description}"
         user_parts.append(angle_text)
 
-    # 5. Istruzioni utente
     if request.user_instructions:
         user_parts.append(request.user_instructions)
 
-    # 6. Output
-    user_parts.append(
-        "Non aprire con una domanda. "
-        "Non usare etichette visibili delle fasi del framework. "
-        "Rispondi solo con il copy."
-    )
+    user_parts.append("Rispondi solo con il copy, senza premesse o commenti.")
 
     user_msg = "\n\n".join(user_parts)
 
