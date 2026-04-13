@@ -1594,6 +1594,18 @@ async def generate_copy(client_id: str, request: CopyRequest):
     if swipe_context:
         sys_parts.append(swipe_context)
 
+    # Angolo comunicativo — nel system prompt come contesto, non nel user message come direttiva
+    if request.angle_title and request.angle_description:
+        sys_parts.append(
+            f"{sep}\nANGOLO COMUNICATIVO\n{sep}\n"
+            f"Titolo: {request.angle_title}\n\n"
+            f"Descrizione: {request.angle_description}\n\n"
+            "L'angolo è il TEMA e la PROSPETTIVA da cui affronti l'argomento. "
+            "Non è uno script da seguire alla lettera — è la lente attraverso cui "
+            "filtri il messaggio. Usa gli elementi dell'angolo che sono compatibili "
+            "con il livello di consapevolezza del target e il formato richiesto."
+        )
+
     system_prompt = "\n\n".join(sys_parts)
 
     # ══════════════════════════════════════════════════════════
@@ -1615,10 +1627,13 @@ async def generate_copy(client_id: str, request: CopyRequest):
         user_parts.append(f"Struttura il copy secondo il framework {request.framework} — le fasi devono essere riconoscibili nel testo ma senza etichette visibili.")
 
     if request.angle_title:
-        angle_text = f"Angolo comunicativo: {request.angle_title}"
-        if request.angle_description:
-            angle_text += f" — {request.angle_description}"
-        user_parts.append(angle_text)
+        user_parts.append(f"Tema dell'angolo: {request.angle_title}.")
+        if request.awareness_level:
+            user_parts.append(
+                "IMPORTANTE: il livello di consapevolezza decide COSA comunicare. "
+                "L'angolo decide DA CHE PROSPETTIVA comunicarlo. "
+                "Non menzionare il brand o il prodotto se il livello non lo prevede."
+            )
 
     if request.user_instructions:
         user_parts.append(request.user_instructions)
