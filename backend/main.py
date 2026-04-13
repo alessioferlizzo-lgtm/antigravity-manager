@@ -1623,38 +1623,90 @@ async def generate_copy(client_id: str, request: CopyRequest):
     system_prompt = "\n\n".join(sys_parts)
 
     # ══════════════════════════════════════════════════════════
-    # USER MESSAGE — La richiesta
-    # Tutta la conoscenza è nel system prompt.
-    # Qui si dice solo cosa fare, come lo diresti a un copywriter.
+    # USER MESSAGE — Processo sequenziale: analizza → pianifica → scrivi
+    #
+    # L'AI deve ragionare sui dati PRIMA di scrivere.
+    # Il ragionamento va in <ragionamento>, il copy finale in <copy>.
+    # Il backend estrae solo il contenuto di <copy>.
     # ══════════════════════════════════════════════════════════
-    user_parts = []
 
-    user_parts.append(f"Scrivi un {type_label}.")
+    # Costruisci la richiesta specifica
+    task_parts = []
+    task_parts.append(f"Formato: {type_label}")
     if word_limit > 0:
-        user_parts.append(f"Massimo {word_limit} parole.")
-
+        task_parts.append(f"Limite: massimo {word_limit} parole")
     if request.awareness_level:
         level_label = request.awareness_level.replace('_', ' ').upper()
-        user_parts.append(f"Il target è {level_label} — usa la conoscenza sui livelli di consapevolezza per decidere COSA comunicare nel messaggio.")
+        task_parts.append(f"Livello di consapevolezza del target: {level_label}")
+    if request.framework:
+        task_parts.append(f"Framework strutturale: {request.framework}")
+    if request.angle_title:
+        task_parts.append(f"Angolo comunicativo: {request.angle_title}")
+    if request.user_instructions:
+        task_parts.append(f"Istruzioni aggiuntive: {request.user_instructions}")
+    task_spec = "\n".join(task_parts)
+
+    # Costruisci gli step di ragionamento in base a cosa è selezionato
+    reasoning_steps = []
+    reasoning_steps.append(
+        "STEP 1 — ANALISI DEL CLIENTE\n"
+        "Leggi i dati del cliente nel system prompt. Rispondi a queste domande:\n"
+        "- Cosa vende ESATTAMENTE questo brand? (prodotti/servizi specifici)\n"
+        "- Qual è il suo vero differenziatore rispetto ai competitor?\n"
+        "- Come parlano i clienti reali nelle recensioni e nei commenti? Cita 2-3 espressioni ESATTE dalla Voice of Customer."
+    )
+
+    if request.awareness_level:
+        reasoning_steps.append(
+            "STEP 2 — LIVELLO DI CONSAPEVOLEZZA\n"
+            f"Il target è {level_label}. Basandoti sulla conoscenza dei livelli:\n"
+            "- Qual è il CONCETTO CENTRALE che questo copy deve comunicare a questo livello?\n"
+            "- Cosa è VIETATO fare a questo livello? (lista dalla sezione 'Cosa NON fare')\n"
+            "- Il brand/prodotto deve comparire nel copy? Se sì, come?"
+        )
 
     if request.framework:
-        user_parts.append(f"Struttura il copy secondo il framework {request.framework} — le fasi devono essere riconoscibili nel testo ma senza etichette visibili.")
+        step_n = "STEP 3" if request.awareness_level else "STEP 2"
+        reasoning_steps.append(
+            f"{step_n} — FRAMEWORK\n"
+            f"Il framework è {request.framework}. Basandoti sulla conoscenza del framework:\n"
+            "- Quali sono le fasi del framework?\n"
+            "- Come si adattano al livello di consapevolezza scelto?\n"
+            "- Le fasi devono essere riconoscibili nel testo ma senza etichette visibili."
+        )
 
     if request.angle_title:
-        user_parts.append(f"Tema dell'angolo: {request.angle_title}.")
-        if request.awareness_level:
-            user_parts.append(
-                "IMPORTANTE: il livello di consapevolezza decide COSA comunicare. "
-                "L'angolo decide DA CHE PROSPETTIVA comunicarlo. "
-                "Non menzionare il brand o il prodotto se il livello non lo prevede."
-            )
+        step_n = f"STEP {len(reasoning_steps) + 1}"
+        reasoning_steps.append(
+            f"{step_n} — ANGOLO\n"
+            f"L'angolo è: {request.angle_title}\n"
+            "L'angolo è la PROSPETTIVA, non il contenuto. "
+            "Quali elementi dell'angolo sono compatibili con il livello di consapevolezza? "
+            "Scarta gli elementi che violano i vincoli del livello."
+        )
 
-    if request.user_instructions:
-        user_parts.append(request.user_instructions)
+    last_step = f"STEP {len(reasoning_steps) + 1}"
+    reasoning_steps.append(
+        f"{last_step} — SCRIVI IL COPY\n"
+        "Ora scrivi il copy finale. Usa SOLO informazioni verificate nei dati del cliente. "
+        "Usa il linguaggio naturale dei clienti reali, non frasi che nessun umano direbbe mai."
+    )
 
-    user_parts.append("Rispondi solo con il copy, senza premesse o commenti.")
+    user_msg = f"""RICHIESTA:
+{task_spec}
 
-    user_msg = "\n\n".join(user_parts)
+Segui questo processo in sequenza. Ragiona dentro <ragionamento> poi scrivi il copy finale dentro <copy>.
+
+{"".join(f"{s}" for s in reasoning_steps)}
+
+Formato output:
+<ragionamento>
+[il tuo ragionamento step by step — NON verrà mostrato al cliente]
+</ragionamento>
+
+<copy>
+[SOLO il copy finale, senza premesse o commenti]
+</copy>"""
 
     try:
         raw = await ai_service._call_ai(
@@ -1664,9 +1716,17 @@ async def generate_copy(client_id: str, request: CopyRequest):
                 {"role": "user", "content": user_msg}
             ],
             temperature=0.6,
-            max_tokens=1500
+            max_tokens=3000
         )
-        return {"copy_text": raw.strip()}
+        # Estrai solo il contenuto dentro <copy>...</copy>
+        import re
+        copy_match = re.search(r"<copy>(.*?)</copy>", raw, re.DOTALL)
+        if copy_match:
+            copy_text = copy_match.group(1).strip()
+        else:
+            # Fallback: se l'AI non ha usato i tag, prendi tutto
+            copy_text = raw.strip()
+        return {"copy_text": copy_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore AI: {str(e)}")
 
