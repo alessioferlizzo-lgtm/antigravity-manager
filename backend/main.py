@@ -1676,6 +1676,80 @@ async def generate_copy(client_id: str, request: CopyRequest):
         ),
     }
 
+    # ── Direttive operative per livello di consapevolezza ──
+    # Queste NON sono "tono" — cambiano COSA il copy dice e COSA presuppone.
+    # Vanno nel user message come istruzione operativa, non come contesto.
+    AWARENESS_DIRECTIVES = {
+        "unaware": (
+            "⚠️ LIVELLO CONSAPEVOLEZZA: UNAWARE (Completamente Inconsapevole)\n"
+            "Il target NON sa di avere un problema. NON conosce il brand. NON sta cercando nulla.\n\n"
+            "COSA FARE:\n"
+            "- Apri con un PATTERN INTERRUPT: dato shock, affermazione contro-intuitiva, o domanda che rompe l'indifferenza\n"
+            "- NON nominare il brand/prodotto subito — prima cattura l'attenzione sul PROBLEMA nascosto\n"
+            "- Usa loss aversion: cosa sta PERDENDO senza saperlo?\n"
+            "- Il brand/prodotto entra solo alla fine come scoperta naturale\n\n"
+            "COSA NON FARE:\n"
+            "- NON parlare del prodotto come se il target lo conoscesse\n"
+            "- NON usare gergo tecnico o di settore\n"
+            "- NON fare offerte dirette — il target non sa nemmeno di avere bisogno di te"
+        ),
+        "problem_aware": (
+            "⚠️ LIVELLO CONSAPEVOLEZZA: PROBLEM AWARE (Consapevole del Problema)\n"
+            "Il target SA di avere un problema ma NON sa come risolverlo. NON conosce ancora il brand.\n\n"
+            "COSA FARE:\n"
+            "- Apri DESCRIVENDO il problema con le parole esatte del target — deve pensare 'questo parla di me'\n"
+            "- Usa storytelling empatico: scenari quotidiani riconoscibili, frustrazioni specifiche\n"
+            "- Crea connessione emotiva PRIMA di presentare qualsiasi soluzione\n"
+            "- Il prodotto/brand arriva come naturale conseguenza della comprensione del problema\n\n"
+            "COSA NON FARE:\n"
+            "- NON partire dal prodotto — il target non lo conosce ancora\n"
+            "- NON essere generico sul problema — più sei specifico più funziona\n"
+            "- NON saltare alla soluzione troppo presto — prima empatia, poi guida"
+        ),
+        "solution_aware": (
+            "⚠️ LIVELLO CONSAPEVOLEZZA: SOLUTION AWARE (Consapevole della Soluzione)\n"
+            "Il target sa che esistono soluzioni e sta CONFRONTANDO le opzioni. Potrebbe conoscere il brand ma non è convinto.\n\n"
+            "COSA FARE:\n"
+            "- Apri con un DIFFERENZIATORE CONCRETO: cosa rende questo prodotto/servizio UNICO rispetto alle alternative?\n"
+            "- Usa dati specifici: numeri, risultati misurabili, caratteristiche tecniche uniche\n"
+            "- Mostra PROVE di superiorità: casi studio, testimonial con risultati, confronti\n"
+            "- Il target è analitico — dagli FATTI, non emozioni generiche\n\n"
+            "COSA NON FARE:\n"
+            "- NON perdere tempo a spiegare il problema — lo conosce già\n"
+            "- NON usare claim vaghi ('il migliore', 'qualità superiore') — servono PROVE concrete\n"
+            "- NON ignorare la concorrenza — il target sta confrontando, devi vincere il confronto"
+        ),
+        "product_aware": (
+            "⚠️ LIVELLO CONSAPEVOLEZZA: PRODUCT AWARE (Consapevole del Prodotto)\n"
+            "Il target CONOSCE GIÀ il brand e il prodotto. Sa cosa offri. È quasi convinto ma ESITA.\n\n"
+            "COSA FARE:\n"
+            "- PRESUPPONI che conosca il brand — NON presentarti, NON spiegare cosa fai\n"
+            "- Parla con AUTORITÀ e COMANDO: 'Se vuoi X, devi fare Y' — struttura imperativa\n"
+            "- Elimina l'indecisione con PRESUPPOSTI DI NECESSITÀ: il tuo metodo è L'UNICO modo\n"
+            "- Usa social proof FINALE: non per convincere, ma per confermare la decisione che sta già considerando\n"
+            "- CTA diretta e assertiva — non 'scopri di più' ma 'fallo adesso'\n\n"
+            "COSA NON FARE:\n"
+            "- ❌ NON presentare il brand come se fosse la prima volta — il target ti conosce GIÀ\n"
+            "- ❌ NON descrivere il problema da zero — lo sa già, lo ha già superato mentalmente\n"
+            "- ❌ NON essere timido o dubitativo — servono CERTEZZA e AUTORITÀ\n"
+            "- ❌ NON usare hook da Unaware ('Sapevi che...?') — il target è AVANTI, parlagli da pari"
+        ),
+        "most_aware": (
+            "⚠️ LIVELLO CONSAPEVOLEZZA: MOST AWARE (Pienamente Consapevole)\n"
+            "Il target è PRONTO a comprare. Conosce il brand, il prodotto, i benefici. Serve solo la SPINTA FINALE.\n\n"
+            "COSA FARE:\n"
+            "- Apri con URGENZA o SCARSITÀ reale: deadline, posti limitati, offerta in scadenza\n"
+            "- SFIDA il target: 'Sei davvero pronto?' — usa il testosterone da sfida accettata\n"
+            "- Inversione del potere: non sei tu che vendi, è lui che deve MERITARSI l'accesso\n"
+            "- CTA con stress positivo: 'Se sei serio, agisci ora. Altrimenti lascia il posto.'\n\n"
+            "COSA NON FARE:\n"
+            "- ❌ NON spiegare chi sei o cosa fai — lo sa TUTTO\n"
+            "- ❌ NON convincere — deve solo AGIRE\n"
+            "- ❌ NON essere gentile o soft — serve una spinta decisa, quasi provocatoria\n"
+            "- ❌ NON usare hook educativi o informativi — il target non ha bisogno di informazioni, ha bisogno di un CALCIO"
+        ),
+    }
+
     # ═══════════════════════════════════════════════════════
     # RAG DA NOTION — Esempi gold standard (copy a 5 stelle)
     # Costo: zero (è una chiamata API Notion, non AI)
@@ -1757,7 +1831,11 @@ async def generate_copy(client_id: str, request: CopyRequest):
             )
 
     if request.awareness_level:
-        user_parts.append(f"TONO: adattato al livello {request.awareness_level.replace('_', ' ').upper()} (vedi knowledge). Questo influenza il tono, NON la struttura.")
+        awareness_directive = AWARENESS_DIRECTIVES.get(request.awareness_level, "")
+        if awareness_directive:
+            user_parts.append(awareness_directive)
+        else:
+            user_parts.append(f"LIVELLO CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()} — adatta il contenuto a questo livello (vedi knowledge).")
 
     if request.angle_title:
         user_parts.append(f"ANGOLO: {request.angle_title}")
