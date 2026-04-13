@@ -1508,7 +1508,7 @@ async def generate_copy(client_id: str, request: CopyRequest):
         client_id=client_id,
         metadata=metadata,
         supabase_client=supabase,
-        focus_areas=["brand_identity", "brand_voice", "customer_personas", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
+        focus_areas=["brand_identity", "brand_voice", "product_portfolio", "customer_personas", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
     )
 
     from .knowledge_loader import (
@@ -1565,10 +1565,24 @@ async def generate_copy(client_id: str, request: CopyRequest):
     sep = "=" * 50
     sys_parts = []
 
-    # Identità
+    # Identità + grounding
+    from datetime import date
+    today = date.today().strftime("%d/%m/%Y")
     sys_parts.append(
         "Sei un copywriter professionista specializzato in copywriting a risposta diretta e "
-        "comunicazione persuasiva per i social media. Scrivi in italiano."
+        "comunicazione persuasiva per i social media. Scrivi in italiano.\n\n"
+        f"Data di oggi: {today}\n\n"
+        "REGOLE DI GROUNDING:\n"
+        "- Scrivi SOLO cose vere sul cliente. Ogni claim, feature, prodotto o offerta deve venire "
+        "dai dati del cliente qui sotto. Se non c'è nei dati, non lo scrivere.\n"
+        "- NON inventare promozioni, sconti, scadenze, numeri di posti limitati o urgenze che non "
+        "esistono nei dati. Se il livello di consapevolezza richiede urgenza (Most Aware), usa "
+        "la struttura dell'urgenza ma basata su fatti reali del cliente.\n"
+        "- Usa il linguaggio dei clienti REALI. Nella sezione Voice of Customer trovi come parlano "
+        "davvero le persone che comprano da questo brand — usa quelle parole, quel tono, quelle "
+        "espressioni. Nessun umano dice 'i gioielli urlano' o 'argento 925 che racconta storie'.\n"
+        "- Leggi attentamente il PORTAFOGLIO PRODOTTI: non attribuire al brand prodotti, servizi o "
+        "caratteristiche che non vende o non ha."
     )
 
     # Dati del cliente
