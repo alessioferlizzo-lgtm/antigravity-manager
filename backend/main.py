@@ -1817,25 +1817,37 @@ async def generate_copy(client_id: str, request: CopyRequest):
     if word_limit > 0:
         user_parts.append(f"MASSIMO {word_limit} PAROLE. Se ne scrivi di più, il copy è inutilizzabile. Sii conciso.")
 
+    # ── AWARENESS PRIMA DI TUTTO — decide COSA comunicare ──
+    # Il livello di consapevolezza è il vincolo PRIMARIO: decide il concetto
+    # del messaggio. Il framework (sotto) decide solo come ORGANIZZARLO.
+    if request.awareness_level:
+        awareness_briefing = AWARENESS_BRIEFING.get(request.awareness_level, "")
+        if awareness_briefing:
+            user_parts.append(
+                f"🔴 VINCOLO PRIMARIO — LIVELLO DI CONSAPEVOLEZZA (Eugene Schwartz):\n"
+                f"{awareness_briefing}\n\n"
+                f"PRIORITÀ ASSOLUTA: Il livello di consapevolezza decide COSA comunica il messaggio. "
+                f"Il framework (sotto) decide solo COME organizzarlo. "
+                f"Se il livello dice 'il prodotto non compare', il framework si adatta: "
+                f"ogni fase parla dell'emozione/problema/meccanismo, NON del prodotto. "
+                f"NON ignorare queste istruzioni per riempire le fasi del framework con informazioni sul brand."
+            )
+        else:
+            user_parts.append(f"LIVELLO CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()} — adatta il contenuto a questo livello.")
+
+    # ── FRAMEWORK — decide COME organizzare il messaggio ──
     if request.framework:
         phases = FRAMEWORK_PHASES.get(request.framework, "")
         if phases:
             user_parts.append(
-                f"⚠️ STRUTTURA OBBLIGATORIA — FRAMEWORK {request.framework}:\n"
+                f"STRUTTURA — FRAMEWORK {request.framework}:\n"
                 f"{phases}\n\n"
                 f"REGOLE FRAMEWORK:\n"
-                f"- Segui ESATTAMENTE questa sequenza di fasi. Non saltarne nessuna.\n"
+                f"- Segui questa sequenza di fasi.\n"
                 f"- Ogni fase deve essere riconoscibile nel testo (ma senza etichette visibili come [ATTENTION] o [PROBLEM]).\n"
-                f"- NON mescolare le fasi. NON aggiungere fasi extra.\n"
-                f"- Il framework è la STRUTTURA del copy. Non inventare una struttura diversa."
+                f"- Il framework organizza il FLUSSO del copy, ma il CONTENUTO di ogni fase "
+                f"deve rispettare il livello di consapevolezza sopra."
             )
-
-    if request.awareness_level:
-        awareness_briefing = AWARENESS_BRIEFING.get(request.awareness_level, "")
-        if awareness_briefing:
-            user_parts.append(awareness_briefing)
-        else:
-            user_parts.append(f"LIVELLO CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()} — adatta il contenuto a questo livello (vedi knowledge).")
 
     if request.angle_title:
         user_parts.append(f"ANGOLO: {request.angle_title}")
