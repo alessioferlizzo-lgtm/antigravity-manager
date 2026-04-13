@@ -1511,45 +1511,10 @@ async def generate_copy(client_id: str, request: CopyRequest):
         focus_areas=["brand_identity", "brand_voice", "customer_personas", "reviews_voc", "objections", "reasons_to_buy", "psychographic_analysis"]
     )
 
-    from .knowledge_loader import (
-        get_writing_knowledge, get_awareness_context,
-        get_single_framework_knowledge, get_inspirational_stair,
-        get_copy_type_knowledge
-    )
-
-    # ═══════════════════════════════════════════════════════
-    # LAYER 1 — Conoscenza base (SEMPRE presente)
-    # Regole di scrittura Vignali + Modelli narrativi Dosio
-    # L'AI deve conoscere queste regole PRIMA di scrivere qualsiasi cosa
-    # ═══════════════════════════════════════════════════════
-    writing_knowledge = get_writing_knowledge()
-
-    # ═══════════════════════════════════════════════════════
-    # LAYER 2 — Livello di consapevolezza (se selezionato)
-    # Dice all'AI COME parlare al target in base a dove si trova
-    # ═══════════════════════════════════════════════════════
-    # Awareness: gestita come AWARENESS_BRIEFING nel user message (concetto Schwartz).
-    # I file di consapevolezza con leve chimiche NON vengono iniettati nel system prompt.
-
-    # ═══════════════════════════════════════════════════════
-    # LAYER 3 — Framework (se selezionato)
-    # Detta la STRUTTURA del copy — l'AI lo segue alla lettera
-    # ═══════════════════════════════════════════════════════
-    framework_section = ""
-    if request.framework:
-        if request.framework == "INSPIRATIONAL_STAIR":
-            framework_section = get_inspirational_stair()
-        else:
-            fw = get_single_framework_knowledge(request.framework)
-            if fw:
-                framework_section = fw
-
-    # ═══════════════════════════════════════════════════════
-    # LAYER 4 — Tipo di copy (canale + vincoli tecnici)
-    # NON detta la struttura — dice solo DOVE verrà pubblicato
-    # e i vincoli tecnici di quel canale
-    # ═══════════════════════════════════════════════════════
-    type_knowledge = get_copy_type_knowledge(request.copy_type)
+    # Knowledge files rimossi dal prompt — sovraccaricavano l'AI con istruzioni
+    # contraddittorie (Vignali, Dosio, framework knowledge, type knowledge).
+    # Claude è già un buon copywriter: servono solo i dati del cliente
+    # e UN'istruzione chiara su cosa scrivere.
 
     # ── Contesto angolo ──
     angle_ctx = ""
@@ -1768,85 +1733,39 @@ async def generate_copy(client_id: str, request: CopyRequest):
             print(f"⚠️ Notion vault copy non disponibile: {e}")
 
     # ══════════════════════════════════════════════════════════
-    # SYSTEM PROMPT — Background knowledge (contesto)
+    # SYSTEM PROMPT — Solo dati del cliente + esempi gold standard
     # ══════════════════════════════════════════════════════════
-    sep = "=" * 60
-    sys_parts = []
-
-    sys_parts.append(
-        "Sei un copywriter. Scrivi copy breve, diretto, che converte. Odi i muri di testo.\n\n"
-        "⚠️ PRIMA DI SCRIVERE — LEGGI I DATI:\n"
-        "Leggi CUSTOMER PERSONAS nei dati del cliente: quelle sono le persone a cui parli.\n"
-        "Leggi BRAND IDENTITY: quella è l'azienda/professionista che vende.\n"
-        "Il copy deve parlare al target descritto nelle personas, usando i loro dolori, desideri e linguaggio."
-    )
-
-    # Contesto strategico del cliente
-    sys_parts.append(f"{sep}\nDATI DEL CLIENTE\n{sep}\n{strategic_context}")
-
-    # Regole di scrittura (sempre)
-    sys_parts.append(f"{sep}\nREGOLE DI SCRITTURA\n{sep}\n{writing_knowledge}")
-
-    # Awareness: il concetto da comunicare è nel user message (AWARENESS_BRIEFING).
-    # NON iniettare i file di consapevolezza nel system prompt — le leve chimiche
-    # (cortisolo, serotonina, ecc.) distraggono l'AI dal concetto Schwartz e producono
-    # lo stesso messaggio a tutti i livelli, solo con emozioni diverse.
-
-    # Framework knowledge di approfondimento (se selezionato)
-    if framework_section:
-        sys_parts.append(f"{sep}\nAPPROFONDIMENTO FRAMEWORK\n{sep}\n{framework_section}")
-
-    # Vincoli tecnici del canale
-    if type_knowledge:
-        sys_parts.append(f"{sep}\nVINCOLI CANALE: {type_label}\n{sep}\n{type_knowledge}")
-
-    # Esempi gold standard dal vault Notion (se disponibili)
+    sys_parts = [
+        "Sei un copywriter esperto. Scrivi in italiano. "
+        "Frasi brevi, ritmo incalzante, zero filler.",
+        f"DATI DEL CLIENTE:\n{strategic_context}",
+    ]
     if swipe_context:
         sys_parts.append(swipe_context)
-
     system_prompt = "\n\n".join(sys_parts)
 
     # ══════════════════════════════════════════════════════════
-    # USER MESSAGE — Istruzioni operative (l'ordine vero)
-    # Questo è ciò che l'AI legge per ULTIMO prima di generare.
-    # Deve essere chiaro, diretto, specifico.
+    # USER MESSAGE — Un'istruzione chiara, non un muro di vincoli
     # ══════════════════════════════════════════════════════════
     user_parts = []
     user_parts.append(f"Scrivi un {type_label}.")
 
     if word_limit > 0:
-        user_parts.append(f"MASSIMO {word_limit} PAROLE. Se ne scrivi di più, il copy è inutilizzabile. Sii conciso.")
+        user_parts.append(f"Massimo {word_limit} parole.")
 
-    # ── AWARENESS PRIMA DI TUTTO — decide COSA comunicare ──
-    # Il livello di consapevolezza è il vincolo PRIMARIO: decide il concetto
-    # del messaggio. Il framework (sotto) decide solo come ORGANIZZARLO.
+    # ── AWARENESS — cosa comunica il messaggio ──
     if request.awareness_level:
         awareness_briefing = AWARENESS_BRIEFING.get(request.awareness_level, "")
         if awareness_briefing:
-            user_parts.append(
-                f"🔴 VINCOLO PRIMARIO — LIVELLO DI CONSAPEVOLEZZA (Eugene Schwartz):\n"
-                f"{awareness_briefing}\n\n"
-                f"PRIORITÀ ASSOLUTA: Il livello di consapevolezza decide COSA comunica il messaggio. "
-                f"Il framework (sotto) decide solo COME organizzarlo. "
-                f"Se il livello dice 'il prodotto non compare', il framework si adatta: "
-                f"ogni fase parla dell'emozione/problema/meccanismo, NON del prodotto. "
-                f"NON ignorare queste istruzioni per riempire le fasi del framework con informazioni sul brand."
-            )
-        else:
-            user_parts.append(f"LIVELLO CONSAPEVOLEZZA: {request.awareness_level.replace('_', ' ').upper()} — adatta il contenuto a questo livello.")
+            user_parts.append(awareness_briefing)
 
-    # ── FRAMEWORK — decide COME organizzare il messaggio ──
+    # ── FRAMEWORK — come organizzare il flusso ──
     if request.framework:
         phases = FRAMEWORK_PHASES.get(request.framework, "")
         if phases:
             user_parts.append(
-                f"STRUTTURA — FRAMEWORK {request.framework}:\n"
-                f"{phases}\n\n"
-                f"REGOLE FRAMEWORK:\n"
-                f"- Segui questa sequenza di fasi.\n"
-                f"- Ogni fase deve essere riconoscibile nel testo (ma senza etichette visibili come [ATTENTION] o [PROBLEM]).\n"
-                f"- Il framework organizza il FLUSSO del copy, ma il CONTENUTO di ogni fase "
-                f"deve rispettare il livello di consapevolezza sopra."
+                f"Organizza il copy con la struttura {request.framework}:\n{phases}\n"
+                f"Le fasi devono essere riconoscibili nel testo ma senza etichette visibili."
             )
 
     if request.angle_title:
