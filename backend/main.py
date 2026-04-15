@@ -3592,12 +3592,21 @@ Rispondi SOLO con il prompt inglese. Senza spiegazioni, senza prefissi."""
             f"?key={GOOGLE_AI_API_KEY}"
         )
         print(f"Gemini {gemini_model}: Claude prompt ready, {len(request.references)} images as inline_data")
+        resp = None
+        last_error = None
         async with httpx.AsyncClient(timeout=180.0) as gclient:
-            try:
-                resp = await gclient.post(gemini_url, headers={"Content-Type": "application/json"}, json=gemini_payload)
-                resp.raise_for_status()
-            except httpx.HTTPStatusError as e:
-                raise HTTPException(status_code=502, detail=f"Gemini error: {e.response.text[:500]}")
+            for attempt in range(3):
+                try:
+                    resp = await gclient.post(gemini_url, headers={"Content-Type": "application/json"}, json=gemini_payload)
+                    resp.raise_for_status()
+                    break
+                except httpx.HTTPStatusError as e:
+                    last_error = e.response.text[:500]
+                    if e.response.status_code == 503 and attempt < 2:
+                        print(f"Gemini 503 (attempt {attempt+1}/3), retry in 5s...")
+                        await asyncio.sleep(5)
+                        continue
+                    raise HTTPException(status_code=502, detail=f"Gemini error: {last_error}")
 
         image_b64 = None
         for candidate in resp.json().get("candidates", []):
