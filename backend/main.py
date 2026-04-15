@@ -3631,7 +3631,6 @@ Rispondi SOLO con il prompt inglese. Senza spiegazioni, senza prefissi."""
     if request.references and "flux" in request.model_id.lower():
         actual_model = "fal-ai/flux-pro/v1.1-ultra/redux"
 
-    fal_url = f"https://fal.run/{actual_model}"
     payload = {"prompt": enhanced_prompt, "output_format": "png"}
 
     # Pixel-perfect image sizes for Flux
@@ -3652,28 +3651,29 @@ Rispondi SOLO con il prompt inglese. Senza spiegazioni, senza prefissi."""
         payload["strength"] = 0.60
         payload["seed"] = random.randint(0, 2**32 - 1)
 
-    # 4. Call Fal.ai REST API - always use JSON
-    fal_headers = {"Authorization": f"Key {FAL_KEY}", "Content-Type": "application/json"}
-
-    async with httpx.AsyncClient(timeout=180.0) as client:
-        try:
-            resp = await client.post(fal_url, headers=fal_headers, json=payload)
-            resp.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            error_detail = e.response.text[:500] if e.response else str(e)
-            raise HTTPException(status_code=502, detail=f"Fal.ai error: {error_detail}")
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"Fal.ai network error: {str(e)}")
-
-    result = resp.json()
+    # 4. Call Fal.ai via queue API (no deadline, polls until done)
+    os.environ["FAL_KEY"] = FAL_KEY
+    try:
+        result = await fal_client.subscribe_async(
+            actual_model,
+            arguments=payload,
+            with_logs=False,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Fal.ai error: {str(e)}")
 
     # 5. Extract generated image URL
     image_url = None
-    if "images" in result and len(result["images"]) > 0:
-        image_url = result["images"][0].get("url")
-    elif "image" in result and isinstance(result["image"], dict):
-        image_url = result["image"].get("url")
-        
+    if hasattr(result, "images") and result.images:
+        image_url = result.images[0].url if hasattr(result.images[0], "url") else result.images[0].get("url")
+    elif hasattr(result, "image"):
+        image_url = result.image.url if hasattr(result.image, "url") else result.image.get("url")
+    elif isinstance(result, dict):
+        if "images" in result and result["images"]:
+            image_url = result["images"][0].get("url")
+        elif "image" in result:
+            image_url = result["image"].get("url") if isinstance(result["image"], dict) else result["image"]
+
     if not image_url:
         raise HTTPException(status_code=500, detail=f"No image returned from Fal.ai. Response: {str(result)[:300]}")
 
