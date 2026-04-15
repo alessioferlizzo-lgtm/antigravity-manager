@@ -405,75 +405,54 @@ class DataCollectionService:
             response.raise_for_status()
             return response.text
 
+    async def _fetch_page_jina(self, url: str) -> str:
+        """Usa Jina AI (r.jina.ai) per convertire una pagina in testo pulito — GRATIS."""
+        jina_url = f"https://r.jina.ai/{url}"
+        headers = {
+            "Accept": "text/plain",
+            "User-Agent": "Mozilla/5.0",
+        }
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+            response = await client.get(jina_url, headers=headers)
+            response.raise_for_status()
+            return response.text
+
     async def _scrape_single_website_page(self, url: str, context: str = "") -> Dict[str, Any]:
         """
-        Scraping DIRETTO: fetch HTML → estrai testo → Claude per strutturazione.
-        Non usa più Perplexity — prende il testo reale dalla pagina.
-        """
-        print(f"   🌐 Scraping diretto {url} {'(' + context + ')' if context else ''}...")
+        Estrae il testo dalla pagina SENZA chiamate AI.
+        1. Jina AI (gratis) → testo markdown pulito
+        2. Fallback: httpx + html_to_text
+        3. Fallback finale: Perplexity (solo per pagine JS-rendered)
 
+        La strutturazione del testo viene fatta dal pre-processing nell'analisi,
+        non per ogni singola pagina — risparmia ~5 chiamate Claude per analisi.
+        """
+        print(f"   🌐 Scraping {url} {'(' + context + ')' if context else ''}...")
+
+        # TENTATIVO 1: Jina AI (gratis, testo pulito)
         try:
-            # STEP 1: Fetch HTML diretto
+            raw_text = await self._fetch_page_jina(url)
+            if len(raw_text.strip()) > 100:
+                raw_text = raw_text[:15000]
+                print(f"   ✅ Jina: {len(raw_text)} caratteri estratti")
+                return {"raw_text": raw_text, "url": url, "context": context}
+        except Exception as e:
+            print(f"   ⚠️ Jina fallito per {url}: {e}")
+
+        # TENTATIVO 2: httpx diretto + parsing HTML
+        try:
             html = await self._fetch_page_html(url)
             raw_text = self._html_to_text(html)
-
-            if len(raw_text.strip()) < 50:
-                print(f"   ⚠️ Pagina {url} ha poco testo ({len(raw_text)} chars), provo con Perplexity come fallback")
-                return await self._scrape_single_website_page_perplexity(url, context)
-
-            # Tronca a 15K chars per non esplodere il context
-            raw_text = raw_text[:15000]
-            print(f"   ✅ HTML scaricato e convertito: {len(raw_text)} caratteri di testo")
-
-            # STEP 2: Claude analizza il testo REALE estratto
-            prompt = f"""Hai davanti il TESTO REALE estratto dalla pagina web: {url}
-{"CONTESTO: " + context if context else ""}
-
-TESTO DELLA PAGINA (estratto direttamente dall'HTML):
----
-{raw_text}
----
-
-ISTRUZIONI:
-1. Analizza il testo sopra COSÌ COM'È. Non inventare, non aggiungere, non interpretare.
-2. Il testo sopra È la pagina. Non hai bisogno di navigare altrove.
-3. FEDELTÀ ASSOLUTA: usa le parole esatte del testo. Se dice "gestione completa" scrivi "gestione completa", non "consulenza".
-
-⚠️ REGOLA CRITICA — CTA ≠ SERVIZIO:
-- Bottoni come "Richiedi una Consulenza Gratuita" sono il PROCESSO DI VENDITA (call conoscitiva), NON il servizio.
-- Il servizio è descritto nel corpo: "Come Funziona", fasi operative, "Fa per te se".
-- Se dice "mi occupo di tutto", "gestione e ottimizzazione", "delegare completamente" → GESTIONE DONE-FOR-YOU.
-
-COMPONENTI RICHIESTI NEL JSON:
-1. "raw_text": COPIA il testo integrale della pagina così come lo vedi sopra — non riassumere.
-2. "product_service_details": Cosa viene offerto, come funziona, fasi del servizio. Specifica se è gestione done-for-you o consulenza BASANDOTI sulle parole reali.
-3. "marketing_hooks": Promesse, angoli, trasformazione promessa al cliente.
-4. "trust_signals": Testimonianze, garanzie, numeri citati.
-5. "brand_voice": Termini specifici e stile comunicativo.
-
-Rispondi esclusivamente con un JSON strutturato con queste chiavi."""
-
-            response = await self.ai_service._call_ai(
-                model="anthropic/claude-3.7-sonnet",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=16000
-            )
-
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group())
-                # SEMPRE preserva il testo REALE dall'HTML — Claude potrebbe riassumerlo
-                data["raw_text"] = raw_text
-                print(f"   ✅ Analisi pagina completata: {len(str(data))} caratteri (raw_text: {len(raw_text)} chars reali)")
-                return data
-            else:
-                print(f"   ✅ Analisi pagina completata (testo): {len(response)} caratteri")
-                return {"raw_text": raw_text}
-
+            if len(raw_text.strip()) > 50:
+                raw_text = raw_text[:15000]
+                print(f"   ✅ HTML diretto: {len(raw_text)} caratteri estratti")
+                return {"raw_text": raw_text, "url": url, "context": context}
         except Exception as e:
-            print(f"   ⚠️ Scraping diretto fallito per {url}: {e} — fallback a Perplexity")
-            return await self._scrape_single_website_page_perplexity(url, context)
+            print(f"   ⚠️ HTML diretto fallito per {url}: {e}")
+
+        # TENTATIVO 3: Perplexity come ultimo fallback (pagine JS-heavy)
+        print(f"   🔄 Fallback Perplexity per {url}...")
+        return await self._scrape_single_website_page_perplexity(url, context)
 
     async def _scrape_single_website_page_perplexity(self, url: str, context: str = "") -> Dict[str, Any]:
         """Fallback: usa Perplexity solo se il fetch diretto fallisce (es. JS-rendered pages)."""
