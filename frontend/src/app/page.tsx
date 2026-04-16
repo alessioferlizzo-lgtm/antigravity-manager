@@ -214,6 +214,7 @@ export default function Dashboard() {
   const [cpyPrompt, setCpyPrompt] = useState("");
   const [cpyOutput, setCpyOutput] = useState("");
   const [cpyLoading, setCpyLoading] = useState(false);
+  const [cpyHasAnalysis, setCpyHasAnalysis] = useState<boolean | null>(null);
   const [cpyAngles, setCpyAngles] = useState<any[]>([]);
   const [cpyAngle, setCpyAngle] = useState<any>(null);
   const [cpyAngLoading, setCpyAngLoading] = useState(false);
@@ -479,10 +480,19 @@ export default function Dashboard() {
 
   /* ─── copy helpers ─── */
   async function loadCopyClientAngles(clientId: string) {
-    if (!clientId) { setCpyAngles([]); setCpyAngle(null); return; }
+    if (!clientId) { setCpyAngles([]); setCpyAngle(null); setCpyHasAnalysis(null); return; }
     setCpyAngLoading(true);
-    const r = await fetch(`${API}/clients/${clientId}/angles`);
-    if (r.ok) setCpyAngles(await r.json());
+    const [anglesRes, analysisRes] = await Promise.all([
+      fetch(`${API}/clients/${clientId}/angles`),
+      fetch(`${API}/clients/${clientId}/analysis`)
+    ]);
+    if (anglesRes.ok) setCpyAngles(await anglesRes.json());
+    if (analysisRes.ok) {
+      const analysis = await analysisRes.json();
+      setCpyHasAnalysis(!!(analysis && Object.keys(analysis).length > 0 && !analysis.error));
+    } else {
+      setCpyHasAnalysis(false);
+    }
     setCpyAngLoading(false);
   }
 
@@ -1629,6 +1639,16 @@ export default function Dashboard() {
                   <textarea className="input" rows={3} placeholder="Es: Focus sul risparmio di tempo, tono informale, obiettivo traffico al sito..."
                     value={cpyPrompt} onChange={e => setCpyPrompt(e.target.value)} />
 
+                  {cpyHasAnalysis === false && (
+                    <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+                      <div>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: "#f87171", marginBottom: 2 }}>Analisi strategica mancante</p>
+                        <p style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.5 }}>Questo cliente non ha ancora un'analisi strategica. Il copy generato potrebbe contenere informazioni inventate. Genera prima l'analisi dalla scheda cliente.</p>
+                      </div>
+                    </div>
+                  )}
+
                   <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={genCopy} disabled={cpyLoading}>
                     {cpyLoading ? <><div className="spinner" />Generando...</> : <><SparklesIcon style={{ width: 15, height: 15 }} />Genera Copy</>}
                   </button>
@@ -1807,14 +1827,14 @@ export default function Dashboard() {
                         id: "gemini-image",
                         name: "Gemini 3.1 Flash",
                         sub: "Google AI (Diretto)",
-                        cost: "Gratuito",
+                        cost: "~$0.01",
                         desc: "🔥 Passa le tue foto DIRETTAMENTE a Gemini. Rapido ed economico."
                       },
                       {
                         id: "gemini-image-pro",
                         name: "Gemini 3 Pro",
                         sub: "Google AI Pro (Diretto)",
-                        cost: "Gratuito",
+                        cost: "~$0.04",
                         desc: "⭐ Versione PRO. Maggiore qualità, migliore gestione di mani e riflessi. Consigliato per ads finali."
                       },
                       {
