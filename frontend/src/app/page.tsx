@@ -484,7 +484,7 @@ export default function Dashboard() {
     setCpyAngLoading(true);
     const [anglesRes, analysisRes] = await Promise.all([
       fetch(`${API}/clients/${clientId}/angles`),
-      fetch(`${API}/clients/${clientId}/analysis`)
+      fetch(`${API}/clients/${clientId}/analysis/complete`)
     ]);
     if (anglesRes.ok) setCpyAngles(await anglesRes.json());
     if (analysisRes.ok) {
