@@ -1649,55 +1649,82 @@ async def generate_copy(client_id: str, request: CopyRequest):
     # Costruisci gli step di ragionamento in base a cosa è selezionato
     reasoning_steps = []
     reasoning_steps.append(
-        "STEP 1 — ANALISI DEL CLIENTE\n"
-        "Leggi i dati del cliente nel system prompt. Rispondi a queste domande:\n"
-        "- Cosa vende ESATTAMENTE questo brand? (prodotti/servizi specifici)\n"
-        "- Qual è il suo vero differenziatore rispetto ai competitor?\n"
-        "- Come parlano i clienti reali nelle recensioni e nei commenti? Cita 2-3 espressioni ESATTE dalla Voice of Customer."
+        "STEP 1 — STUDIO APPROFONDITO DEL CLIENTE\n"
+        "Leggi tutta l'analisi del cliente disponibile nel system prompt. Non fare un riassunto superficiale — "
+        "studia ogni sezione in profondità:\n"
+        "- Chi è il cliente: settore, posizionamento, dove opera, cosa fa esattamente\n"
+        "- Cosa vende: ogni prodotto o servizio nel dettaglio — caratteristiche reali, fasce di prezzo, "
+        "cosa lo rende concretamente diverso\n"
+        "- Tono di voce del brand: come comunica, quali registri usa, cosa NON direbbe mai\n"
+        "- Buyer personas: chi compra, perché, cosa vuole sentirsi, cosa la muove emotivamente\n"
+        "- Voice of Customer: non citare frasi isolate — internalizza il vocabolario emotivo del target. "
+        "Quali parole usano? Qual è il loro tono? Cosa celebrano nell'acquisto? Cosa li delude? "
+        "Quali emozioni e immagini ricorrono?\n"
+        "- Obiezioni reali e ragioni d'acquisto: cosa blocca il cliente, cosa lo convince"
     )
-
-    if request.awareness_level:
-        reasoning_steps.append(
-            "STEP 2 — LIVELLO DI CONSAPEVOLEZZA\n"
-            f"Il target è {level_label}. Basandoti sulla conoscenza dei livelli:\n"
-            "- Qual è il CONCETTO CENTRALE che questo copy deve comunicare a questo livello?\n"
-            "- Cosa è VIETATO fare a questo livello? (lista dalla sezione 'Cosa NON fare')\n"
-            "- Il brand/prodotto deve comparire nel copy? Se sì, come?"
-        )
-
-    if request.framework:
-        step_n = "STEP 3" if request.awareness_level else "STEP 2"
-        reasoning_steps.append(
-            f"{step_n} — FRAMEWORK\n"
-            f"Il framework è {request.framework}. Basandoti sulla conoscenza del framework:\n"
-            "- Quali sono le fasi del framework?\n"
-            "- Come si adattano al livello di consapevolezza scelto?\n"
-            "- Le fasi devono essere riconoscibili nel testo ma senza etichette visibili."
-        )
 
     if request.angle_title:
         step_n = f"STEP {len(reasoning_steps) + 1}"
         reasoning_steps.append(
-            f"{step_n} — ANGOLO\n"
-            f"L'angolo è: {request.angle_title}\n"
-            "L'angolo è la PROSPETTIVA, non il contenuto. "
-            "Quali elementi dell'angolo sono compatibili con il livello di consapevolezza? "
-            "Scarta gli elementi che violano i vincoli del livello."
+            f"{step_n} — IL DESIDERIO (Angolo)\n"
+            f"L'angolo selezionato è: {request.angle_title}\n"
+            "L'angolo esprime un desiderio specifico o un'aspirazione che può muovere il target — "
+            "è un'ipotesi comunicativa da usare come lente, non necessariamente legata alle personas.\n"
+            "Rispondi in una frase concreta: qual è esattamente il desiderio o l'aspirazione che questo angolo esprime?"
+        )
+
+    if request.awareness_level:
+        step_n = f"STEP {len(reasoning_steps) + 1}"
+        reasoning_steps.append(
+            f"{step_n} — LO STATO DELLA PERSONA (Livello di consapevolezza)\n"
+            f"Il target si trova al livello: {level_label}.\n"
+            "La stessa persona che ha quel desiderio si trova in un momento specifico del suo percorso.\n"
+            "- A questo livello, cosa sa questa persona? Cosa non sa ancora?\n"
+            "- Qual è il messaggio unico che il copy deve consegnarle a questo livello?\n"
+            "- Cosa è vietato fare a questo livello? (leggi la sezione 'Cosa NON fare' del livello)"
+        )
+
+    if request.angle_title and request.awareness_level:
+        step_n = f"STEP {len(reasoning_steps) + 1}"
+        level_map = {
+            "unaware":        "Evoca il desiderio attraverso emozione o identità. Niente problema, niente prodotto, niente brand.",
+            "problem_aware":  "Dai un nome al disagio che impedisce a questa persona di soddisfare il suo desiderio. Niente soluzioni ancora.",
+            "solution_aware": "Mostra perché questo approccio specifico soddisfa quel desiderio meglio di qualsiasi alternativa.",
+            "product_aware":  "Smonta le ultime resistenze che bloccano questa persona dal soddisfare il suo desiderio con questo brand.",
+            "most_aware":     "Presenta l'offerta concreta che le dà quello che vuole, adesso. Solo fatti reali — niente urgenze inventate.",
+        }
+        level_instruction = level_map.get(request.awareness_level, "Esprimi il desiderio attraverso lo stato del livello.")
+        reasoning_steps.append(
+            f"{step_n} — ESPRIMI IL DESIDERIO ATTRAVERSO LO STATO\n"
+            f"Prendi il desiderio identificato nello step precedente e mostralo attraverso la realtà del livello {level_label}.\n"
+            f"{level_instruction}\n"
+            "Scrivi qui come intendi costruire il messaggio: punto di partenza, tensione centrale, dove porta il lettore."
+        )
+
+    if request.framework:
+        step_n = f"STEP {len(reasoning_steps) + 1}"
+        reasoning_steps.append(
+            f"{step_n} — STRUTTURA (Framework)\n"
+            f"Il framework è {request.framework}. Applica le sue fasi al copy che stai costruendo.\n"
+            "Le fasi guidano la struttura — devono essere riconoscibili nel ritmo del testo, "
+            "ma non compaiono come etichette visibili."
         )
 
     last_step = f"STEP {len(reasoning_steps) + 1}"
     reasoning_steps.append(
         f"{last_step} — SCRIVI IL COPY\n"
-        "Ora scrivi il copy finale. Usa SOLO informazioni verificate nei dati del cliente. "
-        "Usa il linguaggio naturale dei clienti reali, non frasi che nessun umano direbbe mai."
+        "Scrivi il copy finale. Usa solo informazioni verificate nei dati del cliente. "
+        "Usa il linguaggio che hai internalizzato dalla Voice of Customer — "
+        "parole reali, tono autentico, zero frasi da brochure."
     )
 
+    steps_text = "\n\n".join(reasoning_steps)
     user_msg = f"""RICHIESTA:
 {task_spec}
 
 Segui questo processo in sequenza. Ragiona dentro <ragionamento> poi scrivi il copy finale dentro <copy>.
 
-{"".join(f"{s}" for s in reasoning_steps)}
+{steps_text}
 
 Formato output:
 <ragionamento>
