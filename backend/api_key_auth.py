@@ -73,6 +73,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
     EXEMPT_PATHS = {"/", "/health", "/docs", "/openapi.json", "/redoc"}
 
     async def dispatch(self, request: Request, call_next):
+        # Always allow OPTIONS preflight — browser never sends auth headers on preflight
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         if request.url.path in self.EXEMPT_PATHS:
             return await call_next(request)
 
