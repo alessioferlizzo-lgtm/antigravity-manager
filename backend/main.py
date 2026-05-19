@@ -60,6 +60,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from .api_key_auth import APIKeyMiddleware, create_api_key, list_api_keys, delete_api_key  # noqa: E402
+app.add_middleware(APIKeyMiddleware)
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str
+
+
+@app.post("/api-keys", tags=["API Keys"])
+def api_keys_create(body: ApiKeyCreateRequest):
+    key = create_api_key(body.name)
+    return {"key": key, "name": body.name, "expires_at": None}
+
+
+@app.get("/api-keys", tags=["API Keys"])
+def api_keys_list():
+    return list_api_keys()
+
+
+@app.delete("/api-keys/{key}", tags=["API Keys"])
+def api_keys_delete(key: str):
+    if not delete_api_key(key):
+        raise HTTPException(status_code=404, detail="Key not found")
+    return {"deleted": True}
+
 ai_service = AIService()
 storage_service = StorageService()
 
