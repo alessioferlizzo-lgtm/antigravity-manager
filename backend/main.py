@@ -3478,11 +3478,15 @@ def save_graphic_metadata(client_id: str, filename: str, prompt: str, enhanced_p
 async def generate_image(request: ImageGenerateRequest):
     """Universal image generation endpoint. Claude writes the prompt, the model executes with direct file access."""
     GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     is_gemini = request.model_id in ("gemini-image", "gemini-image-pro")
-    is_fal = not is_gemini
+    is_openai = request.model_id == "openai-gpt-image-1"
+    is_fal = not is_gemini and not is_openai
 
     if is_gemini and not GOOGLE_AI_API_KEY:
         raise HTTPException(status_code=500, detail="GOOGLE_AI_API_KEY not configured")
+    if is_openai and not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
     if is_fal and not FAL_KEY:
         raise HTTPException(status_code=500, detail="FAL_KEY not configured")
 
@@ -3549,6 +3553,7 @@ Stile visivo: {brand.get('visuals', 'non specificato')}"""
     model_names = {
         "gemini-image": "Google Gemini 3.1 Flash Image",
         "gemini-image-pro": "Google Gemini 3 Pro Image",
+        "openai-gpt-image-1": "OpenAI gpt-image-1",
         "fal-ai/flux-pro/v1.1-ultra": "Flux Pro 1.1 Ultra (Black Forest Labs)",
         "fal-ai/flux-realism": "Flux Realism (Black Forest Labs)",
     }
@@ -3685,7 +3690,76 @@ Rispondi SOLO con il prompt inglese. Senza spiegazioni, senza prefissi."""
 
         return {"url": f"/clients/{request.client_id}/graphics/{filename}", "filename": filename, "enhanced_prompt": enhanced_prompt, "model_used": gemini_model}
 
-    # ── STEP 4b: Execute on Fal.ai (Flux models only) ────────────────────────
+    # ── STEP 4b: Execute on OpenAI gpt-image-1 ───────────────────────────────
+    if is_openai:
+        fmt_low = request.format.lower()
+        if "9:16" in fmt_low or "stories" in fmt_low:
+            size = "1024x1792"
+        elif "16:9" in fmt_low or "banner" in fmt_low:
+            size = "1792x1024"
+        else:
+            size = "1024x1024"
+
+        openai_headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        has_refs = bool(request.references)
+        image_b64 = None
+
+        if has_refs:
+            ref = request.references[0]
+            img_bytes = base64.b64decode(ref.data)
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(
+                    "https://api.openai.com/v1/images/edits",
+                    headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+                    files={"image": ("reference.png", img_bytes, ref.mime)},
+                    data={
+                        "model": "gpt-image-1",
+                        "prompt": enhanced_prompt,
+                        "size": size,
+                        "quality": "high",
+                    },
+                )
+                if resp.status_code != 200:
+                    raise HTTPException(status_code=502, detail=f"OpenAI error: {resp.text[:400]}")
+                image_b64 = resp.json()["data"][0].get("b64_json")
+        else:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(
+                    "https://api.openai.com/v1/images/generations",
+                    headers=openai_headers,
+                    json={
+                        "model": "gpt-image-1",
+                        "prompt": enhanced_prompt,
+                        "size": size,
+                        "quality": "high",
+                        "output_format": "png",
+                        "n": 1,
+                    },
+                )
+                if resp.status_code != 200:
+                    raise HTTPException(status_code=502, detail=f"OpenAI error: {resp.text[:400]}")
+                result_json = resp.json()
+                image_b64 = result_json["data"][0].get("b64_json")
+
+        if not image_b64:
+            raise HTTPException(status_code=502, detail="OpenAI did not return an image")
+
+        client_dir = CLIENTS_DIR / request.client_id / "graphics"
+        client_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{uuid.uuid4().hex[:6]}.png"
+        img_bytes_out = base64.b64decode(image_b64)
+        with open(client_dir / filename, "wb") as f:
+            f.write(img_bytes_out)
+        storage_service.save_graphic_to_supabase(request.client_id, filename, img_bytes_out)
+        save_graphic_metadata(request.client_id, filename, request.prompt, enhanced_prompt, request.format)
+        return {"url": f"/clients/{request.client_id}/graphics/{filename}", "filename": filename, "enhanced_prompt": enhanced_prompt, "model_used": "gpt-image-1"}
+
+    # ── STEP 4c: Execute on Fal.ai (Flux models only) ────────────────────────
     # Flux models: use Redux for identity+scene, standard for text-to-image
     fmt_low = request.format.lower()
     actual_model = request.model_id

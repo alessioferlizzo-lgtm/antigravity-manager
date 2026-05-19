@@ -175,7 +175,7 @@ export default function Dashboard() {
   const [gfxClientId, setGfxClientId] = useState("");
   const [gfxRefFilename, setGfxRefFilename] = useState<string | null>(null);
   const [gfxFormats, setGfxFormats] = useState<string[]>(["Feed IG (4:5)"]);
-  const [gfxModel, setGfxModel] = useState<string>("fal-ai/flux-pro/v1.1-ultra");
+  const [gfxModel, setGfxModel] = useState<string>("openai-gpt-image-1");
   const [gfxPrompt, setGfxPrompt] = useState("");
   type GfxImageRef = { data: string; mime: string; name: string; selected: boolean };
   const [gfxSlotLogo, setGfxSlotLogo] = useState<GfxImageRef[]>([]);
@@ -1838,18 +1838,11 @@ export default function Dashboard() {
                         desc: "⭐ Versione PRO. Maggiore qualità, migliore gestione di mani e riflessi. Consigliato per ads finali."
                       },
                       {
-                        id: "fal-ai/flux-pro/v1.1-ultra",
-                        name: "Flux Pro 1.1 Ultra",
-                        sub: "Black Forest Labs",
-                        cost: "$0.05",
-                        desc: "Il top di gamma di Black Forest Labs. Dettaglio estremo, realismo e testi perfetti."
-                      },
-                      {
-                        id: "fal-ai/flux-realism",
-                        name: "Flux Realism",
-                        sub: "Black Forest Labs",
-                        cost: "$0.03",
-                        desc: "Sviluppato da Black Forest Labs. Ottimizzato per volti, pelle e fotografia lifestyle realistica."
+                        id: "openai-gpt-image-1",
+                        name: "GPT Image 1",
+                        sub: "OpenAI",
+                        cost: "~$0.19",
+                        desc: "🏆 Il modello più potente di OpenAI per le immagini. Qualità fotografica estrema, testi perfetti, composizioni complesse."
                       }
                     ].map(m => (
                       <div key={m.id}
