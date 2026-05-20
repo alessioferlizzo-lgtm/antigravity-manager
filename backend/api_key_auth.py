@@ -69,6 +69,9 @@ def _is_localhost_request(request: Request) -> bool:
     return False
 
 
+_FILE_SEGMENTS = {"/logo", "/graphics/", "/thumbnails/", "/creatives/", "/brand/"}
+
+
 class APIKeyMiddleware(BaseHTTPMiddleware):
     EXEMPT_PATHS = {"/", "/health", "/docs", "/openapi.json", "/redoc"}
 
@@ -78,6 +81,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if request.url.path in self.EXEMPT_PATHS:
+            return await call_next(request)
+
+        # Allow direct file/image serving — these are loaded by <img> tags, not fetch
+        if request.method == "GET" and any(seg in request.url.path for seg in _FILE_SEGMENTS):
             return await call_next(request)
 
         if _is_localhost_request(request):
