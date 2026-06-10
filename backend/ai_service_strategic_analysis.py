@@ -71,7 +71,7 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
     
     # 2. Select AI Model Map
     model_map = {
-        "claude": "anthropic/claude-3.7-sonnet",
+        "claude": "anthropic/claude-sonnet-4-5",
         "gemini": "google/gemini-1.5-pro",
         "perplexity": "perplexity/sonar"
     }
@@ -142,10 +142,10 @@ async def run_workflow_task(service, task: Dict[str, Any], context: Dict[str, An
             if attempt < max_retries:
                 print(f"[Workflow Engine] Switching model and retrying {step_id}...")
                 # Switch model for retry
-                if target_model == "anthropic/claude-3.7-sonnet":
+                if target_model == "anthropic/claude-sonnet-4-5":
                     target_model = "google/gemini-1.5-pro"
                 elif target_model == "google/gemini-1.5-pro":
-                    target_model = "anthropic/claude-3.7-sonnet"
+                    target_model = "anthropic/claude-sonnet-4-5"
             else:
                 print(f"[Workflow Engine] Failed {step_id} after {max_retries} attempts.")
                 response_json = {"error": str(e)}
@@ -191,7 +191,7 @@ async def generate_complete_strategic_analysis(
         _report("Pre-analisi sito web…")
         try:
             site_extraction = await service._call_ai(
-                model="anthropic/claude-3.7-sonnet",
+                model="anthropic/claude-sonnet-4-5",
                 messages=[{"role": "user", "content": f"""Estrai TUTTO dal contenuto di questo sito web in modo COMPLETO e STRUTTURATO:
 
 1. CHI È: Nome brand, settore, posizionamento, storia, mission, valori
@@ -226,7 +226,7 @@ CONTENUTO SITO:
         comments_block = f"COMMENTI INSTAGRAM:\n{instagram_comments[:40000]}" if has_comments else ""
         try:
             voc_extraction = await service._call_ai(
-                model="anthropic/claude-3.7-sonnet",
+                model="anthropic/claude-sonnet-4-5",
                 messages=[{"role": "user", "content": f"""Analizza TUTTE le recensioni e i commenti e estrai in modo COMPLETO:
 
 1. GOLDEN HOOKS: Frasi esatte dei clienti che esprimono trasformazione/risultato (copia letteralmente)
@@ -258,7 +258,7 @@ REGOLE: Cita letteralmente le frasi più potenti. Distingui recensioni del brand
         _report("Pre-analisi documenti caricati…")
         try:
             docs_extraction = await service._call_ai(
-                model="anthropic/claude-3.7-sonnet",
+                model="anthropic/claude-sonnet-4-5",
                 messages=[{"role": "user", "content": f"""Estrai TUTTE le informazioni utili da questi documenti caricati dal cliente:
 
 1. INFO SUL BRAND: identità, storia, valori, posizionamento

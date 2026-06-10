@@ -369,7 +369,7 @@ Per ogni angolo fornisci:
 Rispondi ESCLUSIVAMENTE con un array JSON valido, senza testo prima o dopo."""
         
         messages = [{"role": "user", "content": prompt}]
-        result = await self._call_ai("anthropic/claude-3.7-sonnet", messages)
+        result = await self._call_ai("anthropic/claude-sonnet-4-5", messages)
         
         try:
             # Attempt to find and parse the JSON array
@@ -573,7 +573,7 @@ IMPORTANTE: Questo script DEVE differire completamente dalle altre variazioni ne
             {"role": "user", "content": user_msg}
         ]
         temp = min(0.75 + (variation_index * 0.08), 1.0)
-        return await self._call_ai("anthropic/claude-3.7-sonnet", messages, temperature=temp)
+        return await self._call_ai("anthropic/claude-sonnet-4-5", messages, temperature=temp)
 
     async def generate_deep_analysis(self, research_text: str, client_info: Dict[str, Any], target_vocabulary: List[str] = None) -> Dict[str, Any]:
         """Generates SWOT, buyer personas, tone, and strategy from research text."""
@@ -624,7 +624,7 @@ IMPORTANTE: Questo script DEVE differire completamente dalle altre variazioni ne
         }}"""
         
         messages = [{"role": "user", "content": prompt}]
-        result = await self._call_ai("anthropic/claude-3.7-sonnet", messages, temperature=0.5)
+        result = await self._call_ai("anthropic/claude-sonnet-4-5", messages, temperature=0.5)
         
         # Extract JSON robustly
         fence = re.search(r'```(?:json)?\s*\n?(.*?)```', result, re.DOTALL)
@@ -686,7 +686,7 @@ Un'osservazione profonda che emergi dai dati, collegata agli obiettivi del clien
 Sii diretto, specifico e usa i dati reali forniti. Evita genericità."""
 
         messages = [{"role": "user", "content": prompt}]
-        return await self._call_ai("anthropic/claude-3.7-sonnet", messages, temperature=0.5)
+        return await self._call_ai("anthropic/claude-sonnet-4-5", messages, temperature=0.5)
 
     async def sort_tasks(self, tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         """AI-powered task prioritization. Returns sorted task IDs + brief reasoning."""
@@ -718,7 +718,7 @@ Rispondi SOLO con JSON:
 }}"""
 
         messages = [{"role": "user", "content": prompt}]
-        result = await self._call_ai("anthropic/claude-3.7-sonnet", messages, temperature=0.3)
+        result = await self._call_ai("anthropic/claude-sonnet-4-5", messages, temperature=0.3)
         fence = re.search(r'```(?:json)?\s*\n?(.*?)```', result, re.DOTALL)
         raw = fence.group(1).strip() if fence else result.strip()
         fb = raw.find('{'); lb = raw.rfind('}')

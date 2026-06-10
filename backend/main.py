@@ -321,7 +321,7 @@ async def extract_industry(client_id: str):
             # 2. AI Fallback: Summarize the industry from the research text
             print(f"DEBUG: Industry regex failed. Using AI fallback.")
             prompt = f"Basandoti su questo testo di ricerca, estrai SOLO il settore/categoria del business (max 3-5 parole). Esempio: 'Centro Estetico Avanzato', 'Ristorante Gourmet Irpino'.\n\nTesto: {content[:1000]}"
-            industry = await ai_service._call_ai("anthropic/claude-3-7-sonnet", [{"role": "user", "content": prompt}], temperature=0)
+            industry = await ai_service._call_ai("anthropic/claude-sonnet-4-5", [{"role": "user", "content": prompt}], temperature=0)
             industry = industry.strip().strip('"').strip("'")
 
         metadata["industry"] = industry
@@ -2614,7 +2614,7 @@ Sii specifico. Cita le ads per nome/numero. Usa i dati reali forniti."""
             content.append({"type": "image_url", "image_url": {"url": img_url}})
 
     messages = [{"role": "user", "content": content}]
-    analysis = await ai_service._call_ai("anthropic/claude-3.7-sonnet", messages)
+    analysis = await ai_service._call_ai("anthropic/claude-sonnet-4-5", messages)
 
     intel_data = {
         "analysis": analysis,
@@ -4571,7 +4571,7 @@ async def edit_analysis_section(client_id: str, step_id: str, request: SectionEd
 
     try:
         response_str = await ai_service._call_ai(
-            model="anthropic/claude-3.7-sonnet",
+            model="anthropic/claude-sonnet-4-5",
             messages=messages,
             max_tokens=6000
         )

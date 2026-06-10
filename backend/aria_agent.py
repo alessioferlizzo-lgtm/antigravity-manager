@@ -377,7 +377,7 @@ Rispondi in modo strutturato, specifico e professionale. Usa bullet points e sez
 ZERO genericità — ogni punto deve essere specifico per {client_name}."""
 
             text = await self.ai._call_ai(
-                "anthropic/claude-3.7-sonnet",
+                "anthropic/claude-sonnet-4-5",
                 [{"role": "user", "content": prompt}],
                 temperature=0.6,
                 max_tokens=4000
@@ -425,7 +425,7 @@ ZERO genericità — ogni punto deve essere specifico per {client_name}."""
                         for b in m["content"] if isinstance(b, dict)
                     ]
                     flat_messages.append({"role": m["role"], "content": " ".join(str(p) for p in text_parts)})
-            result_text = await self.ai._call_ai("anthropic/claude-3.7-sonnet", flat_messages)
+            result_text = await self.ai._call_ai("anthropic/claude-sonnet-4-5", flat_messages)
             return {"stop_reason": "end_turn", "content": [{"type": "text", "text": result_text}]}
 
         # Build messages with system as first message (OpenRouter tool_use compatible)
@@ -478,7 +478,7 @@ ZERO genericità — ogni punto deve essere specifico per {client_name}."""
                 openrouter_messages.append({"role": role, "content": str(content)})
 
         payload = {
-            "model": "anthropic/claude-3.7-sonnet",
+            "model": "anthropic/claude-sonnet-4-5",
             "messages": openrouter_messages,
             "tools": [
                 {
@@ -796,7 +796,7 @@ Rispondi SOLO con JSON:
   "improvement_notes": "cosa migliorare specificatamente"
 }}"""
 
-        result = await self.ai._call_ai("anthropic/claude-3.7-sonnet", [{"role": "user", "content": prompt}], temperature=0.3)
+        result = await self.ai._call_ai("anthropic/claude-sonnet-4-5", [{"role": "user", "content": prompt}], temperature=0.3)
 
         try:
             start = result.find("{")
