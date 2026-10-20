@@ -101,6 +101,28 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+
+# ─── Dashboard dei clienti ─────────────────────────────────────────
+from . import dashboard_service  # noqa: E402
+
+
+@app.get("/dashboard")
+async def dashboard(forza: bool = False):
+    try:
+        return await dashboard_service.panoramica(forza=forza)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/dashboard/{cliente_id}/inserzioni")
+async def dashboard_inserzioni(cliente_id: str):
+    try:
+        return await dashboard_service.inserzioni(cliente_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Cliente non in dashboard")
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
 @app.on_event("startup")
 async def on_startup():
     import asyncio

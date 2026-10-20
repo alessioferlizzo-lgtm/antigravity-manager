@@ -12,3 +12,4 @@ Pillow
 supabase==2.28.2
 google-auth-oauthlib
 google-api-python-client
+tzdata

@@ -9,7 +9,7 @@ import {
   ChevronRightIcon, SparklesIcon, ArrowPathIcon,
   PhotoIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, TagIcon, ShoppingBagIcon, BookmarkSquareIcon,
   ChartBarIcon, ArrowTrendingUpIcon, ChevronDownIcon, InboxIcon, CheckCircleIcon,
-  FlagIcon,
+  FlagIcon, Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import { FlagIcon as FlagIconSolid, Bars3Icon } from "@heroicons/react/24/solid";
 import DatePicker from "react-datepicker";
@@ -19,6 +19,7 @@ import { useGSAP } from "@gsap/react";
 import TasksSection from "@/components/TasksSection";
 import SmartListEditor from "@/components/SmartListEditor";
 import ARIAPanel from "@/components/ARIAPanel";
+import DashboardSection from "@/components/DashboardSection";
 import { Client, Task } from "@/types";
 
 
@@ -73,7 +74,7 @@ function FormatText({ text }: { text: string }) {
 
 
 
-type WsSection = "tasks" | "grafiche" | "angoli" | "script" | "copy" | "live-ads" | "aria";
+type WsSection = "dashboard" | "tasks" | "grafiche" | "angoli" | "script" | "copy" | "live-ads" | "aria";
 const STATUS_CYCLE: Record<string, string> = { todo: "doing", doing: "done", done: "todo" };
 const PRIORITY_ORDER: Record<string, number> = { alta: 0, media: 1, bassa: 2 };
 const GFX_FORMATS = ["Feed IG (1:1)", "Feed IG (4:5)", "Stories (9:16)", "Banner (16:9)", "Carosello", "LinkedIn (1.91:1)", "Pinterest (2:3)"];
@@ -91,7 +92,7 @@ const FUNNEL_STAGES = [
 export default function Dashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [section, setSection] = useState<WsSection>("tasks");
+  const [section, setSection] = useState<WsSection>("dashboard");
   const [loading, setLoading] = useState(true);
   const [backendError, setBackendError] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -969,6 +970,7 @@ export default function Dashboard() {
   }
 
   const topNavItems: { key: WsSection; icon: any; label: string; badge?: number }[] = [
+    { key: "dashboard", icon: Squares2X2Icon, label: "Dashboard" },
     { key: "tasks", icon: ClipboardDocumentListIcon, label: "Tasks" },
     { key: "angoli", icon: LightBulbIcon, label: "Angoli" },
     { key: "script", icon: DocumentTextIcon, label: "Script Video" },
@@ -1304,6 +1306,8 @@ export default function Dashboard() {
         <div className="home-content-scroll" style={{ flex: 1, overflow: "auto" }}>
 
           {/* ══ TASKS ══ */}
+          {section === "dashboard" && <DashboardSection />}
+
           {section === "tasks" && (
             <div className="tasks-section-container" style={{ flex: 1, display: "flex", justifyContent: "center", width: "100%" }}>
               <div className="tasks-section-brute-force-centered" style={{ width: "100%", maxWidth: 1200, display: "flex", flexDirection: "column", height: "100%", padding: "0 24px" }}>
