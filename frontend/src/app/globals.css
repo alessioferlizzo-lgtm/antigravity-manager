@@ -2121,3 +2121,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 .task-drag-handle { display: flex; align-items: center; justify-content: center; width: 24px; cursor: grab; margin-left: -4px; margin-right: 4px; z-index: 10; touch-action: none; }
 .task-card.dragging { z-index: 999; opacity: 0.8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); }
+
+/* La barra in alto serve solo su telefono: sul computer il menu sta nella barra a sinistra */
+.mobile-topbar { display: none; }
+@media (max-width: 768px) { .mobile-topbar { display: flex; } }

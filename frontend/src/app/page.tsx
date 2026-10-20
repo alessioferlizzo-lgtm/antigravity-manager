@@ -1000,6 +1000,26 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* ═══ MENU dell'app ═══ */}
+        <nav style={{ padding: "10px 8px 6px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+          {topNavItems.map(({ key, icon: Icon, label }) => (
+            <button key={key} onClick={() => { setSection(key); setMobileMenuOpen(false); }}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 9,
+                background: section === key ? "rgba(163,217,6,0.12)" : "none", border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 13.5, fontWeight: section === key ? 700 : 500, textAlign: "left",
+                color: section === key ? "var(--lime)" : "rgba(255,255,255,0.7)", transition: "background 0.15s, color 0.15s"
+              }}
+              onMouseEnter={e => { if (section !== key) { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#fff"; } }}
+              onMouseLeave={e => { if (section !== key) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "rgba(255,255,255,0.7)"; } }}>
+              <Icon style={{ width: 17, height: 17, flexShrink: 0 }} />
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "6px 14px 4px", flexShrink: 0 }} />
+
+        {section === "tasks" ? (<>
         {/* Search */}
         <div style={{ padding: "10px 12px 6px", flexShrink: 0 }}>
           <div style={{ position: "relative" }}>
@@ -1270,36 +1290,32 @@ export default function Dashboard() {
             <PlusIcon style={{ width: 13, height: 13 }} /> Nuovo Cliente
           </button>
         </div>
+        </>) : (
+        <div className="home-sidebar-scroll">
+          <div className="home-section-label">Clienti</div>
+          {clients.map(c => (
+            <a key={c.id} href={`/client/${c.id}`}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 16px", textDecoration: "none", color: "rgba(255,255,255,0.75)", fontSize: 13, borderRadius: 8, margin: "0 8px" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; }}>
+              <span style={{ width: 24, height: 24, borderRadius: 6, background: avatarColor(c.name), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#fff", flexShrink: 0 }}>{initials(c.name)}</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+            </a>
+          ))}
+        </div>
+        )}
       </aside>
 
 
       {/* ═══ MAIN ═══ */}
       <div className="home-main" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
 
-        {/* TOP NAV */}
-        <div style={{ background: "var(--navy-card)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px 0 12px", display: "flex", alignItems: "center", gap: 2, height: 52, flexShrink: 0 }}>
+        {/* Barra in alto: solo su telefono, per aprire il menu */}
+        <div className="mobile-topbar" style={{ background: "var(--navy-card)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px 0 12px", alignItems: "center", gap: 12, height: 52, flexShrink: 0 }}>
           <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(v => !v)}>
             <Bars3Icon style={{ width: 20, height: 20 }} />
           </button>
-          {topNavItems.map(({ key, icon: Icon, label, badge }) => (
-            <button key={key} onClick={() => { setSection(key); setMobileMenuOpen(false); }}
-              style={{
-                display: "flex", alignItems: "center", gap: 7, padding: "0 16px", height: "100%",
-                background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: 13, fontWeight: section === key ? 700 : 500,
-                color: section === key ? "var(--lime)" : "rgba(255,255,255,0.55)",
-                borderBottom: `2px solid ${section === key ? "var(--lime)" : "transparent"}`,
-                transition: "all 0.15s", position: "relative"
-              }}
-              onMouseEnter={e => { if (section !== key) (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.9)"; }}
-              onMouseLeave={e => { if (section !== key) (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.55)"; }}>
-              <Icon style={{ width: 15, height: 15 }} />
-              {label}
-              {badge !== undefined && badge > 0 && (
-                <span style={{ background: "rgba(255,158,28,0.2)", color: "var(--orange)", fontSize: 10, fontWeight: 800, padding: "1px 6px", borderRadius: 10 }}>{badge}</span>
-              )}
-            </button>
-          ))}
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{topNavItems.find(n => n.key === section)?.label}</span>
         </div>
 
         {/* SECTION CONTENT */}
