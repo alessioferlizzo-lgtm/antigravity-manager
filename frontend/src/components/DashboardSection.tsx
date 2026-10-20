@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowPathIcon, ChevronDownIcon, ChevronRightIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, XMarkIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 
 const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? "https://antigravity-backend-production-41ee.up.railway.app" : "http://127.0.0.1:8001");
 
@@ -22,12 +22,12 @@ const euro = (v: number | null | undefined, decimali = 2) =>
   v == null ? "—" : `${v.toLocaleString("it-IT", { minimumFractionDigits: decimali, maximumFractionDigits: decimali })} €`;
 const giorno = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" });
 
-function Numero({ etichetta, valore, sotto, colore }: { etichetta: string; valore: string; sotto?: string; colore?: string }) {
+function Numero({ etichetta, valore, sotto, colore, grande }: { etichetta: string; valore: string; sotto?: string; colore?: string; grande?: boolean }) {
   return (
-    <div style={{ width: 128 }}>
-      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-xmuted)", marginBottom: 3, whiteSpace: "nowrap" }}>{etichetta}</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", fontVariantNumeric: "tabular-nums" }}>{valore}</div>
-      {sotto && <div style={{ fontSize: 11, color: colore || "var(--text-xmuted)", marginTop: 2, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{sotto}</div>}
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-xmuted)", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{etichetta}</div>
+      <div style={{ fontSize: grande ? 22 : 16, fontWeight: 800, color: "#fff", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>{valore}</div>
+      {sotto && <div style={{ fontSize: 11, color: colore || "var(--text-xmuted)", marginTop: 2, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sotto}</div>}
     </div>
   );
 }
@@ -53,9 +53,8 @@ export default function DashboardSection() {
   }
 
   async function apri(id: string) {
-    if (aperto === id) { setAperto(null); return; }
     setAperto(id);
-    if (ads[id] && ads[id] !== "carico" && typeof ads[id] !== "string") return;
+    if (Array.isArray(ads[id]) || ads[id] === "carico") return;
     setAds(p => ({ ...p, [id]: "carico" }));
     try {
       const r = await fetch(`${API}/dashboard/${id}/inserzioni`);
@@ -68,14 +67,21 @@ export default function DashboardSection() {
   }
 
   useEffect(() => { carica(); }, []);
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setAperto(null); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, []);
 
   const attivi = dati?.clienti.filter(c => c.stato !== "ferma") || [];
   const fermi = dati?.clienti.filter(c => c.stato === "ferma") || [];
   const conta = (s: string[]) => attivi.filter(c => s.includes(c.stato)).length;
   const per = dati?.periodi;
+  const scelto = dati?.clienti.find(c => c.id === aperto);
+  const elenco = aperto ? ads[aperto] : undefined;
 
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 1280 }}>
       {/* Testata */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
         <div>
@@ -103,7 +109,7 @@ export default function DashboardSection() {
       {dati && (
         <>
           {/* Il riassunto in una riga */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
             {[
               { n: conta(["rosso", "errore"]), testo: "da guardare", colore: COLORI.rosso },
               { n: conta(["giallo"]), testo: "da tenere d'occhio", colore: COLORI.giallo },
@@ -117,94 +123,114 @@ export default function DashboardSection() {
             ))}
           </div>
 
-          {/* Una riga per cliente, prima quelli da guardare */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Le card, prima quelle da guardare */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 14 }}>
             {attivi.map(c => {
               const s = c.settimana, t = c.tre, v = c.variazione;
               const coloreVar = v == null ? undefined : v <= -10 ? COLORI.verde : v >= 20 ? COLORI.rosso : "var(--text-xmuted)";
-              const elenco = ads[c.id];
+              const cliccabile = c.stato !== "errore";
               return (
-                <div key={c.id} style={{ background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.08)", borderLeft: `3px solid ${COLORI[c.stato]}`, borderRadius: 12, overflow: "hidden" }}>
-                  <div onClick={() => c.stato !== "errore" && apri(c.id)}
-                    style={{ display: "flex", alignItems: "center", gap: 18, padding: "14px 18px", cursor: c.stato === "errore" ? "default" : "pointer", flexWrap: "wrap" }}>
-                    <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>{c.nome}</span>
-                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: COLORI[c.stato] }}>{ETICHETTE[c.stato]}</span>
-                      </div>
-                      <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.45 }}>{c.frase}</div>
+                <div key={c.id} onClick={() => cliccabile && apri(c.id)}
+                  style={{ position: "relative", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 16, padding: "18px 18px 16px", cursor: cliccabile ? "pointer" : "default", display: "flex", flexDirection: "column", gap: 14, overflow: "hidden", transition: "background 0.15s, border-color 0.15s" }}
+                  onMouseEnter={e => { if (cliccabile) { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)"; }}>
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: COLORI[c.stato] }} />
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: 16, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.nome}</span>
+                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: COLORI[c.stato], background: "rgba(255,255,255,0.05)", borderRadius: 999, padding: "3px 8px" }}>{ETICHETTE[c.stato]}</span>
                     </div>
-                    {s && (
-                      <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
-                        <Numero etichetta="Spesa 7 giorni" valore={euro(s.spesa, 0)} sotto={c.prima ? `prima ${euro(c.prima.spesa, 0)}` : undefined} />
-                        <Numero etichetta={c.risultato || "Risultati"} valore={String(s.risultati)} sotto={c.prima ? `prima ${c.prima.risultati}` : undefined} />
-                        <Numero etichetta={`Costo per ${c.risultato_uno || "risultato"}`} valore={euro(s.costo)}
-                          sotto={v == null ? (c.prima?.costo != null ? `prima ${euro(c.prima.costo)}` : undefined) : `${v > 0 ? "+" : ""}${v}% · prima ${euro(c.prima?.costo)}`} colore={coloreVar} />
-                        <Numero etichetta="Ultimi 3 giorni" valore={euro(t?.costo)} sotto={t ? `${t.risultati} ${t.risultati === 1 ? c.risultato_uno : c.risultato}` : undefined} />
-                      </div>
-                    )}
-                    {c.stato !== "errore" && (aperto === c.id
-                      ? <ChevronDownIcon style={{ width: 16, height: 16, color: "var(--text-xmuted)", flexShrink: 0 }} />
-                      : <ChevronRightIcon style={{ width: 16, height: 16, color: "var(--text-xmuted)", flexShrink: 0 }} />)}
+                    <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 6, lineHeight: 1.45, minHeight: 36 }}>{c.frase}</div>
                   </div>
-
-                  {/* Le inserzioni attive */}
-                  {aperto === c.id && (
-                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "12px 18px 16px", background: "rgba(0,0,0,0.12)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Inserzioni attive, ultimi 7 giorni, dalla più spesa</span>
-                        {c.om_id && (
-                          <a href={`/client/${c.om_id}`} style={{ fontSize: 12, color: "var(--orange)", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                            Scheda cliente <ArrowTopRightOnSquareIcon style={{ width: 13, height: 13 }} />
-                          </a>
-                        )}
+                  {s && (
+                    <>
+                      <Numero grande etichetta={`Costo per ${c.risultato_uno || "risultato"}`} valore={euro(s.costo)}
+                        sotto={v == null ? (c.prima?.costo != null ? `prima ${euro(c.prima.costo)}` : undefined) : `${v > 0 ? "+" : ""}${v}% · prima ${euro(c.prima?.costo)}`} colore={coloreVar} />
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                        <Numero etichetta="Spesa 7 gg" valore={euro(s.spesa, 0)} sotto={c.prima ? `prima ${euro(c.prima.spesa, 0)}` : undefined} />
+                        <Numero etichetta={c.risultato || "Risultati"} valore={String(s.risultati)} sotto={c.prima ? `prima ${c.prima.risultati}` : undefined} />
+                        <Numero etichetta="Ultimi 3 gg" valore={euro(t?.costo)} sotto={t ? `${t.risultati} ${t.risultati === 1 ? c.risultato_uno : c.risultato}` : undefined} />
                       </div>
-                      {elenco === "carico" && <div style={{ fontSize: 13, color: "var(--text-xmuted)", padding: "8px 0" }}>Leggo le inserzioni...</div>}
-                      {typeof elenco === "string" && elenco !== "carico" && <div style={{ fontSize: 13, color: "#f87171" }}>{elenco}</div>}
-                      {Array.isArray(elenco) && elenco.length === 0 && <div style={{ fontSize: 13, color: "var(--text-xmuted)" }}>Nessuna inserzione attiva con spesa negli ultimi 7 giorni.</div>}
-                      {Array.isArray(elenco) && elenco.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {elenco.map(a => (
-                            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 10px", borderRadius: 9, background: "rgba(255,255,255,0.035)", flexWrap: "wrap" }}>
-                              {a.anteprima
-                                ? <img src={a.anteprima} alt="" style={{ width: 44, height: 44, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
-                                : <div style={{ width: 44, height: 44, borderRadius: 7, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />}
-                              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.nome}</div>
-                                <div style={{ fontSize: 11, color: "var(--text-xmuted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.gruppo} · {a.campagna}</div>
-                              </div>
-                              <div style={{ display: "flex", gap: 18, fontSize: 12, color: "var(--text-body)", fontVariantNumeric: "tabular-nums" }}>
-                                <span style={{ minWidth: 70 }}>{euro(a.spesa, 0)}</span>
-                                <span style={{ minWidth: 86 }}>{a.risultati} {a.risultati === 1 ? a.risultato_uno : a.risultato}</span>
-                                <span style={{ minWidth: 90, color: a.costo == null ? "var(--text-xmuted)" : "#fff", fontWeight: 600 }}>{a.costo == null ? "nessun risultato" : `${euro(a.costo)} l'uno`}</span>
-                                <span style={{ minWidth: 70, color: "var(--text-xmuted)" }}>CTR {a.ctr == null ? "—" : `${a.ctr.toLocaleString("it-IT")}%`}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    </>
                   )}
                 </div>
               );
             })}
           </div>
 
-          {/* I fermi, in fondo e in piccolo */}
+          {/* I fermi, in fondo e più piccoli */}
           {fermi.length > 0 && (
-            <div style={{ marginTop: 22 }}>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-xmuted)", marginBottom: 8 }}>Senza spesa negli ultimi 7 giorni</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ marginTop: 26 }}>
+              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-xmuted)", marginBottom: 10 }}>Senza spesa negli ultimi 7 giorni</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
                 {fermi.map(c => (
-                  <div key={c.id} style={{ fontSize: 13, color: "var(--text-body)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 9, padding: "7px 12px" }}>
-                    {c.nome}
-                    {c.prima && c.prima.spesa > 0 && <span style={{ color: COLORI.giallo }}> · la settimana prima {euro(c.prima.spesa, 0)}</span>}
+                  <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-body)" }}>{c.nome}</div>
+                    <div style={{ fontSize: 12, marginTop: 3, color: c.prima && c.prima.spesa > 0 ? COLORI.giallo : "var(--text-xmuted)" }}>
+                      {c.prima && c.prima.spesa > 0 ? `La settimana prima ${euro(c.prima.spesa, 0)}` : "Ferma da più di due settimane"}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </>
+      )}
+
+      {/* Il pannello del cliente, con le inserzioni attive */}
+      {scelto && (
+        <div onClick={() => setAperto(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,10,30,0.6)", backdropFilter: "blur(2px)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: "min(720px, 100%)", height: "100%", overflowY: "auto", background: "var(--navy)", borderLeft: "1px solid rgba(255,255,255,0.1)", padding: "22px 22px 40px", boxShadow: "-20px 0 50px rgba(0,0,0,0.35)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>{scelto.nome}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: COLORI[scelto.stato] }}>{ETICHETTE[scelto.stato]}</span>
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 5, lineHeight: 1.45 }}>{scelto.frase}</div>
+              </div>
+              <button onClick={() => setAperto(null)} aria-label="Chiudi"
+                style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <XMarkIcon style={{ width: 18, height: 18, color: "#fff" }} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "22px 0 10px", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Inserzioni attive, ultimi 7 giorni, dalla più spesa</span>
+              {scelto.om_id && (
+                <a href={`/client/${scelto.om_id}`} style={{ fontSize: 12, color: "var(--orange)", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                  Scheda cliente <ArrowTopRightOnSquareIcon style={{ width: 13, height: 13 }} />
+                </a>
+              )}
+            </div>
+
+            {elenco === "carico" && <div style={{ fontSize: 13, color: "var(--text-xmuted)", padding: "8px 0" }}>Leggo le inserzioni...</div>}
+            {typeof elenco === "string" && elenco !== "carico" && <div style={{ fontSize: 13, color: "#f87171" }}>{elenco}</div>}
+            {Array.isArray(elenco) && elenco.length === 0 && <div style={{ fontSize: 13, color: "var(--text-xmuted)" }}>Nessuna inserzione attiva con spesa negli ultimi 7 giorni.</div>}
+            {Array.isArray(elenco) && elenco.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {elenco.map(a => (
+                  <div key={a.id} style={{ display: "flex", gap: 12, padding: 10, borderRadius: 12, background: "rgba(255,255,255,0.045)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    {a.anteprima
+                      ? <img src={a.anteprima} alt="" style={{ width: 64, height: 64, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
+                      : <div style={{ width: 64, height: 64, borderRadius: 9, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.nome}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-xmuted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{a.gruppo} · {a.campagna}</div>
+                      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8, fontSize: 12, color: "var(--text-body)", fontVariantNumeric: "tabular-nums" }}>
+                        <span>{euro(a.spesa, 0)}</span>
+                        <span>{a.risultati} {a.risultati === 1 ? a.risultato_uno : a.risultato}</span>
+                        <span style={{ color: a.costo == null ? "var(--text-xmuted)" : "#fff", fontWeight: 700 }}>{a.costo == null ? "nessun risultato" : `${euro(a.costo)} l'uno`}</span>
+                        <span style={{ color: "var(--text-xmuted)" }}>CTR {a.ctr == null ? "—" : `${a.ctr.toLocaleString("it-IT")}%`}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
