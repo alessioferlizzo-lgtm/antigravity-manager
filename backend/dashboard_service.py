@@ -182,6 +182,16 @@ async def _cliente(hc, cli: dict, per: dict, token: str) -> dict:
     base = {"id": cli["id"], "nome": cli["nome"], "om_id": cli.get("om_id"),
             "obiettivo": cli.get("obiettivo")}
     escludi = cli.get("escludi", [])
+    # Un account bloccato da Meta non spende e sembra solo «fermo»: si dice per primo
+    try:
+        for conto in cli["conti"]:
+            acc = await _get(hc, f"/{conto}", {"fields": "account_status,disable_reason"}, token)
+            stato_acc = acc.get("account_status")
+            if stato_acc and stato_acc != 1:
+                return {**base, "stato": "rosso", "account_bloccato": STATI_ACCOUNT.get(stato_acc, f"stato {stato_acc}"),
+                        "frase": f"Account pubblicitario {STATI_ACCOUNT.get(stato_acc, 'non attivo')}"}
+    except Exception:
+        pass
     try:
         letture = {}
         for nome, (dal, al) in per.items():
@@ -219,6 +229,10 @@ async def _cliente(hc, cli: dict, per: dict, token: str) -> dict:
 
 
 ORDINE = {"rosso": 0, "errore": 1, "giallo": 2, "verde": 3, "ferma": 4}
+
+# account_status di Meta, per nome: https://developers.facebook.com/docs/marketing-api/reference/ad-account
+STATI_ACCOUNT = {2: "disattivato da Meta", 3: "con un pagamento non riuscito", 7: "in revisione da Meta",
+                 8: "in attesa di pagamento", 9: "in periodo di tolleranza", 100: "in chiusura", 101: "chiuso"}
 
 
 async def panoramica(forza: bool = False) -> dict:
