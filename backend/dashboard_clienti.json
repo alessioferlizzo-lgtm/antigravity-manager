@@ -1,14 +1,107 @@
 [
-  {"id": "nevoh", "nome": "Estetica Nevoh", "conti": ["act_331295201604850"], "escludi": ["120245065286840207"], "om_id": "estetica_nevoh_"},
-  {"id": "makadamia", "nome": "Makadamia", "conti": ["act_199233745160979"], "obiettivo": 15, "accettabile": 20},
-  {"id": "capri", "nome": "Capri Profumi", "conti": ["act_1666224654127378"], "om_id": "capri_profumi"},
-  {"id": "rafa", "nome": "Rafa Parfum", "conti": ["act_749442766988782"], "om_id": "rafa_profumi"},
-  {"id": "gioia", "nome": "Gioia Profumi", "conti": ["act_1672597656929847"], "escludi": ["120250559282800608"], "om_id": "gioia_profumi"},
-  {"id": "missionwatch", "nome": "Mission Watch", "conti": ["act_1353080219631614"]},
-  {"id": "gdm", "nome": "GDM Accessories", "conti": ["act_1097991381481323"], "om_id": "gdm_accessories"},
-  {"id": "tabacchi", "nome": "Tabacchi P.G.", "conti": ["act_1250305166004733"], "om_id": "tabacchi_pg"},
-  {"id": "makeda", "nome": "Makeda", "conti": ["act_898841936191343"], "om_id": "pizzeria_makeda"},
-  {"id": "proloco", "nome": "Pro Loco Ariano", "conti": ["act_1603237296698592"], "om_id": "festa_della_pizza"},
-  {"id": "mfbeauty", "nome": "MF Beauty Clinic", "conti": ["act_833184668101221"]},
-  {"id": "personal", "nome": "Personal brand", "conti": ["act_985891509409322"], "om_id": "alessio_ferlizzo"}
+  {
+    "id": "nevoh",
+    "nome": "Estetica Nevoh",
+    "conti": [
+      "act_331295201604850"
+    ],
+    "escludi": [
+      "120245065286840207"
+    ],
+    "om_id": "estetica_nevoh_"
+  },
+  {
+    "id": "makadamia",
+    "nome": "Makadamia",
+    "conti": [
+      "act_199233745160979"
+    ],
+    "obiettivo": 15,
+    "accettabile": 20
+  },
+  {
+    "id": "capri",
+    "nome": "Capri Profumi",
+    "conti": [
+      "act_1666224654127378"
+    ],
+    "om_id": "capri_profumi",
+    "obiettivo": 20
+  },
+  {
+    "id": "rafa",
+    "nome": "Rafa Parfum",
+    "conti": [
+      "act_749442766988782"
+    ],
+    "om_id": "rafa_profumi",
+    "obiettivo": 20
+  },
+  {
+    "id": "gioia",
+    "nome": "Gioia Profumi",
+    "conti": [
+      "act_1672597656929847"
+    ],
+    "escludi": [
+      "120250559282800608"
+    ],
+    "om_id": "gioia_profumi",
+    "obiettivo": 20
+  },
+  {
+    "id": "missionwatch",
+    "nome": "Mission Watch",
+    "conti": [
+      "act_1353080219631614"
+    ]
+  },
+  {
+    "id": "gdm",
+    "nome": "GDM Accessories",
+    "conti": [
+      "act_1097991381481323"
+    ],
+    "om_id": "gdm_accessories",
+    "obiettivo": 30
+  },
+  {
+    "id": "tabacchi",
+    "nome": "Tabacchi P.G.",
+    "conti": [
+      "act_1250305166004733"
+    ],
+    "om_id": "tabacchi_pg"
+  },
+  {
+    "id": "makeda",
+    "nome": "Makeda",
+    "conti": [
+      "act_898841936191343"
+    ],
+    "om_id": "pizzeria_makeda"
+  },
+  {
+    "id": "proloco",
+    "nome": "Pro Loco Ariano",
+    "conti": [
+      "act_1603237296698592"
+    ],
+    "om_id": "festa_della_pizza"
+  },
+  {
+    "id": "mfbeauty",
+    "nome": "MF Beauty Clinic",
+    "conti": [
+      "act_833184668101221"
+    ]
+  },
+  {
+    "id": "personal",
+    "nome": "Personal brand",
+    "conti": [
+      "act_985891509409322"
+    ],
+    "om_id": "alessio_ferlizzo"
+  }
 ]

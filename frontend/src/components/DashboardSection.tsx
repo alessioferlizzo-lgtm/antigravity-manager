@@ -13,6 +13,49 @@ type Riga = {
   settimana?: Periodo; prima?: Periodo; tre?: Periodo; variazione?: number | null;
 };
 type Panoramica = { aggiornato: string; periodi: Record<string, [string, string]>; clienti: Riga[] };
+type Totali = { sessioni: number; ordini: number; vendite_nette: number; vendite_totali: number };
+type Vera = Riga & { meta_vede?: number; vendite?: number; mer?: number | null; negozio?: boolean };
+
+// Gli ordini veri degli e-commerce li dà shopify-negozi, il servizio del Mac di Alessio con la sua sessione Shopify.
+// Risponde solo a questa pagina e solo coi totali; dal telefono non c'è, e la dashboard resta sui numeri di Meta.
+// Quali clienti sono e-commerce lo decide il vault: il «Negozio Shopify» nello stato.md del cliente.
+const NEGOZI = "http://127.0.0.1:3190";
+const ORDINE: Record<string, number> = { rosso: 0, errore: 1, giallo: 2, verde: 3, ferma: 4 };
+const variazione = (ora: number | null, prima: number | null) =>
+  ora == null || prima == null || prima === 0 ? null : Math.round((ora - prima) / prima * 100);
+
+// La stessa regola di _giudizio in backend/dashboard_service.py, sugli ordini veri al posto dei risultati di Meta.
+function giudizio(obiettivo: number | undefined, s: Periodo, p: Periodo, t: Periodo): { stato: Riga["stato"]; frase: string } {
+  if (s.spesa === 0) return { stato: "ferma", frase: "Nessuna spesa negli ultimi 7 giorni" };
+  if (s.costo == null) return { stato: "rosso", frase: `${s.spesa.toFixed(0)} € spesi e nessun ordine vero in 7 giorni` };
+  const v = variazione(s.costo, p.costo);
+  let stato: Riga["stato"], frase: string;
+  if (obiettivo) {
+    [stato, frase] = s.costo <= obiettivo ? ["verde", `Sotto l'obiettivo di ${obiettivo} € per ordine vero`] : ["rosso", `Sopra l'obiettivo di ${obiettivo} € per ordine vero`];
+  } else if (v == null) { stato = "giallo"; frase = "Niente da confrontare con la settimana prima"; }
+  else if (v <= -10) { stato = "verde"; frase = `Il costo per ordine vero scende del ${Math.abs(v)}% sulla settimana prima`; }
+  else if (v >= 20) { stato = "rosso"; frase = `Il costo per ordine vero sale del ${v}% sulla settimana prima`; }
+  else { stato = "giallo"; frase = `Stabile sulla settimana prima (${v > 0 ? "+" : ""}${v}%)`; }
+  if (s.risultati < 3) { if (stato === "verde") stato = "giallo"; frase += `. Pochi dati: ${s.risultati} in 7 giorni`; }
+  const v3 = variazione(t.costo, s.costo);
+  if (t.spesa > 0 && t.costo == null) frase += ". Negli ultimi 3 giorni nessun ordine vero";
+  else if (v3 != null && v3 >= 30) frase += `. Ultimi 3 giorni in salita (+${v3}%)`;
+  return { stato, frase };
+}
+
+function conNegozio(c: Riga, n?: Record<string, Totali>): Vera {
+  if (!n) return c;
+  if (!c.settimana || !c.prima || !c.tre || !n.settimana)
+    return n.settimana ? { ...c, frase: `${c.frase} · Nel negozio ${n.settimana.ordini} ordini veri in 7 giorni`, negozio: true } : c;
+  const periodo = (meta: Periodo, tot?: Totali): Periodo =>
+    ({ spesa: meta.spesa, risultati: tot?.ordini ?? 0, costo: tot && tot.ordini ? meta.spesa / tot.ordini : null });
+  const s = periodo(c.settimana, n.settimana), p = periodo(c.prima, n.prima), t = periodo(c.tre, n.tre);
+  return {
+    ...c, ...giudizio(c.obiettivo, s, p, t), settimana: s, prima: p, tre: t, variazione: variazione(s.costo, p.costo),
+    risultato: "ordini veri", risultato_uno: "ordine vero", meta_vede: c.settimana.risultati, negozio: true,
+    vendite: n.settimana.vendite_nette, mer: s.spesa ? n.settimana.vendite_nette / s.spesa : null,
+  };
+}
 type Inserzione = { id: string; nome: string; gruppo: string; campagna: string; spesa: number; risultati: number; risultato: string; risultato_uno: string; costo: number | null; ctr: number | null; anteprima: string | null };
 
 const COLORI: Record<string, string> = { rosso: "#f87171", errore: "#f87171", giallo: "#fbbf24", verde: "#a3d906", ferma: "rgba(255,255,255,0.25)" };
@@ -38,6 +81,18 @@ export default function DashboardSection() {
   const [errore, setErrore] = useState<string | null>(null);
   const [aperto, setAperto] = useState<string | null>(null);
   const [ads, setAds] = useState<Record<string, Inserzione[] | "carico" | string>>({});
+  const [negozi, setNegozi] = useState<Record<string, Record<string, Totali>> | "carico" | "assente">("carico");
+
+  async function caricaNegozi(d: Panoramica) {
+    setNegozi("carico");
+    try {
+      const q = new URLSearchParams({ clienti: d.clienti.map(c => c.id).join(",") });
+      for (const k of ["settimana", "prima", "tre"]) if (d.periodi[k]) q.set(k, d.periodi[k].join(":"));
+      const r = await fetch(`${NEGOZI}/dashboard?${q}`, { signal: AbortSignal.timeout(90000) });
+      if (!r.ok) throw new Error();
+      setNegozi((await r.json()).negozi);
+    } catch { setNegozi("assente"); }
+  }
 
   async function carica(forza = false) {
     setCarico(true); setErrore(null);
@@ -46,6 +101,7 @@ export default function DashboardSection() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.detail || "Errore del server");
       setDati(j);
+      caricaNegozi(j);
       if (forza) setAds({});
     } catch (e: any) {
       setErrore(e.message);
@@ -73,8 +129,10 @@ export default function DashboardSection() {
     return () => window.removeEventListener("keydown", esc);
   }, []);
 
-  const attivi = dati?.clienti.filter(c => c.stato !== "ferma") || [];
-  const fermi = dati?.clienti.filter(c => c.stato === "ferma") || [];
+  const veri: Vera[] = (dati?.clienti || []).map(c => conNegozio(c, typeof negozi === "object" ? negozi[c.id] : undefined))
+    .sort((a, b) => (ORDINE[a.stato] ?? 9) - (ORDINE[b.stato] ?? 9) || (b.settimana?.spesa || 0) - (a.settimana?.spesa || 0));
+  const attivi = veri.filter(c => c.stato !== "ferma");
+  const fermi = veri.filter(c => c.stato === "ferma");
   const conta = (s: string[]) => attivi.filter(c => s.includes(c.stato)).length;
   const per = dati?.periodi;
   const scelto = dati?.clienti.find(c => c.id === aperto);
@@ -88,6 +146,9 @@ export default function DashboardSection() {
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", margin: 0, letterSpacing: "-0.02em" }}>Come stanno i clienti</h1>
           <p style={{ color: "var(--text-xmuted)", fontSize: 13, marginTop: 5 }}>
             {per ? <>Ultimi 7 giorni ({giorno(per.settimana[0])} → {giorno(per.settimana[1])}) contro i 7 prima · aggiornato {dati?.aggiornato}</> : "Letto da Meta, colonna Risultati"}
+            {dati && <><br />{negozi === "carico" ? "E-commerce: leggo gli ordini veri dei negozi..." : negozi === "assente"
+              ? "E-commerce coi numeri di Meta: gli ordini veri si vedono aprendo la dashboard dal Mac"
+              : "E-commerce giudicati sugli ordini veri del negozio, non sugli acquisti di Meta"}</>}
           </p>
         </div>
         <button onClick={() => carica(true)} disabled={carico}
@@ -148,9 +209,15 @@ export default function DashboardSection() {
                         sotto={v == null ? (c.prima?.costo != null ? `prima ${euro(c.prima.costo)}` : undefined) : `${v > 0 ? "+" : ""}${v}% · prima ${euro(c.prima?.costo)}`} colore={coloreVar} />
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                         <Numero etichetta="Spesa 7 gg" valore={euro(s.spesa, 0)} sotto={c.prima ? `prima ${euro(c.prima.spesa, 0)}` : undefined} />
-                        <Numero etichetta={c.risultato || "Risultati"} valore={String(s.risultati)} sotto={c.prima ? `prima ${c.prima.risultati}` : undefined} />
+                        <Numero etichetta={c.risultato || "Risultati"} valore={String(s.risultati)}
+                          sotto={c.meta_vede != null ? `Meta ne vede ${c.meta_vede}` : c.prima ? `prima ${c.prima.risultati}` : undefined} />
                         <Numero etichetta="Ultimi 3 gg" valore={euro(t?.costo)} sotto={t ? `${t.risultati} ${t.risultati === 1 ? c.risultato_uno : c.risultato}` : undefined} />
                       </div>
+                      {c.vendite != null && (
+                        <div style={{ fontSize: 11.5, color: "var(--text-xmuted)", marginTop: -4 }}>
+                          Vendite nette 7 gg <strong style={{ color: "#fff" }}>{euro(c.vendite, 0)}</strong> · MER <strong style={{ color: "#fff" }}>{c.mer == null ? "—" : c.mer.toLocaleString("it-IT", { maximumFractionDigits: 2 })}</strong> · dal negozio
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
